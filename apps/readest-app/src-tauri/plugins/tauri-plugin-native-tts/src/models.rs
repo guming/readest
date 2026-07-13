@@ -93,3 +93,48 @@ pub struct UpdateMediaSessionMetadataRequest {
     pub album: Option<String>,
     pub artwork: Option<String>,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCarPlayStateRequest {
+    pub active: bool,
+    pub title: Option<String>,
+    pub author: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayoutEnqueueRequest {
+    pub session: i32,
+    pub index: i32,
+    pub data: String,
+    pub gap_ms: Option<f64>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayoutEnqueueResponse {
+    pub duration_ms: f64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayoutControlRequest {
+    pub action: String,
+    pub rate: Option<f64>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayoutControlResponse {
+    pub session: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayoutPositionResponse {
+    pub session: i32,
+    pub index: i32,
+    pub position_ms: f64,
+    pub playing: bool,
+}
