@@ -8,7 +8,7 @@ import { useCommandPalette } from '@/components/command-palette';
 import { RiFontSize, RiShareLine } from 'react-icons/ri';
 import { RiDashboardLine, RiTranslate } from 'react-icons/ri';
 import { VscSymbolColor } from 'react-icons/vsc';
-import { PiDotsThreeVerticalBold, PiRobot, PiSpeakerHigh } from 'react-icons/pi';
+import { PiDotsThreeVerticalBold, PiRobot, PiSparkle, PiSpeakerHigh } from 'react-icons/pi';
 import { LiaHandPointerSolid } from 'react-icons/lia';
 import { IoAccessibilityOutline } from 'react-icons/io5';
 import {
@@ -32,6 +32,7 @@ import ControlPanel from './ControlPanel';
 import LangPanel from './LangPanel';
 import MiscPanel from './MiscPanel';
 import AIPanel from './AIPanel';
+import NotebookAssistantPanel from './NotebookAssistantPanel';
 import TTSPanel from './TTSPanel';
 
 export type SettingsPanelType =
@@ -42,6 +43,7 @@ export type SettingsPanelType =
   | 'TTS'
   | 'Language'
   | 'AI'
+  | 'NotebookAssistant'
   | 'Integrations'
   | 'Custom';
 export type SettingsPanelPanelProp = {
@@ -110,6 +112,11 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
       tab: 'Integrations',
       icon: RiShareLine,
       label: _('Integrations'),
+    },
+    {
+      tab: 'NotebookAssistant',
+      icon: PiSparkle,
+      label: _('Notebook Assistant'),
     },
     {
       tab: 'AI',
@@ -269,6 +276,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     TTS: null,
     Language: null,
     AI: null,
+    NotebookAssistant: null,
     Integrations: null,
     Custom: null,
   });
@@ -303,6 +311,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
         tts: 'TTS',
         language: 'Language',
         ai: 'AI',
+        notebookassistant: 'NotebookAssistant',
         integrations: 'Integrations',
         custom: 'Custom',
       };
@@ -563,6 +572,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
           />
         )}
         {activePanel === 'AI' && <AIPanel />}
+        {activePanel === 'NotebookAssistant' && <NotebookAssistantPanel />}
         {activePanel === 'Integrations' && <IntegrationsPanel />}
         {activePanel === 'Custom' && (
           <MiscPanel

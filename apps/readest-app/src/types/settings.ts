@@ -7,6 +7,7 @@ import { OPDSCatalog } from './opds';
 import { WebSource } from './webSource';
 import { ABSServer } from './audiobookshelf';
 import type { AISettings } from '@/services/ai/types';
+import type { NotebookAssistantSettings } from '@/services/notebook-assistant/types';
 import type { NotebookTab } from '@/store/notebookStore';
 import type { DictionarySettings, ImportedDictionary } from '@/services/dictionaries/types';
 
@@ -544,6 +545,8 @@ export interface SystemSettings {
   icloud: ICloudSettings;
 
   aiSettings: AISettings;
+  /** Device-local, non-secret configuration for selected-text AI actions. */
+  notebookAssistant?: NotebookAssistantSettings;
   /**
    * Per-device id used as the deviceId portion of every HLC this device
    * mints. Lazy-generated on first sync init via uuidv4 (mirrors
