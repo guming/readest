@@ -3,9 +3,9 @@ import type { UserPlan } from '@/types/quota';
 import type { FileSyncBackendKind } from '@/services/sync/file/providerRegistry';
 
 /**
- * The user's selected cloud sync provider for library data (book files,
- * book rows, progress, notes). 'readest' is the native Readest Cloud;
- * the others are third-party file-sync backends configured by the user.
+ * The user's selected sync provider for library data (book files,
+ * book rows, progress, notes). 'local' is the local-only default; the
+ * others are third-party file-sync backends configured by the user.
  *
  * The selection is DERIVED from the existing per-device enabled flags —
  * there is no separate persisted field, so it inherits the device-local
@@ -14,7 +14,7 @@ import type { FileSyncBackendKind } from '@/services/sync/file/providerRegistry'
  * exclusive; if both are ever enabled (hand-edited or restored
  * settings), WebDAV wins deterministically.
  */
-export type CloudSyncProviderKind = 'readest' | FileSyncBackendKind;
+export type CloudSyncProviderKind = 'local' | FileSyncBackendKind;
 
 export interface CloudSyncGate {
   provider: CloudSyncProviderKind;
@@ -41,7 +41,7 @@ export const cloudProviderDisplayName = (kind: CloudSyncProviderKind): string =>
         ? 'S3'
         : kind === 'onedrive'
           ? 'OneDrive'
-          : 'Readest Cloud';
+          : 'Local';
 
 export const getCloudSyncProvider = (
   settings: SystemSettings | null | undefined,
@@ -54,7 +54,7 @@ export const getCloudSyncProvider = (
         ? 's3'
         : settings?.onedrive?.enabled
           ? 'onedrive'
-          : 'readest';
+          : 'local';
 
 /** Cached for compatibility with older plan-aware call sites. */
 let cachedUserPlan: UserPlan = 'free';
@@ -100,11 +100,9 @@ export const applySyncBooksAutoEnable = (settings: SystemSettings): boolean => {
 
 /**
  * Whether Readest Cloud storage may be written to (book file uploads).
- * Readest Cloud remains active when no third-party provider is selected.
- * Selecting a third-party provider disables native Readest Cloud uploads,
- * regardless of account plan.
+ * The local-first app no longer writes to Readest Cloud from the client.
  */
 export const isReadestCloudStorageActive = (
-  settings: SystemSettings | null | undefined,
-  plan?: UserPlan,
-): boolean => resolveCloudSyncGate(settings, plan).provider === 'readest';
+  _settings: SystemSettings | null | undefined,
+  _plan?: UserPlan,
+): boolean => false;

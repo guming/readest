@@ -107,9 +107,8 @@ beforeEach(() => {
   resetTransferManager();
   vi.clearAllMocks();
   localStorage.clear();
-  // Book uploads are gated on the selected cloud sync provider and
-  // deferred until settings hydrate; hydrate with Readest Cloud selected
-  // so the pre-gating behavior under test is preserved.
+  // Book uploads to the legacy account storage are disabled in local-first
+  // mode; download/delete queue behavior remains covered below.
   useSettingsStore.setState({
     settings: {
       version: 1,
@@ -226,7 +225,7 @@ describe('TransferManager', () => {
       expect(result).toBeNull();
     });
 
-    test('queues an upload and returns a transfer id', async () => {
+    test('returns null in local-first mode', async () => {
       const appService = makeAppService();
       await transferManager.initialize(
         appService as never,
@@ -236,16 +235,11 @@ describe('TransferManager', () => {
       );
 
       const id = transferManager.queueUpload(makeBook());
-      expect(id).toBeTruthy();
-      expect(typeof id).toBe('string');
-
-      const transfer = useTransferStore.getState().transfers[id!];
-      expect(transfer).toBeDefined();
-      expect(transfer!.type).toBe('upload');
-      expect(transfer!.bookHash).toBe('hash1');
+      expect(id).toBeNull();
+      expect(Object.keys(useTransferStore.getState().transfers)).toHaveLength(0);
     });
 
-    test('returns existing id if already queued', async () => {
+    test('does not create duplicate rows when uploads are gated', async () => {
       const appService = makeAppService();
       await transferManager.initialize(
         appService as never,
@@ -256,10 +250,12 @@ describe('TransferManager', () => {
 
       const id1 = transferManager.queueUpload(makeBook());
       const id2 = transferManager.queueUpload(makeBook());
-      expect(id1).toBe(id2);
+      expect(id1).toBeNull();
+      expect(id2).toBeNull();
+      expect(Object.keys(useTransferStore.getState().transfers)).toHaveLength(0);
     });
 
-    test('respects custom priority', async () => {
+    test('ignores custom priority because uploads are gated', async () => {
       const appService = makeAppService();
       await transferManager.initialize(
         appService as never,
@@ -269,8 +265,8 @@ describe('TransferManager', () => {
       );
 
       const id = transferManager.queueUpload(makeBook(), 1);
-      const transfer = useTransferStore.getState().transfers[id!];
-      expect(transfer!.priority).toBe(1);
+      expect(id).toBeNull();
+      expect(Object.keys(useTransferStore.getState().transfers)).toHaveLength(0);
     });
   });
 
@@ -355,7 +351,7 @@ describe('TransferManager', () => {
       expect(result).toEqual([]);
     });
 
-    test('queues multiple uploads', async () => {
+    test('returns empty when uploads are gated', async () => {
       const book1 = makeBook({ hash: 'h1', title: 'B1' });
       const book2 = makeBook({ hash: 'h2', title: 'B2' });
       const appService = makeAppService();
@@ -367,10 +363,8 @@ describe('TransferManager', () => {
       );
 
       const ids = transferManager.queueBatchUploads([book1, book2]);
-      expect(ids).toHaveLength(2);
-      ids.forEach((id) => {
-        expect(useTransferStore.getState().transfers[id]).toBeDefined();
-      });
+      expect(ids).toEqual([]);
+      expect(Object.keys(useTransferStore.getState().transfers)).toHaveLength(0);
     });
   });
 
@@ -385,7 +379,7 @@ describe('TransferManager', () => {
         translationFn,
       );
 
-      const id = transferManager.queueUpload(makeBook())!;
+      const id = transferManager.queueDownload(makeBook())!;
       transferManager.cancelTransfer(id);
 
       const transfer = useTransferStore.getState().transfers[id];
@@ -401,7 +395,7 @@ describe('TransferManager', () => {
         translationFn,
       );
 
-      const id = transferManager.queueUpload(makeBook())!;
+      const id = transferManager.queueDownload(makeBook())!;
 
       // Manually inject an abort controller to simulate active transfer
       const abortController = new AbortController();
@@ -423,7 +417,7 @@ describe('TransferManager', () => {
         translationFn,
       );
 
-      const id = transferManager.queueUpload(makeBook())!;
+      const id = transferManager.queueDownload(makeBook())!;
       transferManager.cancelTransfer(id);
 
       const stored = localStorage.getItem('readest_transfer_queue');
@@ -444,7 +438,7 @@ describe('TransferManager', () => {
         translationFn,
       );
 
-      const id = transferManager.queueUpload(makeBook())!;
+      const id = transferManager.queueDownload(makeBook())!;
       useTransferStore.getState().setTransferStatus(id, 'failed', 'Network error');
 
       transferManager.retryTransfer(id);
@@ -468,7 +462,7 @@ describe('TransferManager', () => {
         translationFn,
       );
 
-      const id1 = transferManager.queueUpload(book1)!;
+      const id1 = transferManager.queueDelete(book1)!;
       const id2 = transferManager.queueDownload(book2)!;
       useTransferStore.getState().setTransferStatus(id1, 'failed', 'err1');
       useTransferStore.getState().setTransferStatus(id2, 'failed', 'err2');
@@ -625,7 +619,7 @@ describe('TransferManager', () => {
 
   // ── Queue processing (integration-style) ─────────────────────────
   describe('queue processing', () => {
-    test('successful upload calls appService.uploadBook and updates book', async () => {
+    test('account upload is not queued in local-first mode', async () => {
       const book = makeBook({ hash: 'h1', title: 'Test Upload' });
       const appService = makeAppService();
       const updateBook = vi.fn().mockResolvedValue(undefined);
@@ -642,11 +636,10 @@ describe('TransferManager', () => {
       // Let the async queue processing run
       await vi.advanceTimersByTimeAsync(500);
 
-      expect(appService['uploadBook']).toHaveBeenCalled();
-      expect(updateBook).toHaveBeenCalled();
-
-      const transfer = useTransferStore.getState().transfers[id];
-      expect(transfer!.status).toBe('completed');
+      expect(id).toBeNull();
+      expect(appService['uploadBook']).not.toHaveBeenCalled();
+      expect(updateBook).not.toHaveBeenCalled();
+      expect(Object.keys(useTransferStore.getState().transfers)).toHaveLength(0);
     });
 
     test('successful download calls appService.downloadBook and updates book', async () => {
@@ -705,7 +698,7 @@ describe('TransferManager', () => {
         translationFn,
       );
 
-      transferManager.queueUpload(book);
+      transferManager.queueDownload(book);
       await vi.advanceTimersByTimeAsync(500);
 
       expect(eventDispatcher.dispatch).toHaveBeenCalledWith(
@@ -739,7 +732,7 @@ describe('TransferManager', () => {
     test('failed transfer with retries schedules retry', async () => {
       const book = makeBook({ hash: 'h1', title: 'Retry Book' });
       const appService = makeAppService();
-      (appService['uploadBook'] as Mock).mockRejectedValue(new Error('Network fail'));
+      (appService['downloadBook'] as Mock).mockRejectedValue(new Error('Network fail'));
 
       await transferManager.initialize(
         appService as never,
@@ -748,7 +741,7 @@ describe('TransferManager', () => {
         translationFn,
       );
 
-      const id = transferManager.queueUpload(book)!;
+      const id = transferManager.queueDownload(book)!;
       await vi.advanceTimersByTimeAsync(500);
 
       // After first failure, retryCount should be incremented and status back to pending
@@ -768,12 +761,12 @@ describe('TransferManager', () => {
       );
 
       transferManager.pauseQueue();
-      transferManager.queueUpload(book);
+      transferManager.queueDownload(book);
 
       await vi.advanceTimersByTimeAsync(500);
 
-      // The upload should not have been called because queue is paused
-      expect(appService['uploadBook']).not.toHaveBeenCalled();
+      // The download should not have been called because queue is paused
+      expect(appService['downloadBook']).not.toHaveBeenCalled();
     });
 
     test('book not found in library dispatches error', async () => {
@@ -787,7 +780,7 @@ describe('TransferManager', () => {
         translationFn,
       );
 
-      transferManager.queueUpload(book);
+      transferManager.queueDownload(book);
       await vi.advanceTimersByTimeAsync(10000);
 
       // After all retries exhausted, error toast should be dispatched
@@ -809,7 +802,7 @@ describe('TransferManager', () => {
         translationFn,
       );
 
-      transferManager.queueUpload(makeBook());
+      transferManager.queueDownload(makeBook());
 
       const stored = localStorage.getItem('readest_transfer_queue');
       expect(stored).toBeTruthy();

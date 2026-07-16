@@ -83,7 +83,7 @@ describe('isSyncCategoryEnabled', () => {
       expect(isSyncCategoryEnabled('progress')).toBe(false);
     });
 
-    test('no gating when readest is the provider', () => {
+    test('no gating when local is the provider', () => {
       setSettings({
         webdav: { enabled: false },
         googleDrive: { enabled: false },

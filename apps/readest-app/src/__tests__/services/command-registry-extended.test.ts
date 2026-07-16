@@ -19,6 +19,7 @@ vi.mock('react-icons/io5', () => ({
 }));
 vi.mock('react-icons/pi', () => ({
   PiRobot: () => null,
+  PiSparkle: () => null,
   PiSpeakerHigh: () => null,
   PiSun: () => null,
   PiMoon: () => null,
