@@ -5,9 +5,7 @@ import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useBookProgress } from '@/store/readerProgressStore';
 import { useSettingsStore } from '@/store/settingsStore';
-import { useQuotaStats } from '@/hooks/useQuotaStats';
 import { useTranslation } from '@/hooks/useTranslation';
-import { isCloudSyncAllowed } from '@/utils/access';
 import { debounce } from '@/utils/debounce';
 import { eventDispatcher } from '@/utils/event';
 import { FileSyncEngine } from '@/services/sync/file/engine';
@@ -141,15 +139,7 @@ export const useFileSync = (bookKey: string) => {
     [activeKind, envConfig, setSettings, saveSettings],
   );
 
-  // Third-party cloud sync will be a premium feature (the reader's auto-sync
-  // would stay off for free plans), but it is temporarily UNGATED while the
-  // feature stabilises — `isCloudSyncAllowed` returns true for every plan until
-  // `CLOUD_SYNC_REQUIRES_PREMIUM` is flipped back on.
-  const { userProfilePlan } = useQuotaStats();
-  const isPremium = isCloudSyncAllowed(userProfilePlan ?? 'free');
-
   const isReady = useMemo(() => {
-    if (!isPremium) return false;
     if (activeKind === 'webdav') {
       const w = settings.webdav;
       return !!(w?.enabled && w?.serverUrl && w?.username);
@@ -161,14 +151,7 @@ export const useFileSync = (bookKey: string) => {
     }
     if (activeKind === 'onedrive') return !!settings.onedrive?.enabled;
     return false;
-  }, [
-    isPremium,
-    activeKind,
-    settings.webdav,
-    settings.googleDrive,
-    settings.s3,
-    settings.onedrive,
-  ]);
+  }, [activeKind, settings.webdav, settings.googleDrive, settings.s3, settings.onedrive]);
 
   const strategy = providerSettings?.strategy ?? 'silent';
   const allowPush = isReady && strategy !== 'receive';

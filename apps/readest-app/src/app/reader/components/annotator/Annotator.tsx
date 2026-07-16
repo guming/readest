@@ -50,6 +50,7 @@ import { runSimpleCC } from '@/utils/simplecc';
 import { getWordCount } from '@/utils/word';
 import { getIndexFromCfi } from '@/utils/cfi';
 import { writeTextToClipboard } from '@/utils/clipboard';
+import { saveViewSettings } from '@/helpers/settings';
 import { canShareText, shareSelectedText } from '@/utils/share';
 import { getToolbarToolTypes } from '@/utils/annotationToolbar';
 import { AnnotationToolType } from '@/types/annotator';
@@ -77,6 +78,8 @@ import AnnotationPopup from './AnnotationPopup';
 import DictionaryPopup from './DictionaryPopup';
 import DictionarySheet from './DictionarySheet';
 import TranslatorPopup from './TranslatorPopup';
+import SelectedTextAssistantPopup from './SelectedTextAssistantPopup';
+import type { SelectedTextAction } from '@/services/notebook-assistant/types';
 import useShortcuts from '@/hooks/useShortcuts';
 import ProofreadPopup from './ProofreadPopup';
 import { setProofreadRulesVisibility } from '@/app/reader/components/ProofreadRules';
@@ -145,6 +148,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
   const [showAnnotPopup, setShowAnnotPopup] = useState(false);
   const [showDictionaryPopup, setShowDictionaryPopup] = useState(false);
   const [showDeepLPopup, setShowDeepLPopup] = useState(false);
+  const [assistantAction, setAssistantAction] = useState<SelectedTextAction | null>(null);
   const [showProofreadPopup, setShowProofreadPopup] = useState(false);
   const [trianglePosition, setTrianglePosition] = useState<Position>();
   const [annotPopupPosition, setAnnotPopupPosition] = useState<Position>();
@@ -188,7 +192,11 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
   const pendingWordLensDictRef = useRef(false);
 
   const showingPopup =
-    showAnnotPopup || showDictionaryPopup || showDeepLPopup || showProofreadPopup;
+    showAnnotPopup ||
+    showDictionaryPopup ||
+    showDeepLPopup ||
+    !!assistantAction ||
+    showProofreadPopup;
 
   const popupPadding = useResponsiveSize(10);
   const trianglePadding = popupPadding * 2 + 6;
@@ -201,6 +209,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
   const dictPopupHeight = Math.min(360, maxHeight);
   const transPopupWidth = Math.min(480, maxWidth);
   const transPopupHeight = Math.min(265, maxHeight);
+  const assistantPopupHeight = Math.min(340, maxHeight);
   const proofreadPopupWidth = Math.min(440, maxWidth);
   const proofreadPopupHeight = Math.min(200, maxHeight);
   const canShare = canShareText(appService);
@@ -304,6 +313,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
       setShowAnnotPopup(false);
       setShowDictionaryPopup(false);
       setShowDeepLPopup(false);
+      setAssistantAction(null);
       setShowProofreadPopup(false);
       setEditingAnnotation(null);
     }, 500),
@@ -345,6 +355,12 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
     handleDismissPopup();
     view?.deselect();
     isTextSelected.current = false;
+  };
+
+  const handleSelectedTextAssistant = (action: SelectedTextAction) => {
+    if (!selection?.text) return;
+    setShowAnnotPopup(false);
+    setAssistantAction(action);
   };
 
   const onLoad = (event: Event) => {
@@ -1673,6 +1689,18 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
         return { tooltipText: _(label), Icon, onClick: handleDictionary };
       case 'translate':
         return { tooltipText: _(label), Icon, onClick: handleTranslation };
+      case 'ai-translate':
+        return {
+          tooltipText: _(label),
+          Icon,
+          onClick: () => handleSelectedTextAssistant('translation'),
+        };
+      case 'explain':
+        return {
+          tooltipText: _(label),
+          Icon,
+          onClick: () => handleSelectedTextAssistant('explanation'),
+        };
       case 'tts':
         return { tooltipText: _(label), Icon, onClick: handleSpeakText };
       case 'proofread':
@@ -1741,6 +1769,38 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
           trianglePosition={trianglePosition}
           popupWidth={transPopupWidth}
           popupHeight={transPopupHeight}
+          currentProvider={
+            viewSettings.translationProvider === 'custom-ai'
+              ? 'google'
+              : viewSettings.translationProvider
+          }
+          onDismiss={handleDismissPopupAndSelection}
+          onProviderChange={(provider) => {
+            if (provider === 'custom-ai') return;
+            void saveViewSettings(
+              envConfig,
+              bookKey,
+              'translationProvider',
+              provider,
+              false,
+              false,
+            );
+          }}
+          onSelectCustomAI={() => {
+            setShowDeepLPopup(false);
+            setAssistantAction('translation');
+          }}
+        />
+      )}
+      {assistantAction && selection && trianglePosition && translatorPopupPosition && (
+        <SelectedTextAssistantPopup
+          action={assistantAction}
+          bookKey={bookKey}
+          selection={selection}
+          position={translatorPopupPosition}
+          trianglePosition={trianglePosition}
+          popupWidth={transPopupWidth}
+          popupHeight={assistantPopupHeight}
           onDismiss={handleDismissPopupAndSelection}
         />
       )}

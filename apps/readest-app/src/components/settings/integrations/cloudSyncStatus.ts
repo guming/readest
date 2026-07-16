@@ -26,7 +26,7 @@ export interface ThirdPartyRowInputs {
   enabled: boolean;
   configured: boolean;
   syncing: boolean;
-  /** Selected but disallowed by the premium guard (never silently unpaused). */
+  /** Legacy input retained for old callers; BYO storage is never plan-paused. */
   paused: boolean;
   /** Last terminal sync error, from fileSyncStore. */
   lastError: string | null | undefined;
@@ -36,7 +36,6 @@ export interface ThirdPartyRowInputs {
 
 export const getThirdPartyRowStatus = (_: TranslationFunc, s: ThirdPartyRowInputs): string => {
   if (!s.enabled) return s.configured ? _('Configured') : _('Not connected');
-  if (s.paused) return _('Paused — plan required');
   if (s.syncing) return _('Syncing…');
   if (s.lastError) return _('Sync failed');
   if (!s.syncBooks) {

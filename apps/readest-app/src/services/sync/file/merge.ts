@@ -1,4 +1,4 @@
-import { Book, BookConfig, BookNote } from '@/types/book';
+import { Book, BookConfig, BookNote, NotebookCard } from '@/types/book';
 import { RemoteBookConfig } from './wire';
 
 /**
@@ -51,6 +51,25 @@ export const mergeNotes = (local: BookNote[], remote: BookNote[]): BookNote[] =>
   return Array.from(byId.values());
 };
 
+export const mergeNotebookCards = (
+  local: NotebookCard[],
+  remote: NotebookCard[],
+): NotebookCard[] => {
+  const byId = new Map<string, NotebookCard>();
+  for (const card of local) byId.set(card.id, card);
+  for (const remoteCard of remote) {
+    const localCard = byId.get(remoteCard.id);
+    if (!localCard) {
+      byId.set(remoteCard.id, remoteCard);
+      continue;
+    }
+    const localClock = Math.max(localCard.updatedAt ?? 0, localCard.deletedAt ?? 0);
+    const remoteClock = Math.max(remoteCard.updatedAt ?? 0, remoteCard.deletedAt ?? 0);
+    if (remoteClock >= localClock) byId.set(remoteCard.id, remoteCard);
+  }
+  return Array.from(byId.values());
+};
+
 /**
  * Merge a remote config envelope into the local BookConfig.
  *
@@ -80,6 +99,7 @@ export const mergeBookConfig = (
       : ({ ...filteredRemote, ...local } as BookConfig);
   const notes = mergeNotes(local.booknotes ?? [], remote.booknotes ?? []);
   merged.booknotes = notes;
+  merged.notebookCards = mergeNotebookCards(local.notebookCards ?? [], remote.notebookCards ?? []);
   return { config: merged, notes };
 };
 

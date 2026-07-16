@@ -50,6 +50,18 @@ export const SETTINGS_WHITELIST = [
   'dictionarySettings.providerEnabled',
   'dictionarySettings.webSearches',
   'dictionarySettings.fontScale',
+  // Notebook Assistant non-secret configuration. API keys are intentionally
+  // absent: they live only in `secretStore` on each device.
+  'notebookAssistant.provider',
+  'notebookAssistant.baseUrl',
+  'notebookAssistant.model',
+  'notebookAssistant.targetLanguage',
+  'notebookAssistant.warnAboveTokens',
+  'notebookAssistant.defaultQuizQuestionCount',
+  'notebookAssistant.defaultSummaryStyle',
+  'notebookAssistant.costMode',
+  'notebookAssistant.dailyTokenLimit',
+  'notebookAssistant.usageTrackingEnabled',
   // External integrations. Server URL + identifiers sync as plaintext;
   // the credential fields are listed in `encryptedFields` below so the
   // publish/pull middleware wraps them in cipher envelopes.

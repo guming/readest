@@ -82,7 +82,7 @@ describe('getCloudSyncProvider', () => {
 });
 
 describe('resolveCloudSyncGate', () => {
-  test('readest provider is never paused, even when cloud sync is disallowed', () => {
+  test('readest provider is never paused, even when legacy cloud sync checks are disallowed', () => {
     vi.mocked(isCloudSyncAllowed).mockReturnValue(false);
     expect(resolveCloudSyncGate(makeSettings(), 'free')).toEqual({
       provider: 'readest',
@@ -90,10 +90,10 @@ describe('resolveCloudSyncGate', () => {
     });
   });
 
-  test('third-party provider stays selected but paused when disallowed (no silent readest fallback)', () => {
+  test('third-party provider stays active when legacy plan checks are disallowed', () => {
     vi.mocked(isCloudSyncAllowed).mockReturnValue(false);
     const settings = makeSettings({ webdav: { enabled: true } } as Partial<SystemSettings>);
-    expect(resolveCloudSyncGate(settings, 'free')).toEqual({ provider: 'webdav', paused: true });
+    expect(resolveCloudSyncGate(settings, 'free')).toEqual({ provider: 'webdav', paused: false });
   });
 
   test('third-party provider is active when allowed', () => {
@@ -106,7 +106,7 @@ describe('resolveCloudSyncGate', () => {
     const settings = makeSettings({ webdav: { enabled: true } } as Partial<SystemSettings>);
 
     setCachedUserPlan('free');
-    expect(resolveCloudSyncGate(settings).paused).toBe(true);
+    expect(resolveCloudSyncGate(settings).paused).toBe(false);
 
     setCachedUserPlan('pro');
     expect(resolveCloudSyncGate(settings).paused).toBe(false);
@@ -116,7 +116,7 @@ describe('resolveCloudSyncGate', () => {
     vi.mocked(isCloudSyncAllowed).mockImplementation((plan) => plan !== 'free');
     const settings = makeSettings({ webdav: { enabled: true } } as Partial<SystemSettings>);
     setCachedUserPlan(undefined);
-    expect(resolveCloudSyncGate(settings).paused).toBe(true);
+    expect(resolveCloudSyncGate(settings).paused).toBe(false);
   });
 });
 
@@ -171,7 +171,7 @@ describe('isReadestCloudStorageActive', () => {
     expect(isReadestCloudStorageActive(settings)).toBe(false);
   });
 
-  test('false while paused: uploads must not silently resume to Readest Cloud', () => {
+  test('false for third-party even when legacy plan checks are disallowed', () => {
     vi.mocked(isCloudSyncAllowed).mockReturnValue(false);
     const settings = makeSettings({ googleDrive: { enabled: true } } as Partial<SystemSettings>);
     expect(isReadestCloudStorageActive(settings, 'free')).toBe(false);

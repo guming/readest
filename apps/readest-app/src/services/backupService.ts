@@ -61,6 +61,9 @@ export const BACKUP_SETTINGS_BLACKLIST = [
   's3.deviceId',
   's3.lastSyncedAt',
   's3.providerSelectedAt',
+  // Notebook Assistant API keys are local-only by product policy. This is a
+  // defensive strip in case a future settings shape accidentally grows one.
+  'notebookAssistant.apiKey',
   // Transient runtime state — book keys may not exist post-restore; screen
   // brightness is live device state.
   'lastOpenBooks',

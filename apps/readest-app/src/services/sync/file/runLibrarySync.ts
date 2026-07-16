@@ -29,8 +29,6 @@ export const runActiveFileLibrarySync = async (
   _: TranslationFunc,
 ): Promise<SyncLibraryResult | null> => {
   const gate = resolveCloudSyncGate(useSettingsStore.getState().settings);
-  // Paused means paused (#4959): a downgraded account's still-selected
-  // provider must not sync, and must not fall back to Readest Cloud either.
   if (gate.provider === 'readest' || gate.paused) return null;
   const kind = gate.provider;
 

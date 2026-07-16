@@ -1,4 +1,4 @@
-import { Book, BookConfig, BookNote } from '@/types/book';
+import { Book, BookConfig, BookNote, NotebookCard } from '@/types/book';
 
 /**
  * Per-book remote payload stored at
@@ -26,6 +26,8 @@ export interface RemoteBookConfig {
   config: Partial<BookConfig>;
   /** Booknotes carry their own per-note updatedAt/deletedAt for merging. */
   booknotes: BookNote[];
+  /** Structured selected-text assistant results, merged independently by id. */
+  notebookCards?: NotebookCard[];
   writerDeviceId: string;
   writerVersion: 'readest-webdav-1';
   /** When the writer last touched the row (client wall clock, millis). */
@@ -70,6 +72,7 @@ export const buildRemotePayload = (
     metaHash: book.metaHash,
     config: trimmed,
     booknotes: config.booknotes ?? [],
+    notebookCards: config.notebookCards ?? [],
     writerDeviceId: deviceId,
     writerVersion: 'readest-webdav-1',
     updatedAt: Date.now(),

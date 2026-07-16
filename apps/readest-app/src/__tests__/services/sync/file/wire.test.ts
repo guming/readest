@@ -25,6 +25,22 @@ const config = {
   location: 'loc',
   xpointer: 'xp',
   booknotes: [],
+  notebookCards: [
+    {
+      id: 'c1',
+      bookId: 'h1',
+      type: 'translation',
+      title: 'T',
+      sourceText: 's',
+      content: 'c',
+      contextType: 'selection',
+      provider: 'custom',
+      model: 'm',
+      tokenEstimate: { input: 1, output: 1 },
+      createdAt: 1,
+      updatedAt: 1,
+    },
+  ],
   viewSettings: { fontSize: 14 },
 } as unknown as BookConfig;
 
@@ -39,6 +55,7 @@ describe('wire envelope (frozen)', () => {
     expect(p.config).toEqual({ progress: [3, 10], location: 'loc', xpointer: 'xp', updatedAt: 42 });
     // Device-local fields never travel.
     expect('viewSettings' in p.config).toBe(false);
+    expect(p.notebookCards?.[0]?.id).toBe('c1');
   });
 
   test('parseRemotePayload rejects null / non-JSON / wrong schema', () => {

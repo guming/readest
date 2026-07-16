@@ -49,10 +49,10 @@ describe('getThirdPartyRowStatus', () => {
     expect(getThirdPartyRowStatus(_, { ...base, enabled: false })).toBe('Configured');
   });
 
-  test('paused outranks syncing, errors, and warnings', () => {
+  test('legacy paused flag does not affect BYO storage status', () => {
     expect(
       getThirdPartyRowStatus(_, { ...base, paused: true, syncing: true, lastError: 'x' }),
-    ).toBe('Paused — plan required');
+    ).toBe('Syncing…');
   });
 
   test('syncing while a run is in flight', () => {

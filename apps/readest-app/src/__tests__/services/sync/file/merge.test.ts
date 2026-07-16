@@ -1,12 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import {
   mergeNotes,
+  mergeNotebookCards,
   mergeBookConfig,
   mergeBookMetadata,
   isRemoteBookMetadataNewer,
   shouldApplyRemoteBookMetadata,
 } from '@/services/sync/file/merge';
-import type { Book, BookConfig, BookNote } from '@/types/book';
+import type { Book, BookConfig, BookNote, NotebookCard } from '@/types/book';
 import type { RemoteBookConfig } from '@/services/sync/file/wire';
 
 const note = (id: string, updatedAt: number, deletedAt?: number): BookNote =>
@@ -19,6 +20,22 @@ const note = (id: string, updatedAt: number, deletedAt?: number): BookNote =>
     updatedAt,
     deletedAt,
   }) as BookNote;
+
+const card = (id: string, updatedAt: number, deletedAt?: number): NotebookCard => ({
+  id,
+  bookId: 'h1',
+  type: 'translation',
+  title: 'T',
+  sourceText: 'source',
+  content: id,
+  contextType: 'selection',
+  provider: 'custom',
+  model: 'm',
+  tokenEstimate: { input: 1, output: 1 },
+  createdAt: 1,
+  updatedAt,
+  deletedAt,
+});
 
 const envelope = (over: Partial<RemoteBookConfig> = {}): RemoteBookConfig => ({
   schemaVersion: 1,
@@ -73,6 +90,22 @@ describe('mergeNotes (element-set CRDT)', () => {
     // Whichever order, the strictly-newer side (updatedAt 9) supplies `note`.
     expect(lr.note).toBe('remote');
     expect(rl.note).toBe('remote');
+  });
+});
+
+describe('mergeNotebookCards', () => {
+  test('unions distinct cards and keeps the newer same-id card', () => {
+    const out = mergeNotebookCards(
+      [card('a', 1), card('b', 5)],
+      [card('c', 2), { ...card('b', 9), content: 'new' }],
+    );
+    expect(out.map((item) => item.id).sort()).toEqual(['a', 'b', 'c']);
+    expect(out.find((item) => item.id === 'b')?.content).toBe('new');
+  });
+
+  test('newer tombstone prevents resurrection', () => {
+    const out = mergeNotebookCards([card('a', 5)], [card('a', 6, 7)]);
+    expect(out[0]?.deletedAt).toBe(7);
   });
 });
 

@@ -1,4 +1,5 @@
 import { BookMetadata } from '@/libs/document';
+import type { QuizCardContent } from '@/services/notebook-assistant/types';
 import { TTSHighlightOptions } from '@/services/tts/types';
 import { TTSHighlightGranularity } from '@/services/tts/types';
 import { TTSMediaMetadataMode } from '@/services/tts/types';
@@ -165,6 +166,37 @@ export interface BookNote {
    */
   global?: boolean;
 
+  createdAt: number;
+  updatedAt: number;
+  deletedAt?: number | null;
+}
+
+export type NotebookCardType =
+  | 'translation'
+  | 'explanation'
+  | 'summary'
+  | 'insight'
+  | 'takeaway'
+  | 'quiz'
+  | 'mistake';
+
+export interface NotebookCard {
+  id: string;
+  bookId: string;
+  chapterId?: string;
+  chapterTitle?: string;
+  pageNumber?: number;
+  pageCfi?: string;
+  selectionCfi?: string;
+  type: NotebookCardType;
+  title: string;
+  sourceText?: string;
+  content: string | QuizCardContent;
+  contextType: 'selection' | 'page' | 'chapter';
+  targetLanguage?: string;
+  provider: string;
+  model: string;
+  tokenEstimate: { input: number; output: number };
   createdAt: number;
   updatedAt: number;
   deletedAt?: number | null;
@@ -490,6 +522,7 @@ export interface BookConfig {
   location?: string; // CFI of the current location
   xpointer?: string; // XPointer of the current location (for Koreader interoperability)
   booknotes?: BookNote[];
+  notebookCards?: NotebookCard[];
   rsvpPosition?: { cfi: string; wordText: string };
   searchConfig?: Partial<BookSearchConfig>;
   viewSettings?: Partial<ViewSettings>;

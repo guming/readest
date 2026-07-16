@@ -2,7 +2,7 @@ import { IconType } from 'react-icons';
 import { FiSearch } from 'react-icons/fi';
 import { FiCopy } from 'react-icons/fi';
 import { FiShare } from 'react-icons/fi';
-import { PiHighlighterFill } from 'react-icons/pi';
+import { PiHighlighterFill, PiSparkle, PiLightbulb } from 'react-icons/pi';
 import { BsPencilSquare } from 'react-icons/bs';
 import { BsTranslate } from 'react-icons/bs';
 import { TbHexagonLetterD } from 'react-icons/tb';
@@ -76,6 +76,18 @@ export const annotationToolButtons = createAnnotationToolButtons([
     tooltip: _('Translate text after selection'),
     Icon: BsTranslate,
     quickAction: true,
+  },
+  {
+    type: 'ai-translate',
+    label: _('AI Translate'),
+    tooltip: _('Translate selected text with your AI provider'),
+    Icon: PiSparkle,
+  },
+  {
+    type: 'explain',
+    label: _('Explain'),
+    tooltip: _('Explain selected text with your AI provider'),
+    Icon: PiLightbulb,
   },
   {
     type: 'tts',

@@ -30,7 +30,10 @@ interface TranslatorPopupProps {
   trianglePosition: Position;
   popupWidth: number;
   popupHeight: number;
+  currentProvider: string;
   onDismiss?: () => void;
+  onSelectCustomAI?: () => void;
+  onProviderChange?: (provider: string) => void;
 }
 
 interface TranslatorType {
@@ -39,13 +42,25 @@ interface TranslatorType {
   disabled: boolean;
 }
 
+const resolveAvailableProvider = (requestedProvider: string, hasToken: boolean): string => {
+  const availableTranslators = getTranslators().filter((t) => isTranslatorAvailable(t, hasToken));
+  return (
+    availableTranslators.find((t) => t.name === requestedProvider)?.name ||
+    availableTranslators[0]?.name ||
+    'google'
+  );
+};
+
 const TranslatorPopup: React.FC<TranslatorPopupProps> = ({
   text,
   position,
   trianglePosition,
   popupWidth,
   popupHeight,
+  currentProvider,
   onDismiss,
+  onSelectCustomAI,
+  onProviderChange,
 }) => {
   const _ = useTranslation();
   const { token } = useAuth();
@@ -53,7 +68,9 @@ const TranslatorPopup: React.FC<TranslatorPopupProps> = ({
   const [providers, setProviders] = useState<TranslatorType[]>([]);
   const [sourceLang, setSourceLang] = useState('AUTO');
   const [targetLang, setTargetLang] = useState(settings.globalReadSettings.translateTargetLang);
-  const [provider, setProvider] = useState(settings.globalReadSettings.translationProvider);
+  const [provider, setProvider] = useState(() =>
+    resolveAvailableProvider(currentProvider, !!token),
+  );
   const [translation, setTranslation] = useState<string | null>(null);
   const [detectedSourceLang, setDetectedSourceLang] = useState<string | null>(null);
 
@@ -77,15 +94,22 @@ const TranslatorPopup: React.FC<TranslatorPopupProps> = ({
 
   const handleProviderChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const requestedProvider = event.target.value;
+    if (requestedProvider === 'custom-ai') {
+      onSelectCustomAI?.();
+      return;
+    }
     const availableTranslators = getTranslators().filter((t) => isTranslatorAvailable(t, !!token));
     const selectedTranslator =
       availableTranslators.find((t) => t.name === requestedProvider) || availableTranslators[0]!;
     if (selectedTranslator) {
-      settings.globalReadSettings.translationProvider = selectedTranslator.name;
-      setSettings(settings);
+      onProviderChange?.(selectedTranslator.name);
       setProvider(selectedTranslator.name);
     }
   };
+
+  useEffect(() => {
+    setProvider(resolveAvailableProvider(currentProvider, !!token));
+  }, [currentProvider, token]);
 
   useEffect(() => {
     const availableProviders = translators.map((t) => ({
@@ -93,7 +117,10 @@ const TranslatorPopup: React.FC<TranslatorPopupProps> = ({
       label: getTranslatorDisplayLabel(t, !!token, _),
       disabled: !!t.disabled,
     }));
-    setProviders(availableProviders);
+    setProviders([
+      { name: 'custom-ai', label: _('Custom AI'), disabled: false },
+      ...availableProviders,
+    ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [translators]);
 

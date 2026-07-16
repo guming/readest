@@ -161,6 +161,53 @@ describe('settingsAdapter', () => {
     expect(out.patch.s3?.enabled).toBeUndefined();
   });
 
+  test('pack ∘ unpack round-trips Notebook Assistant non-secret config only', () => {
+    const record: SettingsRemoteRecord = {
+      name: 'singleton',
+      patch: {
+        notebookAssistant: {
+          provider: 'openrouter',
+          baseUrl: 'https://openrouter.ai/api/v1',
+          model: 'openai/gpt-4o-mini',
+          targetLanguage: 'English',
+          warnAboveTokens: 12_000,
+          defaultQuizQuestionCount: 7,
+          defaultSummaryStyle: 'brief',
+          costMode: 'conservative',
+          dailyTokenLimit: 80_000,
+          usageTrackingEnabled: true,
+          apiKey: 'must-not-sync',
+        },
+      } as unknown as Partial<SystemSettings>,
+    };
+    const fields = settingsAdapter.pack(record);
+    expect(fields['notebookAssistant.provider']).toBe('openrouter');
+    expect(fields['notebookAssistant.baseUrl']).toBe('https://openrouter.ai/api/v1');
+    expect(fields['notebookAssistant.model']).toBe('openai/gpt-4o-mini');
+    expect(fields['notebookAssistant.targetLanguage']).toBe('English');
+    expect(fields['notebookAssistant.warnAboveTokens']).toBe(12_000);
+    expect(fields['notebookAssistant.defaultQuizQuestionCount']).toBe(7);
+    expect(fields['notebookAssistant.defaultSummaryStyle']).toBe('brief');
+    expect(fields['notebookAssistant.costMode']).toBe('conservative');
+    expect(fields['notebookAssistant.dailyTokenLimit']).toBe(80_000);
+    expect(fields['notebookAssistant.usageTrackingEnabled']).toBe(true);
+    expect(fields['notebookAssistant.apiKey']).toBeUndefined();
+
+    const out = settingsAdapter.unpack(fields);
+    expect(out.patch.notebookAssistant).toEqual({
+      provider: 'openrouter',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      model: 'openai/gpt-4o-mini',
+      targetLanguage: 'English',
+      warnAboveTokens: 12_000,
+      defaultQuizQuestionCount: 7,
+      defaultSummaryStyle: 'brief',
+      costMode: 'conservative',
+      dailyTokenLimit: 80_000,
+      usageTrackingEnabled: true,
+    });
+  });
+
   test('declares encryptedFields covering kosync / readwise / hardcover / webdav / s3 credentials only (not serverUrl / endpoint)', () => {
     expect(settingsAdapter.encryptedFields).toEqual([
       'kosync.username',
@@ -188,6 +235,11 @@ describe('settingsAdapter', () => {
     expect(settingsAdapter.encryptedFields).not.toContain('s3.endpoint');
     expect(settingsAdapter.encryptedFields).not.toContain('s3.region');
     expect(settingsAdapter.encryptedFields).not.toContain('s3.bucket');
+  });
+
+  test('Notebook Assistant API key is not a synced or encrypted settings field', () => {
+    expect(SETTINGS_WHITELIST).not.toContain('notebookAssistant.apiKey');
+    expect(settingsAdapter.encryptedFields).not.toContain('notebookAssistant.apiKey');
   });
 
   test('unpackRow reconstructs the patch from CRDT envelopes', () => {
@@ -238,6 +290,20 @@ describe('SETTINGS_WHITELIST', () => {
     expect(SETTINGS_WHITELIST).not.toContain('s3.enabled');
     expect(SETTINGS_WHITELIST).not.toContain('s3.deviceId');
     expect(SETTINGS_WHITELIST).not.toContain('s3.providerSelectedAt');
+  });
+
+  test('includes Notebook Assistant non-secret config but not local-only API key', () => {
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.provider');
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.baseUrl');
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.model');
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.targetLanguage');
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.warnAboveTokens');
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.defaultQuizQuestionCount');
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.defaultSummaryStyle');
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.costMode');
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.dailyTokenLimit');
+    expect(SETTINGS_WHITELIST).toContain('notebookAssistant.usageTrackingEnabled');
+    expect(SETTINGS_WHITELIST).not.toContain('notebookAssistant.apiKey');
   });
 
   test('does NOT sync dictionarySettings.defaultProviderId (per-device last-used tab)', () => {

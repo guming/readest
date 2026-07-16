@@ -1,12 +1,13 @@
 import clsx from 'clsx';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RiQuillPenLine } from 'react-icons/ri';
+import { PiCaretDown, PiCaretRight, PiCopy, PiLightbulb, PiSparkle, PiTrash } from 'react-icons/pi';
 
 import { useSettingsStore } from '@/store/settingsStore';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useSidebarStore } from '@/store/sidebarStore';
-import { useNotebookStore } from '@/store/notebookStore';
+import { NotebookTab, useNotebookStore } from '@/store/notebookStore';
 import { useAIChatStore } from '@/store/aiChatStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useThemeStore } from '@/store/themeStore';
@@ -14,7 +15,9 @@ import { useEnv } from '@/context/EnvContext';
 import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import { TextSelection } from '@/utils/sel';
-import { BookNote } from '@/types/book';
+import { BookNote, NotebookCard } from '@/types/book';
+import type { QuizCardContent } from '@/services/notebook-assistant/types';
+import { writeTextToClipboard } from '@/utils/clipboard';
 import { uniqueId } from '@/utils/misc';
 import { eventDispatcher } from '@/utils/event';
 import { getBookDirFromLanguage } from '@/utils/book';
@@ -30,6 +33,8 @@ import {
 } from '../../utils/annotatorUtil';
 import BooknoteItem from '../sidebar/BooknoteItem';
 import AIAssistant from './AIAssistant';
+import NotebookAssistantActions from './NotebookAssistantActions';
+import NotebookReview from './NotebookReview';
 import NotebookHeader from './Header';
 import NoteEditor from './NoteEditor';
 import SearchBar from './SearchBar';
@@ -59,6 +64,7 @@ const Notebook: React.FC = ({}) => {
   const [isSearchBarVisible, setIsSearchBarVisible] = useState(false);
   const [searchResults, setSearchResults] = useState<BookNote[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(() => new Set());
   const isMobile = window.innerWidth < 640;
   const [isFullHeightInMobile, setIsFullHeightInMobile] = useState(isMobile);
 
@@ -137,7 +143,7 @@ const Notebook: React.FC = ({}) => {
     saveSysSettings(envConfig, 'globalReadSettings', newGlobalReadSettings);
   };
 
-  const handleTabChange = (tab: 'notes' | 'ai') => {
+  const handleTabChange = (tab: NotebookTab) => {
     setNotebookActiveTab(tab);
     const globalReadSettings = settings.globalReadSettings;
     const newGlobalReadSettings = { ...globalReadSettings, notebookActiveTab: tab };
@@ -292,6 +298,13 @@ const Notebook: React.FC = ({}) => {
 
   const config = getConfig(sideBarBookKey);
   const { booknotes: allNotes = [] } = config || {};
+  const notebookCards = (config?.notebookCards ?? [])
+    .filter((card) => !card.deletedAt)
+    .sort((a, b) => b.createdAt - a.createdAt);
+  const assistantCards = notebookCards.filter((card) =>
+    ['summary', 'insight', 'takeaway'].includes(card.type),
+  );
+  const quizCards = notebookCards.filter((card) => ['quiz', 'mistake'].includes(card.type));
   const annotationNotes = allNotes
     .filter((note) => note.type === 'annotation' && note.note && !note.deletedAt)
     .sort((a, b) => b.createdAt - a.createdAt);
@@ -323,6 +336,152 @@ const Notebook: React.FC = ({}) => {
     [excerptNotes, searchResults, isSearchBarVisible],
   );
 
+  const handleNavigateCard = (card: NotebookCard) => {
+    const cfi = card.selectionCfi || card.pageCfi;
+    if (!cfi || !sideBarBookKey) return;
+    eventDispatcher.dispatch('navigate', { bookKey: sideBarBookKey, cfi });
+    getView(sideBarBookKey)?.goTo(cfi);
+  };
+
+  const handleDeleteCard = async (card: NotebookCard) => {
+    if (!sideBarBookKey) return;
+    const latest = getConfig(sideBarBookKey);
+    if (!latest) return;
+    const now = Date.now();
+    const cards = (latest.notebookCards ?? []).map((item) =>
+      item.id === card.id ? { ...item, updatedAt: now, deletedAt: now } : item,
+    );
+    const next = { ...latest, notebookCards: cards, updatedAt: now };
+    useBookDataStore.getState().setConfig(sideBarBookKey, next);
+    await saveConfig(envConfig, sideBarBookKey, next, settings);
+  };
+
+  const toggleCardExpanded = (cardId: string) => {
+    setExpandedCardIds((current) => {
+      const next = new Set(current);
+      if (next.has(cardId)) {
+        next.delete(cardId);
+      } else {
+        next.add(cardId);
+      }
+      return next;
+    });
+  };
+
+  const renderNotebookCard = (card: NotebookCard) => {
+    const isExpanded = expandedCardIds.has(card.id);
+    const Icon = card.type === 'translation' || card.type === 'summary' ? PiSparkle : PiLightbulb;
+    const sourceText = card.sourceText || card.contextType;
+    const contentText =
+      typeof card.content === 'string'
+        ? card.content
+        : card.content.questions
+            .map((question, index) => `${index + 1}. ${question.question}`)
+            .join('\n');
+    return (
+      <li key={card.id} className='my-2'>
+        <article className='border-base-300 bg-base-100 rounded-md border p-3 text-sm'>
+          <div className={clsx('flex items-center justify-between gap-2', isExpanded && 'mb-2')}>
+            <button
+              type='button'
+              className='flex min-w-0 items-center gap-2 font-medium disabled:cursor-default'
+              disabled={!card.selectionCfi && !card.pageCfi}
+              onClick={() => handleNavigateCard(card)}
+            >
+              <Icon className='shrink-0' />
+              <span className='truncate'>{card.title}</span>
+            </button>
+            <div className='flex shrink-0'>
+              <button
+                type='button'
+                className='btn btn-ghost btn-xs btn-square'
+                onClick={() => toggleCardExpanded(card.id)}
+                aria-expanded={isExpanded}
+                aria-label={isExpanded ? _('Collapse') : _('Expand')}
+                title={isExpanded ? _('Collapse') : _('Expand')}
+              >
+                {isExpanded ? <PiCaretDown /> : <PiCaretRight />}
+              </button>
+              <button
+                type='button'
+                className='btn btn-ghost btn-xs btn-square'
+                onClick={() => void writeTextToClipboard(contentText)}
+                aria-label={_('Copy')}
+                title={_('Copy')}
+              >
+                <PiCopy />
+              </button>
+              <button
+                type='button'
+                className='btn btn-ghost btn-xs btn-square text-red-500'
+                onClick={() => void handleDeleteCard(card)}
+                aria-label={_('Delete')}
+                title={_('Delete')}
+              >
+                <PiTrash />
+              </button>
+            </div>
+          </div>
+          {(card.pageNumber != null || card.chapterTitle) && (
+            <p className={clsx('text-base-content/55 text-xs', isExpanded && 'mb-2')}>
+              {card.pageNumber != null && _('Page {{number}}', { number: card.pageNumber })}
+              {card.pageNumber != null && card.chapterTitle ? ' · ' : ''}
+              {card.chapterTitle || ''}
+            </p>
+          )}
+          {isExpanded && (
+            <>
+              {sourceText && (
+                <p
+                  className={clsx(
+                    'text-base-content/60 mb-2 text-xs',
+                    card.type === 'translation' ? 'whitespace-pre-wrap' : 'line-clamp-2',
+                  )}
+                >
+                  {sourceText}
+                </p>
+              )}
+              {typeof card.content === 'string' ? (
+                <p className='whitespace-pre-wrap leading-relaxed'>{card.content}</p>
+              ) : (
+                <div className='space-y-2'>
+                  <p className='text-base-content/70 text-sm'>
+                    {card.type === 'mistake' ? (
+                      <>
+                        {_('Missed Questions')}: {card.content.questions.length}
+                      </>
+                    ) : (
+                      <>
+                        {_('Score')}: {card.content.score ?? 0}/{card.content.questions.length}
+                      </>
+                    )}
+                  </p>
+                  <ol className='space-y-2'>
+                    {(card.content as QuizCardContent).questions.map((question, index) => (
+                      <li key={question.id} className='text-sm'>
+                        <p className='font-medium'>
+                          {index + 1}. {question.question}
+                        </p>
+                        <p className='text-base-content/70'>
+                          {_('Answer')}: {question.answer}
+                        </p>
+                        <p className='text-base-content/60'>{question.explanation}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              <p className='text-base-content/50 mt-2 text-xs'>
+                {card.provider} · {card.model} · ~
+                {card.tokenEstimate.input + card.tokenEstimate.output} tokens
+              </p>
+            </>
+          )}
+        </article>
+      </li>
+    );
+  };
+
   if (!sideBarBookKey) return null;
 
   const bookData = getBookData(sideBarBookKey);
@@ -334,7 +493,8 @@ const Notebook: React.FC = ({}) => {
   const languageDir = getBookDirFromLanguage(bookDoc.metadata.language);
 
   const hasSearchResults = filteredAnnotationNotes.length > 0 || filteredExcerptNotes.length > 0;
-  const hasAnyNotes = annotationNotes.length > 0 || excerptNotes.length > 0;
+  const hasAnyNotes =
+    annotationNotes.length > 0 || excerptNotes.length > 0 || notebookCards.length > 0;
   const isNotesTabEmpty =
     !notebookNewAnnotation && !notebookEditAnnotation && !isSearchBarVisible && !hasAnyNotes;
 
@@ -437,7 +597,40 @@ const Notebook: React.FC = ({}) => {
         </div>
         {notebookActiveTab === 'ai' ? (
           <div className='flex min-h-0 flex-1 flex-col'>
-            <AIAssistant key={activeConversationId ?? 'new'} bookKey={sideBarBookKey} />
+            <NotebookAssistantActions bookKey={sideBarBookKey} />
+            {assistantCards.length > 0 && (
+              <div className='min-h-0 overflow-y-auto px-3 py-2'>
+                <div dir='ltr'>
+                  <p className='content font-size-base'>{_('Assistant Cards')}</p>
+                </div>
+                <ul>{assistantCards.map(renderNotebookCard)}</ul>
+              </div>
+            )}
+            {settings.aiSettings?.enabled ? (
+              <div className='min-h-0 flex-1'>
+                <AIAssistant key={activeConversationId ?? 'new'} bookKey={sideBarBookKey} />
+              </div>
+            ) : assistantCards.length === 0 ? (
+              <div className='flex flex-1 items-center justify-center overflow-y-auto px-3'>
+                <EmptyState
+                  Icon={PiSparkle}
+                  label={_('No Assistant Cards')}
+                  hint={_('Generate a summary, insight, or takeaway')}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : notebookActiveTab === 'review' ? (
+          <div className='flex min-h-0 flex-1 flex-col'>
+            <NotebookReview bookKey={sideBarBookKey} />
+            {quizCards.length > 0 && (
+              <div className='min-h-0 overflow-y-auto px-3 py-2'>
+                <div dir='ltr'>
+                  <p className='content font-size-base'>{_('Saved Quizzes')}</p>
+                </div>
+                <ul>{quizCards.map(renderNotebookCard)}</ul>
+              </div>
+            )}
           </div>
         ) : isNotesTabEmpty ? (
           <div className='flex flex-grow items-center justify-center overflow-y-auto px-3'>
@@ -454,6 +647,12 @@ const Notebook: React.FC = ({}) => {
                 <p className='font-size-sm text-center'>{_('No notes match your search')}</p>
               </div>
             )}
+            <div dir='ltr'>
+              {notebookCards.length > 0 && (
+                <p className='content font-size-base'>{_('Assistant Cards')}</p>
+              )}
+            </div>
+            <ul>{notebookCards.map(renderNotebookCard)}</ul>
             <div dir='ltr'>
               {filteredExcerptNotes.length > 0 && (
                 <p className='content font-size-base'>
