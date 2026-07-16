@@ -18,7 +18,6 @@ vi.mock('react-icons/io5', () => ({
   IoAccessibilityOutline: () => null,
 }));
 vi.mock('react-icons/pi', () => ({
-  PiRobot: () => null,
   PiSparkle: () => null,
   PiSpeakerHigh: () => null,
   PiSun: () => null,
@@ -176,11 +175,10 @@ describe('buildCommandRegistry', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('should include AI panel items in non-production', () => {
+  it('should not include removed AI panel settings items', () => {
     const items = buildCommandRegistry(createMockOptions());
-    const aiItems = items.filter((i) => i.panel === 'AI');
-    // In test environment (not production), AI items should be included
-    expect(aiItems.length).toBeGreaterThan(0);
+    const aiItems = items.filter((i) => i.id.startsWith('settings.ai.'));
+    expect(aiItems).toHaveLength(0);
   });
 
   it('should give each settings item keywords and section', () => {

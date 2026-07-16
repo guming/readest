@@ -8,7 +8,7 @@ import { useCommandPalette } from '@/components/command-palette';
 import { RiFontSize, RiShareLine } from 'react-icons/ri';
 import { RiDashboardLine, RiTranslate } from 'react-icons/ri';
 import { VscSymbolColor } from 'react-icons/vsc';
-import { PiDotsThreeVerticalBold, PiRobot, PiSparkle, PiSpeakerHigh } from 'react-icons/pi';
+import { PiDotsThreeVerticalBold, PiSparkle, PiSpeakerHigh } from 'react-icons/pi';
 import { LiaHandPointerSolid } from 'react-icons/lia';
 import { IoAccessibilityOutline } from 'react-icons/io5';
 import {
@@ -31,7 +31,6 @@ import DialogMenu from './DialogMenu';
 import ControlPanel from './ControlPanel';
 import LangPanel from './LangPanel';
 import MiscPanel from './MiscPanel';
-import AIPanel from './AIPanel';
 import NotebookAssistantPanel from './NotebookAssistantPanel';
 import TTSPanel from './TTSPanel';
 
@@ -42,7 +41,6 @@ export type SettingsPanelType =
   | 'Control'
   | 'TTS'
   | 'Language'
-  | 'AI'
   | 'NotebookAssistant'
   | 'Integrations'
   | 'Custom';
@@ -119,12 +117,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
       label: _('Notebook Assistant'),
     },
     {
-      tab: 'AI',
-      icon: PiRobot,
-      label: _('AI Assistant'),
-      disabled: process.env.NODE_ENV === 'production',
-    },
-    {
       tab: 'TTS',
       icon: PiSpeakerHigh,
       label: _('TTS'),
@@ -185,7 +177,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     Control: null,
     TTS: null,
     Language: null,
-    AI: null,
     NotebookAssistant: null,
     Integrations: null,
     Custom: null,
@@ -220,7 +211,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
         control: 'Control',
         tts: 'TTS',
         language: 'Language',
-        ai: 'AI',
+        ai: 'NotebookAssistant',
         notebookassistant: 'NotebookAssistant',
         integrations: 'Integrations',
         custom: 'Custom',
@@ -481,7 +472,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
             onRegisterReset={(fn) => registerResetFunction('Language', fn)}
           />
         )}
-        {activePanel === 'AI' && <AIPanel />}
         {activePanel === 'NotebookAssistant' && <NotebookAssistantPanel />}
         {activePanel === 'Integrations' && <IntegrationsPanel />}
         {activePanel === 'Custom' && (
