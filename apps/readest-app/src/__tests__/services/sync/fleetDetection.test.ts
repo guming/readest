@@ -1,15 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import type { SystemSettings } from '@/types/settings';
-import { useFileSyncStore } from '@/store/fileSyncStore';
-
-vi.mock('@/utils/event', () => ({
-  eventDispatcher: {
-    dispatch: vi.fn(),
-  },
-}));
-
 import { checkMixedFleetOnce } from '@/services/sync/fleetDetection';
-import { eventDispatcher } from '@/utils/event';
 import type { SyncClient } from '@/libs/sync';
 
 const translationFn = (key: string) => key;
@@ -29,16 +20,10 @@ const settingsWith = (patch: Partial<SystemSettings>): SystemSettings =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useFileSyncStore.setState({
-    byKind: {},
-    activeKind: null,
-    lastErrorByKind: {},
-    fleetNoticeShown: false,
-  });
 });
 
 describe('checkMixedFleetOnce', () => {
-  test('no probe when readest is the provider', async () => {
+  test('no probe when local is the provider', async () => {
     const client = makeSyncClient([]);
     expect(await checkMixedFleetOnce(client, settingsWith({}), translationFn)).toBe(false);
     expect(client.pullChanges).not.toHaveBeenCalled();
@@ -51,24 +36,17 @@ describe('checkMixedFleetOnce', () => {
     expect(client.pullChanges).not.toHaveBeenCalled();
   });
 
-  test('probes read-only since the selection anchor and notifies when another writer exists', async () => {
+  test('does not probe account sync even with a selection anchor', async () => {
     const client = makeSyncClient([{ book_hash: 'h1' }]);
     const settings = settingsWith({
       webdav: { enabled: true, providerSelectedAt: 12345 },
     } as Partial<SystemSettings>);
 
-    expect(await checkMixedFleetOnce(client, settings, translationFn)).toBe(true);
-
-    expect(client.pullChanges).toHaveBeenCalledWith(12345, 'books', undefined, undefined, 1);
-    expect(vi.mocked(eventDispatcher.dispatch)).toHaveBeenCalledWith(
-      'toast',
-      expect.objectContaining({
-        message: expect.stringContaining('Another device is still syncing'),
-      }),
-    );
+    expect(await checkMixedFleetOnce(client, settings, translationFn)).toBe(false);
+    expect(client.pullChanges).not.toHaveBeenCalled();
   });
 
-  test('notifies only once per session', async () => {
+  test('stays quiet across repeated calls', async () => {
     const client = makeSyncClient([{ book_hash: 'h1' }]);
     const settings = settingsWith({
       webdav: { enabled: true, providerSelectedAt: 12345 },
@@ -77,7 +55,7 @@ describe('checkMixedFleetOnce', () => {
     await checkMixedFleetOnce(client, settings, translationFn);
     await checkMixedFleetOnce(client, settings, translationFn);
 
-    expect(vi.mocked(eventDispatcher.dispatch)).toHaveBeenCalledTimes(1);
+    expect(client.pullChanges).not.toHaveBeenCalled();
   });
 
   test('quiet when no newer rows exist', async () => {
@@ -87,7 +65,7 @@ describe('checkMixedFleetOnce', () => {
     } as Partial<SystemSettings>);
 
     expect(await checkMixedFleetOnce(client, settings, translationFn)).toBe(false);
-    expect(vi.mocked(eventDispatcher.dispatch)).not.toHaveBeenCalled();
+    expect(client.pullChanges).not.toHaveBeenCalled();
   });
 
   test('probe failures are silent (offline is not a fleet problem)', async () => {
@@ -101,6 +79,6 @@ describe('checkMixedFleetOnce', () => {
     } as Partial<SystemSettings>);
 
     expect(await checkMixedFleetOnce(client, settings, translationFn)).toBe(false);
-    expect(vi.mocked(eventDispatcher.dispatch)).not.toHaveBeenCalled();
+    expect(client.pullChanges).not.toHaveBeenCalled();
   });
 });

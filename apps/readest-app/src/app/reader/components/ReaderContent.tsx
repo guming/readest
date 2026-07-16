@@ -118,7 +118,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
       if (!user) {
         eventDispatcher.dispatch('toast', {
           type: 'info',
-          message: _('Sign in to share books'),
+          message: _('Cloud sharing is unavailable in local mode'),
           timeout: 2500,
         });
         return;

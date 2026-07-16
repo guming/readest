@@ -29,7 +29,7 @@ export const runActiveFileLibrarySync = async (
   _: TranslationFunc,
 ): Promise<SyncLibraryResult | null> => {
   const gate = resolveCloudSyncGate(useSettingsStore.getState().settings);
-  if (gate.provider === 'readest' || gate.paused) return null;
+  if (gate.provider === 'local' || gate.paused) return null;
   const kind = gate.provider;
 
   if (!useLibraryStore.getState().libraryLoaded) return null;
@@ -91,14 +91,14 @@ export const runActiveFileLibrarySync = async (
 };
 
 /**
- * Build the ACTIVE third-party provider's engine, or null when Readest Cloud
+ * Build the ACTIVE third-party provider's engine, or null when local-only mode
  * is selected / the provider cannot be constructed. Shared by the per-book
  * upload / download actions below.
  */
 const buildActiveEngine = async (envConfig: EnvConfigType): Promise<FileSyncEngine | null> => {
   const settings = useSettingsStore.getState().settings;
   const gate = resolveCloudSyncGate(settings);
-  if (gate.provider === 'readest' || gate.paused) return null;
+  if (gate.provider === 'local' || gate.paused) return null;
   const kind = gate.provider;
   const appService = await envConfig.getAppService();
   const fileProvider = await createFileSyncProvider(kind, settings);

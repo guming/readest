@@ -53,7 +53,7 @@ export function useOpenShareLink() {
       if (!user) {
         eventDispatcher.dispatch('toast', {
           type: 'info',
-          message: _('Sign in to import shared books'),
+          message: _('Shared-book import is unavailable in local mode'),
           timeout: 2500,
         });
         return;

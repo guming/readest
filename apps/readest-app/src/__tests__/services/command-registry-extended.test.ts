@@ -19,6 +19,7 @@ vi.mock('react-icons/io5', () => ({
 }));
 vi.mock('react-icons/pi', () => ({
   PiRobot: () => null,
+  PiSparkle: () => null,
   PiSpeakerHigh: () => null,
   PiSun: () => null,
   PiMoon: () => null,
@@ -59,7 +60,6 @@ function createMockOptions(
     toggleFullscreen: vi.fn(),
     toggleAlwaysOnTop: vi.fn(),
     toggleScreenWakeLock: vi.fn(),
-    toggleAutoUpload: vi.fn(),
     reloadPage: vi.fn(),
     toggleOpenLastBooks: vi.fn(),
     showAbout: vi.fn(),

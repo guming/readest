@@ -75,8 +75,8 @@ describe('withActiveCloudProvider', () => {
     expect(next.googleDrive.enabled).toBe(false);
   });
 
-  test("'readest' behaves as deactivation of both third-party providers", () => {
-    const next = withActiveCloudProvider(base, 'readest');
+  test("'local' behaves as deactivation of third-party providers", () => {
+    const next = withActiveCloudProvider(base, 'local');
     expect(next.webdav.enabled).toBe(false);
     expect(next.googleDrive.enabled).toBe(false);
     // Config survives so switching back needs no re-entry.

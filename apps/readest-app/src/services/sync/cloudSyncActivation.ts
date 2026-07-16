@@ -7,8 +7,7 @@ import { broadcastGlobalSettings } from '@/utils/settingsSync';
 
 /**
  * The provider argument for activation: a third-party backend, or
- * 'readest' / null (both mean "no third-party provider active" — Readest
- * Cloud is the derived default, never a stored flag).
+ * 'readest' / null (both mean "no third-party provider active").
  */
 export type CloudSyncActivationKind = CloudSyncProviderKind | null;
 
@@ -26,8 +25,8 @@ const isThirdParty = (active: CloudSyncActivationKind): active is FileSyncBacken
  *
  * Activating a provider (disabled -> enabled) also turns its `syncBooks` on
  * and stamps `providerSelectedAt`: the selected provider owns the book-file
- * channel — native Readest Cloud uploads gate off — so leaving syncBooks at
- * its `false` default would back books up nowhere, and the timestamp anchors
+ * channel, so leaving syncBooks at its `false` default would back books up
+ * nowhere, and the timestamp anchors
  * the mixed-fleet detection probe. An explicit syncBooks opt-out while the
  * provider stays active is respected (re-activation changes nothing).
  */

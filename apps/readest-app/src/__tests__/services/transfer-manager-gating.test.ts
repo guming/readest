@@ -147,11 +147,11 @@ describe('provider gating of book uploads', () => {
     expect(Object.keys(useTransferStore.getState().transfers)).toHaveLength(0);
   });
 
-  test('queueUpload works when Readest Cloud is the provider', async () => {
+  test('queueUpload returns null in local mode', async () => {
     await initManager();
 
     const id = transferManager.queueUpload(makeBook());
-    expect(id).toBeTruthy();
+    expect(id).toBeNull();
   });
 
   test('queueBatchUploads returns empty when gated', async () => {
@@ -197,7 +197,7 @@ describe('settings-loaded barrier', () => {
     expect(useTransferStore.getState().transfers['t1']?.status).toBe('pending');
   });
 
-  test('the deferred upload executes once settings hydrate with readest selected', async () => {
+  test('a deferred account upload is policy-cancelled once local settings hydrate', async () => {
     settingsNotLoaded();
     localStorage.setItem(
       'readest_transfer_queue',
@@ -212,7 +212,9 @@ describe('settings-loaded barrier', () => {
     settingsLoaded();
     await flushAsync();
 
-    expect(appService['uploadBook']).toHaveBeenCalledTimes(1);
+    expect(appService['uploadBook']).not.toHaveBeenCalled();
+    expect(useTransferStore.getState().transfers['t1']?.status).toBe('cancelled');
+    expect(useTransferStore.getState().transfers['t1']?.cancelReason).toBe('policy');
   });
 
   test('replica transfers are not stalled by the barrier', async () => {
@@ -265,17 +267,13 @@ describe('policy cancellation on restore/reconcile', () => {
     expect(transfers['rep1']?.status).toBe('pending');
   });
 
-  test('switching providers after init policy-cancels pending book uploads', async () => {
+  test('new book uploads cannot be queued after init in local mode', async () => {
     await initManager();
     useTransferStore.getState().pauseQueue();
-    const id = transferManager.queueUpload(makeBook())!;
+    const id = transferManager.queueUpload(makeBook());
 
-    webdavSelected();
-    await flushAsync();
-
-    const transfer = useTransferStore.getState().transfers[id];
-    expect(transfer?.status).toBe('cancelled');
-    expect(transfer?.cancelReason).toBe('policy');
+    expect(id).toBeNull();
+    expect(Object.keys(useTransferStore.getState().transfers)).toHaveLength(0);
   });
 
   test('policy-cancelled rows from a previous session are pruned on restore', async () => {
@@ -361,8 +359,7 @@ describe('cancelled bucket accounting', () => {
 
   test('user cancelTransfer records cancelReason user', async () => {
     await initManager();
-    useTransferStore.getState().pauseQueue();
-    const id = transferManager.queueUpload(makeBook())!;
+    const id = useTransferStore.getState().addTransfer('hash1', 'Test Book', 'download');
 
     transferManager.cancelTransfer(id);
 
@@ -390,31 +387,30 @@ describe('cancelled bucket accounting', () => {
 });
 
 describe('quota failure handling', () => {
-  test('quota 403 fails immediately with zero retries', async () => {
+  test('quota path is unreachable for new account uploads in local mode', async () => {
     const appService = makeAppService({
       uploadBook: vi.fn().mockRejectedValue(new Error('Insufficient storage quota')),
     });
     const book = makeBook();
     await initManager(appService, [book]);
 
-    transferManager.queueUpload(book);
+    const id = transferManager.queueUpload(book);
     await flushAsync();
 
     const transfers = Object.values(useTransferStore.getState().transfers);
-    expect(transfers).toHaveLength(1);
-    expect(transfers[0]?.status).toBe('failed');
-    expect(transfers[0]?.retryCount).toBe(0);
-    expect(appService['uploadBook']).toHaveBeenCalledTimes(1);
+    expect(id).toBeNull();
+    expect(transfers).toHaveLength(0);
+    expect(appService['uploadBook']).not.toHaveBeenCalled();
   });
 
-  test('a batch of quota failures produces one summary toast, not one per book', async () => {
+  test('batch account uploads are not queued in local mode', async () => {
     const appService = makeAppService({
       uploadBook: vi.fn().mockRejectedValue(new Error('Insufficient storage quota')),
     });
     const books = [makeBook(), makeBook({ hash: 'hash2' }), makeBook({ hash: 'hash3' })];
     await initManager(appService, books);
 
-    transferManager.queueBatchUploads(books);
+    const ids = transferManager.queueBatchUploads(books);
     await flushAsync(10000);
 
     const dispatched = vi.mocked(eventDispatcher.dispatch).mock.calls.filter(
@@ -424,22 +420,24 @@ describe('quota failure handling', () => {
           .toLowerCase()
           .includes('quota'),
     );
-    expect(dispatched).toHaveLength(1);
-    expect(String((dispatched[0]![1] as { message: string }).message)).toContain('3');
+    expect(ids).toEqual([]);
+    expect(dispatched).toHaveLength(0);
+    expect(appService['uploadBook']).not.toHaveBeenCalled();
   });
 
-  test('non-quota errors keep the existing retry behavior', async () => {
+  test('non-quota upload errors are not reached in local mode', async () => {
     const appService = makeAppService({
       uploadBook: vi.fn().mockRejectedValue(new Error('network boom')),
     });
     const book = makeBook();
     await initManager(appService, [book]);
 
-    transferManager.queueUpload(book);
+    const id = transferManager.queueUpload(book);
     await flushAsync(60000);
 
     const transfer = Object.values(useTransferStore.getState().transfers)[0];
-    expect(transfer?.status).toBe('failed');
-    expect(transfer?.retryCount).toBe(3);
+    expect(id).toBeNull();
+    expect(transfer).toBeUndefined();
+    expect(appService['uploadBook']).not.toHaveBeenCalled();
   });
 });

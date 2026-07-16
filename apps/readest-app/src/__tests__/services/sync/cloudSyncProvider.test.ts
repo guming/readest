@@ -33,8 +33,8 @@ beforeEach(() => {
 });
 
 describe('getCloudSyncProvider', () => {
-  test('derives readest when no third-party provider is enabled', () => {
-    expect(getCloudSyncProvider(makeSettings())).toBe('readest');
+  test('derives local when no third-party provider is enabled', () => {
+    expect(getCloudSyncProvider(makeSettings())).toBe('local');
   });
 
   test('derives webdav when webdav is enabled', () => {
@@ -74,18 +74,18 @@ describe('getCloudSyncProvider', () => {
     expect(getCloudSyncProvider(settings)).toBe('webdav');
   });
 
-  test('defaults to readest for missing slices and missing settings', () => {
-    expect(getCloudSyncProvider({} as SystemSettings)).toBe('readest');
-    expect(getCloudSyncProvider(null)).toBe('readest');
-    expect(getCloudSyncProvider(undefined)).toBe('readest');
+  test('defaults to local for missing slices and missing settings', () => {
+    expect(getCloudSyncProvider({} as SystemSettings)).toBe('local');
+    expect(getCloudSyncProvider(null)).toBe('local');
+    expect(getCloudSyncProvider(undefined)).toBe('local');
   });
 });
 
 describe('resolveCloudSyncGate', () => {
-  test('readest provider is never paused, even when legacy cloud sync checks are disallowed', () => {
+  test('local provider is never paused, even when legacy cloud sync checks are disallowed', () => {
     vi.mocked(isCloudSyncAllowed).mockReturnValue(false);
     expect(resolveCloudSyncGate(makeSettings(), 'free')).toEqual({
-      provider: 'readest',
+      provider: 'local',
       paused: false,
     });
   });
@@ -137,7 +137,7 @@ describe('applySyncBooksAutoEnable (upgrade migration for already-enabled provid
     expect(settings.googleDrive?.syncBooks).toBe(true);
   });
 
-  test('no-op when readest is the provider', () => {
+  test('no-op when local is the provider', () => {
     const settings = makeSettings();
     expect(applySyncBooksAutoEnable(settings)).toBe(false);
     expect(settings.webdav?.syncBooks).toBeUndefined();
@@ -162,8 +162,8 @@ describe('applySyncBooksAutoEnable (upgrade migration for already-enabled provid
 });
 
 describe('isReadestCloudStorageActive', () => {
-  test('true when readest is the derived provider', () => {
-    expect(isReadestCloudStorageActive(makeSettings())).toBe(true);
+  test('false in local mode', () => {
+    expect(isReadestCloudStorageActive(makeSettings())).toBe(false);
   });
 
   test('false when a third-party provider is selected', () => {
@@ -193,6 +193,6 @@ describe('cloudProviderDisplayName', () => {
     expect(cloudProviderDisplayName('gdrive')).toBe('Google Drive');
     expect(cloudProviderDisplayName('s3')).toBe('S3');
     expect(cloudProviderDisplayName('onedrive')).toBe('OneDrive');
-    expect(cloudProviderDisplayName('readest')).toBe('Readest Cloud');
+    expect(cloudProviderDisplayName('local')).toBe('Local');
   });
 });

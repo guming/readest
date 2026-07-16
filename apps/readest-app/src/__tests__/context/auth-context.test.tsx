@@ -18,9 +18,11 @@ vi.mock('posthog-js', () => ({
 }));
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { supabase } from '@/utils/supabase';
 
 describe('AuthContext memoization', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     if (typeof window !== 'undefined') {
       window.localStorage.clear();
     }
@@ -98,5 +100,31 @@ describe('AuthContext memoization', () => {
     expect(last.login).toBe(prev.login);
     expect(last.logout).toBe(prev.logout);
     expect(last.refresh).toBe(prev.refresh);
+  });
+
+  test('clears legacy auth storage without touching Supabase', () => {
+    window.localStorage.setItem('token', 'old-token');
+    window.localStorage.setItem('refresh_token', 'old-refresh');
+    window.localStorage.setItem('user', '{"id":"old-user"}');
+
+    function Probe() {
+      const value = useAuth();
+      expect(value.token).toBeNull();
+      expect(value.user).toBeNull();
+      return null;
+    }
+
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    );
+
+    expect(window.localStorage.getItem('token')).toBeNull();
+    expect(window.localStorage.getItem('refresh_token')).toBeNull();
+    expect(window.localStorage.getItem('user')).toBeNull();
+    expect(supabase.auth.refreshSession).not.toHaveBeenCalled();
+    expect(supabase.auth.signOut).not.toHaveBeenCalled();
+    expect(supabase.auth.onAuthStateChange).not.toHaveBeenCalled();
   });
 });

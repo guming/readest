@@ -120,7 +120,7 @@ export function SyncCategoriesSection() {
           // interactive and persists: it governs the native channel the
           // user returns to when Readest Cloud is re-selected.
           const managedByProvider =
-            cloudProvider !== 'readest' &&
+            cloudProvider !== 'local' &&
             (category === 'book' || category === 'progress' || category === 'note');
           return (
             <li key={category} className='flex items-center justify-between gap-4 px-4 py-3'>

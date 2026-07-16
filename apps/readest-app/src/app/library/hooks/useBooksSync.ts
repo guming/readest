@@ -59,21 +59,15 @@ export const useBooksSync = () => {
 
   const pullLibrary = useCallback(
     async (fullRefresh = false, verbose = false) => {
-      // While a third-party provider is selected, the native book channel
-      // is gated (syncBooks would return undefined and the toast would read
-      // "undefined book(s) synced"); every library-refresh surface — pull to
-      // refresh, the SettingsMenu sync row, BackupWindow — routes through
-      // here, so route them all to the file engine instead. Works logged out
-      // (file sync has no Readest account dependency).
+      // While a third-party provider is selected, route library-refresh
+      // surfaces to the file engine. Local-only mode simply skips sync.
       const provider = getCloudSyncProvider(useSettingsStore.getState().settings);
-      if (provider !== 'readest') {
+      if (provider !== 'local') {
         if (isPullingRef.current) return;
         try {
           isPullingRef.current = true;
           const result = await runActiveFileLibrarySync(envConfig, _);
           if (verbose) {
-            // Same message as the native Readest Cloud sync below, so every
-            // provider reports its work the same way.
             eventDispatcher.dispatch('toast', {
               type: result ? 'info' : 'error',
               message: result
@@ -111,12 +105,10 @@ export const useBooksSync = () => {
     throttle(
       async () => {
         if (isPullingRef.current) return;
-        // Third-party provider selected: the native book channel is gated,
-        // so the interval runs the read-only mixed-fleet probe instead —
-        // a device still writing natively would otherwise fork progress
-        // silently (the auto library sync itself is useLibraryFileSync's).
+        // Third-party provider selected: the file-sync engine owns the
+        // library channel (the auto library sync itself is useLibraryFileSync's).
         const settingsNow = useSettingsStore.getState().settings;
-        if (getCloudSyncProvider(settingsNow) !== 'readest') {
+        if (getCloudSyncProvider(settingsNow) !== 'local') {
           void checkMixedFleetOnce(syncClient, settingsNow, _);
           return;
         }

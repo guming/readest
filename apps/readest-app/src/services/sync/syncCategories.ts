@@ -122,12 +122,10 @@ export const isSyncCategoryEnabled = (id: string): boolean => {
   if (!category) return true; // unknown id → always-on
   if (
     PROVIDER_GATED_CATEGORIES.has(category) &&
-    getCloudSyncProvider(useSettingsStore.getState().settings) !== 'readest'
+    getCloudSyncProvider(useSettingsStore.getState().settings) !== 'local'
   ) {
     // Runtime override, deliberately not written into syncCategories:
-    // the user's own toggles persist untouched and govern the native
-    // channels again the moment Readest Cloud is re-selected. The
-    // Manage Sync panel surfaces this state per-row.
+    // a third-party provider owns these file-backed channels.
     return false;
   }
   if (isSyncCategoryLocked(category)) return true; // forced by a dependent

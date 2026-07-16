@@ -182,9 +182,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({
                     label={_('Share Book')}
                     disabled={!shareEnabled}
                     tooltip={
-                      shareEnabled
-                        ? undefined
-                        : _('Sign in and make the book available to share it')
+                      shareEnabled ? undefined : _('Cloud sharing is unavailable in local mode')
                     }
                     onClick={onShare}
                   />

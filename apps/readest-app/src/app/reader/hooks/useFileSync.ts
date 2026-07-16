@@ -86,7 +86,7 @@ export const useFileSync = (bookKey: string) => {
 
   // The single active cloud provider (WebDAV and Google Drive are exclusive).
   const provider = getCloudSyncProvider(settings);
-  const activeKind: FileSyncBackendKind | null = provider === 'readest' ? null : provider;
+  const activeKind: FileSyncBackendKind | null = provider === 'local' ? null : provider;
   const providerSettings = activeKind ? settings[settingsKeyForBackend(activeKind)] : undefined;
 
   /** Flips true on the first local change after a push, false right before each push. */

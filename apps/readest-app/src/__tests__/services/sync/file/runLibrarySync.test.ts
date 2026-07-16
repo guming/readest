@@ -81,7 +81,7 @@ beforeEach(() => {
 });
 
 describe('runActiveFileLibrarySync', () => {
-  test('returns false without syncing when readest is the provider', async () => {
+  test('returns false without syncing when local is the provider', async () => {
     setProvider({});
     expect(await runActiveFileLibrarySync(envConfig, translationFn)).toBeNull();
     expect(syncLibrary).not.toHaveBeenCalled();
@@ -137,7 +137,7 @@ describe('runActiveFileLibrarySync', () => {
 // The Book Details / bookshelf cloud buttons route here when a third-party
 // provider is selected, instead of the (gated) Readest Cloud transfer queue.
 describe('runActiveFileBookUpload', () => {
-  test('returns false without touching the engine when readest is the provider', async () => {
+  test('returns false without touching the engine when local is the provider', async () => {
     setProvider({});
     expect(await runActiveFileBookUpload(envConfig, makeBook('h1'))).toBe(false);
     expect(pushBookFile).not.toHaveBeenCalled();
@@ -170,7 +170,7 @@ describe('runActiveFileBookUpload', () => {
 });
 
 describe('runActiveFileBookDownload', () => {
-  test('returns false without touching the engine when readest is the provider', async () => {
+  test('returns false without touching the engine when local is the provider', async () => {
     setProvider({});
     expect(await runActiveFileBookDownload(envConfig, makeBook('h1'))).toBe(false);
     expect(downloadBookFile).not.toHaveBeenCalled();

@@ -52,7 +52,7 @@ export const useLibraryFileSync = () => {
   const libraryLoaded = useLibraryStore((s) => s.libraryLoaded);
   // The single active cloud provider (WebDAV and Google Drive are exclusive).
   const provider = getCloudSyncProvider(settings);
-  const activeKind: FileSyncBackendKind | null = provider === 'readest' ? null : provider;
+  const activeKind: FileSyncBackendKind | null = provider === 'local' ? null : provider;
 
   const isReady = useMemo(() => {
     if (activeKind === 'webdav') {

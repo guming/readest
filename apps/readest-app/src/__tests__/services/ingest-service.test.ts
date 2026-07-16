@@ -150,7 +150,7 @@ describe('ingestFile', () => {
     expect(book?.updatedAt).toBe(2000);
   });
 
-  test('forceUpload queues an upload even when autoUpload is off', async () => {
+  test('forceUpload does not queue account upload in local mode', async () => {
     const { appService, settings, isLoggedIn } = makeDeps({
       autoUpload: false,
       isLoggedIn: true,
@@ -159,16 +159,16 @@ describe('ingestFile', () => {
       { file: 'book.epub', books: [], forceUpload: true },
       { appService, settings, isLoggedIn },
     );
-    expect(transferManager.queueUpload).toHaveBeenCalledTimes(1);
+    expect(transferManager.queueUpload).not.toHaveBeenCalled();
   });
 
-  test('autoUpload queues an upload without forceUpload', async () => {
+  test('autoUpload does not queue account upload in local mode', async () => {
     const { appService, settings, isLoggedIn } = makeDeps({
       autoUpload: true,
       isLoggedIn: true,
     });
     await ingestFile({ file: 'book.epub', books: [] }, { appService, settings, isLoggedIn });
-    expect(transferManager.queueUpload).toHaveBeenCalledTimes(1);
+    expect(transferManager.queueUpload).not.toHaveBeenCalled();
   });
 
   test('does not queue an upload when neither forceUpload nor autoUpload is set', async () => {
@@ -624,13 +624,11 @@ describe('ingestFile', () => {
     expect(importBook.mock.calls[0]?.[2]).toMatchObject({ inPlace: false });
   });
 
-  // ------ in-place + cloud upload ------
-  // In-place imports are still uploaded so the user gets backup / cross-device
-  // sync. Only transient imports opt out of upload entirely. The on-the-wire
-  // shape is identical to a hash-copy book; uploadBook reads from book.filePath
-  // when set, which is asserted in cloud-service.test.ts.
+  // ------ in-place + local-first upload gating ------
+  // In-place imports no longer enqueue account uploads. User-owned sync
+  // storage mirrors imports through the file-sync path instead.
 
-  test('autoUpload still queues an in-place book (book.filePath set)', async () => {
+  test('autoUpload does not queue an in-place account upload', async () => {
     const { appService, settings, isLoggedIn } = makeDeps({
       autoUpload: true,
       isLoggedIn: true,
@@ -641,10 +639,10 @@ describe('ingestFile', () => {
       { file: '/Users/me/Library/sample.epub', books: [] },
       { appService, settings, isLoggedIn },
     );
-    expect(transferManager.queueUpload).toHaveBeenCalledTimes(1);
+    expect(transferManager.queueUpload).not.toHaveBeenCalled();
   });
 
-  test('forceUpload still queues an in-place book even when autoUpload is off', async () => {
+  test('forceUpload does not queue an in-place account upload', async () => {
     const { appService, settings, isLoggedIn } = makeDeps({
       autoUpload: false,
       isLoggedIn: true,
@@ -655,7 +653,7 @@ describe('ingestFile', () => {
       { file: '/Users/me/Library/sample.epub', books: [], forceUpload: true },
       { appService, settings, isLoggedIn },
     );
-    expect(transferManager.queueUpload).toHaveBeenCalledTimes(1);
+    expect(transferManager.queueUpload).not.toHaveBeenCalled();
   });
 
   test('transient still trumps in-place — no upload even with forceUpload', async () => {
