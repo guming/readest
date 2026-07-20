@@ -9,9 +9,11 @@ import {
   estimateQuizTokens,
   estimateSelectedTextTokens,
   normalizeAssistantBaseUrl,
+  parseOneQuestionResponse,
   parseQuizResponse,
   runChapterQuizAssistant,
   runNotebookContextAssistant,
+  runOneQuestionAssistant,
   runSelectedTextAssistant,
 } from '@/services/notebook-assistant/client';
 import { DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS } from '@/services/notebook-assistant/types';
@@ -133,6 +135,134 @@ describe('selected-text assistant client', () => {
       type: 'true_false',
       answer: 'True',
     });
+  });
+
+  test('parses and validates one multiple-choice question against its source', () => {
+    const parsed = parseOneQuestionResponse(
+      JSON.stringify({
+        question: {
+          id: 'one-1',
+          type: 'multiple_choice',
+          question: 'Why can rewards reduce motivation?',
+          choices: [
+            { id: 'a', text: 'They always cost too much.' },
+            { id: 'b', text: 'They can feel controlling.' },
+            { id: 'c', text: 'They remove all choices.' },
+          ],
+          correctChoiceId: 'b',
+          referenceAnswer: 'Rewards can replace intrinsic motivation when they feel controlling.',
+          evidenceQuote: 'Rewards can feel controlling and weaken intrinsic motivation.',
+        },
+      }),
+      'The author argues: Rewards can feel controlling and weaken intrinsic motivation.',
+    );
+    expect(parsed.question).toMatchObject({
+      id: 'one-1',
+      type: 'multiple_choice',
+      correctChoiceId: 'b',
+    });
+  });
+
+  test('parses an open question and explicit abstention', () => {
+    expect(
+      parseOneQuestionResponse(
+        JSON.stringify({
+          question: {
+            id: 'one-2',
+            type: 'open',
+            question: 'Explain the central trade-off in your own words.',
+            referenceAnswer: 'Speed improves output but can reduce accuracy.',
+            evidenceQuote: 'Greater speed increased output while reducing accuracy.',
+          },
+        }),
+        'Greater speed increased output while reducing accuracy.',
+      ).question,
+    ).toMatchObject({ type: 'open' });
+    expect(
+      parseOneQuestionResponse(
+        JSON.stringify({ question: null, reason: 'insufficient_content' }),
+        'Copyright page',
+      ),
+    ).toEqual({ question: null, reason: 'insufficient_content' });
+  });
+
+  test('rejects invalid one-question choices and unsupported evidence', () => {
+    const invalidChoice = JSON.stringify({
+      question: {
+        type: 'multiple_choice',
+        question: 'What matters?',
+        choices: [
+          { id: 'a', text: 'Context' },
+          { id: 'a', text: 'Context again' },
+          { id: 'c', text: 'Evidence' },
+        ],
+        correctChoiceId: 'missing',
+        referenceAnswer: 'Evidence matters.',
+        evidenceQuote: 'Evidence matters.',
+      },
+    });
+    expect(() => parseOneQuestionResponse(invalidChoice, 'Evidence matters.')).toThrow(
+      NotebookAssistantError,
+    );
+
+    const unsupportedEvidence = JSON.stringify({
+      question: {
+        type: 'open',
+        question: 'What matters?',
+        referenceAnswer: 'Evidence matters.',
+        evidenceQuote: 'This quote is not in the chapter.',
+      },
+    });
+    expect(() => parseOneQuestionResponse(unsupportedEvidence, 'Evidence matters.')).toThrow(
+      NotebookAssistantError,
+    );
+  });
+
+  test('requests exactly one source-grounded question', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  question: {
+                    id: 'one-3',
+                    type: 'open',
+                    question: 'Why is local-first useful?',
+                    referenceAnswer: 'It keeps reading available without a network.',
+                    evidenceQuote: 'Local-first keeps reading available without a network.',
+                  },
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    const settings = {
+      ...DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
+      baseUrl: 'https://api.example.com/v1',
+    };
+    const result = await runOneQuestionAssistant(
+      {
+        sourceText: 'Local-first keeps reading available without a network.',
+        title: 'Chapter 1',
+        targetLanguage: 'English',
+        provider: 'custom',
+        model: settings.model,
+      },
+      settings,
+      'secret',
+    );
+    expect(result.question?.type).toBe('open');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(init.body as string);
+    expect(body.messages[0].content).toContain('exactly one');
+    expect(body.messages[1].content).toContain('Local-first keeps reading');
+    expect(JSON.stringify(body)).not.toContain('secret');
   });
 
   test('requests a chapter quiz as structured JSON', async () => {
