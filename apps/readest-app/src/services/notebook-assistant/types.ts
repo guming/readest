@@ -121,13 +121,18 @@ export const DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS: NotebookAssistantSettings = {
   defaultQuizQuestionCount: 5,
   defaultSummaryStyle: 'structured',
   costMode: 'conservative',
-  dailyTokenLimit: 100_000,
+  dailyTokenLimit: 0,
   usageTrackingEnabled: true,
 };
 
 export const resolveNotebookAssistantSettings = (
   settings?: Partial<NotebookAssistantSettings> | null,
-): NotebookAssistantSettings => ({
-  ...DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
-  ...(settings ?? {}),
-});
+): NotebookAssistantSettings => {
+  const resolved = {
+    ...DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
+    ...(settings ?? {}),
+  };
+  // Migrate the former default so existing installations also become unlimited.
+  if (resolved.dailyTokenLimit === 100_000) resolved.dailyTokenLimit = 0;
+  return resolved;
+};

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS } from '@/services/notebook-assistant/types';
+import {
+  DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
+  resolveNotebookAssistantSettings,
+} from '@/services/notebook-assistant/types';
 import {
   buildNotebookAssistantDiagnostics,
   clearNotebookAssistantUsage,
@@ -10,6 +13,10 @@ import {
 } from '@/services/notebook-assistant/usage';
 
 describe('notebook assistant usage', () => {
+  test('migrates the former daily token default to unlimited', () => {
+    expect(resolveNotebookAssistantSettings({ dailyTokenLimit: 100_000 }).dailyTokenLimit).toBe(0);
+  });
+
   beforeEach(() => {
     clearNotebookAssistantUsage();
   });

@@ -82,8 +82,14 @@ export async function buildCurrentChapterContext(
   const section = findCurrentSection(bookDoc, view, progress);
   let sourceText = '';
   if (section?.loadText) {
-    sourceText = stripHtml((await section.loadText()) || '');
-  } else if (view?.renderer.getContents) {
+    try {
+      sourceText = stripHtml((await section.loadText()) || '');
+    } catch {
+      // Some document backends cannot load the section text while the renderer is
+      // still settling. The rendered document below is a valid fallback.
+    }
+  }
+  if (!sourceText && view?.renderer.getContents) {
     const first = view.renderer.getContents()[0];
     sourceText = first ? textFromDocument(first.doc) : '';
   }
