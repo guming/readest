@@ -1,6 +1,6 @@
 import clsx from 'clsx';
-import React, { useMemo } from 'react';
-import { MdEdit, MdDelete, MdContentCopy } from 'react-icons/md';
+import React, { useMemo, useState } from 'react';
+import { MdEdit, MdDelete, MdContentCopy, MdLibraryAdd } from 'react-icons/md';
 
 import { useEnv } from '@/context/EnvContext';
 import { BookNote, HighlightColor } from '@/types/book';
@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useNotebookStore } from '@/store/notebookStore';
 import { useBookDataStore } from '@/store/bookDataStore';
+import { useLibraryStore } from '@/store/libraryStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { eventDispatcher } from '@/utils/event';
@@ -23,6 +24,8 @@ import { useInlineTextEditor } from '../../hooks/useInlineTextEditor';
 import TextButton from '@/components/TextButton';
 import TextEditor from '@/components/TextEditor';
 import { BooknoteTimeLabel } from './BooknoteTime';
+import { openExternalUrl } from '@/utils/open';
+import { getArxivPdfUrl, importArxivPaper } from '../../utils/arxiv';
 
 interface BooknoteItemProps {
   bookKey: string;
@@ -40,11 +43,12 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
   inlineNoteEditing,
 }) => {
   const _ = useTranslation();
-  const { envConfig } = useEnv();
+  const { envConfig, appService } = useEnv();
   const { settings } = useSettingsStore();
   const { getConfig, saveConfig, updateBooknotes } = useBookDataStore();
   const { getProgress, getView, getViewsById, getViewSettings } = useReaderStore();
   const { setNotebookEditAnnotation, setNotebookVisible } = useNotebookStore();
+  const { library, setLibrary } = useLibraryStore();
 
   const globalReadSettings = settings.globalReadSettings;
   const customColors = globalReadSettings.customHighlightColors;
@@ -70,6 +74,7 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
       if (isBookmark) return saveBookmarkText(draftText);
       else return saveBooknoteNoteText(item.id, draftText);
     });
+  const [importingPaper, setImportingPaper] = useState(false);
   const separatorWidth = useResponsiveSize(3);
   const size18 = useResponsiveSize(18);
 
@@ -88,12 +93,63 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
   // item.note and bust the cache automatically.
   const noteHtml = useMemo(() => (note ? parseNoteMarkdown(note) : ''), [note]);
 
-  const handleClickItem = (event: React.MouseEvent | React.KeyboardEvent) => {
+  const referenceLabel = useMemo(() => {
+    if (item.type !== 'reference' || !item.referenceData) return '';
+    if (item.referenceData.url) return item.referenceData.url;
+    return item.referenceData.kind === 'footnote' ? _('Footnote') : _('In-book link');
+  }, [_, item.referenceData, item.type]);
+
+  const handleClickItem = async (event: React.MouseEvent | React.KeyboardEvent) => {
     event.preventDefault();
+    if (item.type === 'reference') {
+      const reference = item.referenceData;
+      if (reference?.url) {
+        openExternalUrl(reference.url);
+        return;
+      }
+      const view = getView(bookKey);
+      if (!view) return;
+      const targets = [reference?.targetCfi, reference?.href, cfi].filter(
+        (target): target is string => !!target,
+      );
+      for (const target of targets) {
+        try {
+          if (!view.resolveNavigation(target)) continue;
+          await view.goTo(target);
+          onClick?.();
+          return;
+        } catch {
+          // Try the next portable location representation.
+        }
+      }
+      return;
+    }
     eventDispatcher.dispatch('navigate', { bookKey, cfi });
 
     onClick?.();
     getView(bookKey)?.goTo(cfi);
+  };
+
+  const handleImportPaper = async () => {
+    const url = item.referenceData?.url;
+    if (!appService || !url || importingPaper) return;
+    setImportingPaper(true);
+    try {
+      const book = await importArxivPaper(appService, library, url);
+      setLibrary([...library]);
+      await eventDispatcher.dispatch('toast', {
+        type: 'success',
+        message: _('Added “{{title}}” to your library', { title: book.title }),
+      });
+    } catch (error) {
+      console.error('Failed to import arXiv paper', error);
+      await eventDispatcher.dispatch('toast', {
+        type: 'error',
+        message: _('Failed to import paper'),
+      });
+    } finally {
+      setImportingPaper(false);
+    }
   };
 
   const deleteNote = (note: BookNote) => {
@@ -192,7 +248,7 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
   }
 
   const isEditable =
-    !!item.note || isBookmark || (!!inlineNoteEditing && item.type === 'annotation');
+    !!item.note || isBookmark || item.type === 'reference' || (!!inlineNoteEditing && item.type === 'annotation');
 
   return (
     <li
@@ -241,7 +297,13 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
               }}
             ></div>
           )}
-          <div className={clsx('content font-size-sm line-clamp-3', item.note && 'mt-2')}>
+          <div
+            className={clsx(
+              'content font-size-sm',
+              item.type !== 'reference' && 'line-clamp-3',
+              item.note && 'mt-2',
+            )}
+          >
             <span
               className={clsx(
                 'booknote-text inline leading-normal',
@@ -268,6 +330,32 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
             >
               {text || ''}
             </span>
+            {item.type === 'reference' && (
+              <div className='text-base-content/60 mt-1 text-xs'>
+                <p className='break-all'>{referenceLabel}</p>
+                {item.referenceData?.description && (
+                  <p className='mt-1 line-clamp-2'>{item.referenceData.description}</p>
+                )}
+                {getArxivPdfUrl(item.referenceData?.url) && (
+                  <button
+                    type='button'
+                    className='btn btn-outline btn-xs mt-2'
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleImportPaper();
+                    }}
+                    disabled={importingPaper}
+                  >
+                    {importingPaper ? (
+                      <span className='loading loading-spinner loading-xs' />
+                    ) : (
+                      <MdLibraryAdd size={size18} />
+                    )}
+                    {_('Import paper to library')}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

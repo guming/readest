@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { BiMoon, BiSun } from 'react-icons/bi';
 import { PiGear } from 'react-icons/pi';
 import { TbSunMoon } from 'react-icons/tb';
-import { MdZoomOut, MdZoomIn, MdCheck, MdInfoOutline, MdOutlineSensors } from 'react-icons/md';
+import { MdZoomOut, MdZoomIn, MdCheck, MdInfoOutline, MdOutlineSensors, MdLink } from 'react-icons/md';
 import { MdRemove, MdAdd, MdContrast } from 'react-icons/md';
 import { MdSync, MdSyncProblem } from 'react-icons/md';
 import { IoMdExpand } from 'react-icons/io';
@@ -47,12 +47,14 @@ interface ViewMenuProps {
   bookKey: string;
   setIsDropdownOpen?: (open: boolean) => void;
   onShowMetaHashDialog?: () => void;
+  onShowPageReferences?: () => void;
 }
 
 const ViewMenu: React.FC<ViewMenuProps> = ({
   bookKey,
   setIsDropdownOpen,
   onShowMetaHashDialog,
+  onShowPageReferences,
 }) => {
   const _ = useTranslation();
   const router = useRouter();
@@ -606,6 +608,14 @@ const ViewMenu: React.FC<ViewMenuProps> = ({
 
       <hr aria-hidden='true' className='border-base-300 my-1' />
 
+      <MenuItem
+        label={_('References on this page')}
+        Icon={MdLink}
+        onClick={() => {
+          setIsDropdownOpen?.(false);
+          onShowPageReferences?.();
+        }}
+      />
       <MenuItem label={_('Share Book')} Icon={IoShareOutline} onClick={handleShare} />
     </Menu>
   );

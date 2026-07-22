@@ -55,6 +55,7 @@ export interface DBBookNote {
   color?: string;
   note: string;
   global?: boolean;
+  reference_data?: import('./book').BookReferenceData;
 
   created_at?: string;
   updated_at?: string;

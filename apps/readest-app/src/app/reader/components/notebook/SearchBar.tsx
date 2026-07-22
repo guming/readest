@@ -81,6 +81,22 @@ const SearchBar: React.FC<SearchBarProps> = ({
     }
   };
 
+  const filterNotes = (notes: BookNote[], query: string): BookNote[] => {
+    if (!query.trim()) return [];
+
+    const lowercaseQuery = query.toLowerCase();
+    return notes.filter((note) => {
+      const textMatch = note.text?.toLowerCase().includes(lowercaseQuery) || false;
+      const noteMatch = note.note?.toLowerCase().includes(lowercaseQuery) || false;
+      const referenceMatch = [
+        note.referenceData?.url,
+        note.referenceData?.description,
+        note.referenceData?.href,
+      ].some((value) => value?.toLowerCase().includes(lowercaseQuery));
+      return textMatch || noteMatch || referenceMatch;
+    });
+  };
+
   const handleSearchTermChange = (term: string) => {
     if (term.trim().length >= 1) {
       handleSearch(term);

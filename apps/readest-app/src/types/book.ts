@@ -25,7 +25,15 @@ export type BookFormat =
   | 'OPDSAUDIO'
   // Streaming audiobook from BookOrbit's audiobook API; filePath is bookorbit://<bookId> (#6224)
   | 'BOOKORBIT';
-export type BookNoteType = 'bookmark' | 'annotation' | 'excerpt' | 'notebook';
+export type BookNoteType = 'bookmark' | 'annotation' | 'excerpt' | 'notebook' | 'reference';
+
+export interface BookReferenceData {
+  kind: 'external' | 'footnote' | 'internal';
+  href: string;
+  url?: string;
+  targetCfi?: string;
+  description?: string;
+}
 export type ReadingStatus = 'unread' | 'reading' | 'finished' | 'abandoned';
 export type HighlightStyle = 'highlight' | 'underline' | 'squiggly';
 // Predefined highlight colors, can be extended with custom hex colors
@@ -210,6 +218,7 @@ export interface BookNote {
   style?: HighlightStyle;
   color?: HighlightColor;
   note: string;
+  referenceData?: BookReferenceData;
   /**
    * If true, this annotation should be applied to every occurrence of `text`
    * within the same section (chapter/spine item), in addition to the original
