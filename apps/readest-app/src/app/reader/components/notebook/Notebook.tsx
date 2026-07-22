@@ -308,6 +308,9 @@ const Notebook: React.FC = ({}) => {
   const excerptNotes = allNotes
     .filter((note) => note.type === 'excerpt' && note.text && !note.deletedAt)
     .sort((a, b) => a.createdAt - b.createdAt);
+  const referenceNotes = allNotes
+    .filter((note) => note.type === 'reference' && note.text && !note.deletedAt)
+    .sort((a, b) => b.createdAt - a.createdAt);
 
   const handleToggleSearchBar = () => {
     setIsSearchBarVisible((prev) => !prev);
@@ -331,6 +334,14 @@ const Notebook: React.FC = ({}) => {
         ? searchResults.filter((note) => note.type === 'excerpt' && note.text && !note.deletedAt)
         : excerptNotes,
     [excerptNotes, searchResults, isSearchBarVisible],
+  );
+
+  const filteredReferenceNotes = useMemo(
+    () =>
+      isSearchBarVisible && searchResults
+        ? searchResults.filter((note) => note.type === 'reference' && !note.deletedAt)
+        : referenceNotes,
+    [referenceNotes, searchResults, isSearchBarVisible],
   );
 
   const handleNavigateCard = (card: NotebookCard) => {
@@ -489,9 +500,15 @@ const Notebook: React.FC = ({}) => {
   const { bookDoc } = bookData;
   const languageDir = getBookDirFromLanguage(bookDoc.metadata.language);
 
-  const hasSearchResults = filteredAnnotationNotes.length > 0 || filteredExcerptNotes.length > 0;
+  const hasSearchResults =
+    filteredAnnotationNotes.length > 0 ||
+    filteredExcerptNotes.length > 0 ||
+    filteredReferenceNotes.length > 0;
   const hasAnyNotes =
-    annotationNotes.length > 0 || excerptNotes.length > 0 || notebookCards.length > 0;
+    annotationNotes.length > 0 ||
+    excerptNotes.length > 0 ||
+    referenceNotes.length > 0 ||
+    notebookCards.length > 0;
   const isNotesTabEmpty =
     !notebookNewAnnotation && !notebookEditAnnotation && !isSearchBarVisible && !hasAnyNotes;
 
@@ -700,6 +717,23 @@ const Notebook: React.FC = ({}) => {
                     </div>
                   </div>
                 </li>
+              ))}
+            </ul>
+            <div dir='ltr'>
+              {filteredReferenceNotes.length > 0 && (
+                <p className='content font-size-base'>
+                  {_('Reference links')}
+                  {isSearchBarVisible && searchResults && (
+                    <span className='font-size-xs ml-2 text-gray-500'>
+                      ({filteredReferenceNotes.length})
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+            <ul>
+              {filteredReferenceNotes.map((item, index) => (
+                <BooknoteItem key={`${index}-${item.id}`} bookKey={sideBarBookKey} item={item} />
               ))}
             </ul>
             <div dir='ltr'>

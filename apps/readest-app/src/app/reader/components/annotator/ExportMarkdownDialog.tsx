@@ -21,6 +21,7 @@ import {
   buildAnnotationWebUrl,
 } from '@/utils/deeplink';
 import Dialog from '@/components/Dialog';
+import { formatBookReferencesMarkdown } from '../../utils/referenceExport';
 
 interface ExportMarkdownDialogProps {
   bookKey: string;
@@ -52,6 +53,13 @@ const ExportMarkdownDialog: React.FC<ExportMarkdownDialogProps> = ({
   const { settings } = useSettingsStore();
   const { getViewSettings } = useReaderStore();
   const viewSettings = getViewSettings(bookKey);
+  const referenceNotes = useMemo(
+    () =>
+      Object.values(booknoteGroups)
+        .flatMap((group) => group.booknotes)
+        .filter((note) => note.type === 'reference'),
+    [booknoteGroups],
+  );
 
   const defaultTemplate = `## {{ title }}
 **${_('Author')}**: {{ author }}
@@ -139,7 +147,13 @@ const ExportMarkdownDialog: React.FC<ExportMarkdownDialogProps> = ({
   } = useMemo(
     () =>
       filterExportGroups(
-        Object.values(booknoteGroups).sort((a, b) => a.id - b.id),
+        Object.values(booknoteGroups)
+          .map((group) => ({
+            ...group,
+            booknotes: group.booknotes.filter((note) => note.type !== 'reference'),
+          }))
+          .filter((group) => group.booknotes.length > 0)
+          .sort((a, b) => a.id - b.id),
         {
           excludedColors: exportConfig.excludedColors,
           excludedStyles: exportConfig.excludedStyles,
@@ -301,13 +315,16 @@ const ExportMarkdownDialog: React.FC<ExportMarkdownDialogProps> = ({
       output = lines.join('\n');
     }
 
+    const referencesMarkdown = formatBookReferencesMarkdown(referenceNotes, _('References'));
+    if (referencesMarkdown) output = [output, referencesMarkdown].filter(Boolean).join('\n\n');
+
     // Strip markdown if plain text export is enabled
     if (exportConfig.exportAsPlainText) {
       output = stripMarkdown(output);
     }
 
     return output;
-  }, [exportConfig, filteredGroups, bookTitle, bookAuthor, bookHash, _]);
+  }, [exportConfig, filteredGroups, referenceNotes, bookTitle, bookAuthor, bookHash, _]);
 
   // Convert markdown to HTML for preview
   const htmlPreview = useMemo(() => {

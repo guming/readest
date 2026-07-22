@@ -5,12 +5,13 @@ import { isPWA, isTauriAppPlatform, isWebAppPlatform } from '@/services/environm
 import { BOOK_IDS_SEPARATOR } from '@/services/constants';
 import { AppService } from '@/types/system';
 
-let readerWindowsCount = 0;
+let nextReaderWindowId = 0;
 const createReaderWindow = (appService: AppService, url: string) => {
   const currentWindow = getCurrentWindow();
   const label = currentWindow.label;
   const newLabelPrefix = label === 'main' ? 'reader' : label;
-  const win = new WebviewWindow(`${newLabelPrefix}-${readerWindowsCount}`, {
+  const windowId = nextReaderWindowId++;
+  const win = new WebviewWindow(`${newLabelPrefix}-${windowId}`, {
     url,
     width: 800,
     height: 600,
@@ -30,13 +31,9 @@ const createReaderWindow = (appService: AppService, url: string) => {
   });
   win.once('tauri://created', () => {
     console.log('new window created');
-    readerWindowsCount += 1;
   });
   win.once('tauri://error', (e) => {
     console.error('error creating window', e);
-  });
-  win.once('tauri://destroyed', () => {
-    readerWindowsCount -= 1;
   });
 };
 

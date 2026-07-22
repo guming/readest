@@ -55,4 +55,13 @@ describe('nav.ts window transparency', () => {
     const options = webviewWindowCtor.mock.calls[0]![1] as Record<string, unknown>;
     expect(options['transparent']).toBe(false);
   });
+
+  test('uses a unique label for windows created before earlier windows report created', () => {
+    showReaderWindow(makeAppService('macos'), ['book-1']);
+    showReaderWindow(makeAppService('macos'), ['book-2']);
+
+    const firstLabel = webviewWindowCtor.mock.calls[0]![0];
+    const secondLabel = webviewWindowCtor.mock.calls[1]![0];
+    expect(secondLabel).not.toBe(firstLabel);
+  });
 });

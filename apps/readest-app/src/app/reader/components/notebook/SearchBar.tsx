@@ -88,7 +88,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
     return notes.filter((note) => {
       const textMatch = note.text?.toLowerCase().includes(lowercaseQuery) || false;
       const noteMatch = note.note?.toLowerCase().includes(lowercaseQuery) || false;
-      return textMatch || noteMatch;
+      const referenceMatch = [
+        note.referenceData?.url,
+        note.referenceData?.description,
+        note.referenceData?.href,
+      ].some((value) => value?.toLowerCase().includes(lowercaseQuery));
+      return textMatch || noteMatch || referenceMatch;
     });
   };
 

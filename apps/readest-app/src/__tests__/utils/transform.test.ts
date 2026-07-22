@@ -11,6 +11,29 @@ import { BookConfig, BookNote, Book } from '@/types/book';
 import { DBBookConfig, DBBookNote } from '@/types/records';
 
 describe('transformBookNoteToDB with xpointer fields', () => {
+  it('round-trips native reference metadata', () => {
+    const note: BookNote = {
+      id: 'reference-1',
+      type: 'reference',
+      cfi: 'epubcfi(/6/2)',
+      text: 'Paper',
+      note: 'Read later',
+      referenceData: {
+        kind: 'external',
+        href: 'https://example.com/paper',
+        url: 'https://example.com/paper',
+        description: 'Useful paper',
+      },
+      createdAt: 100,
+      updatedAt: 100,
+      bookHash: 'book-1',
+    };
+
+    const db = transformBookNoteToDB(note, 'user-1');
+    expect(db.reference_data).toEqual(note.referenceData);
+    expect(transformBookNoteFromDB(db).referenceData).toEqual(note.referenceData);
+  });
+
   it('passes through xpointer0 and xpointer1', () => {
     const note: BookNote = {
       bookHash: 'abc123',
