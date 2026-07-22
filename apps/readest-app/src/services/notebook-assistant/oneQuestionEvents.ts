@@ -12,6 +12,7 @@ export type OneQuestionEventName =
   | 'one_question_asked_another'
   | 'one_question_continued_reading'
   | 'one_question_quality_feedback'
+  | 'one_question_source_opened'
   | 'one_question_failed';
 
 export type OneQuestionQualityFeedback =

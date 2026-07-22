@@ -45,6 +45,8 @@
     "tauri:dev:test": "dotenv -e .env.tauri -- tauri dev --features webdriver",
     "tauri:build:test": "dotenv -e .env.tauri -- tauri build --debug --features webdriver",
     "tauri": "node scripts/tauri.mjs",
+    "ios:patch-local-dev": "node scripts/patch-ios-local-dev.mjs",
+    "tauri:ios:dev-local": "node scripts/patch-ios-local-dev.mjs && tauri ios dev --config src-tauri/tauri-ios-local-dev.conf.json",
     "tauri:dev:cdp": "READEST_CDP_PORT=9222 node scripts/tauri.mjs dev",
     "cdp": "node scripts/cdp.mjs",
     "fmt:check": "cargo fmt -p Readest --check",

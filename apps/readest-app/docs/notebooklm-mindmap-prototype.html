@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Readest AI Research Prototype</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1e2329;
+        --muted: #6d737c;
+        --line: #d8dde3;
+        --paper: #f7f6f2;
+        --panel: #ffffff;
+        --panel-soft: #f0f3f5;
+        --accent: #2f6f73;
+        --accent-soft: #d8eceb;
+        --gold: #a96d1f;
+        --blue: #476c9b;
+        --rose: #a5555c;
+        --shadow: 0 18px 45px rgba(27, 32, 36, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--paper);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      button {
+        border: 0;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: minmax(360px, 1fr) minmax(420px, 560px);
+        min-height: 100vh;
+      }
+
+      .reader {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        border-right: 1px solid var(--line);
+        background: #fbfaf7;
+      }
+
+      .reader-top,
+      .notebook-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 52px;
+        padding: 0 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .reader-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .book-dot {
+        width: 28px;
+        height: 34px;
+        border-radius: 4px;
+        background: linear-gradient(145deg, #40515a, #7c6452);
+        box-shadow: inset -3px 0 rgba(255, 255, 255, 0.22);
+      }
+
+      .eyebrow {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .title {
+        overflow: hidden;
+        max-width: 420px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .icon-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .icon-btn {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 8px;
+        background: transparent;
+      }
+
+      .icon-btn:hover,
+      .icon-btn.active {
+        background: var(--panel-soft);
+      }
+
+      .reader-page {
+        display: grid;
+        flex: 1;
+        place-items: center;
+        padding: 42px clamp(24px, 6vw, 92px);
+      }
+
+      .page {
+        width: min(760px, 100%);
+        min-height: 74vh;
+        padding: 44px clamp(28px, 5vw, 64px);
+        border: 1px solid #e2ded5;
+        border-radius: 6px;
+        background: #fffdf8;
+        box-shadow: 0 18px 55px rgba(80, 68, 50, 0.09);
+      }
+
+      .chapter {
+        margin: 0 0 26px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 30px;
+        font-weight: 500;
+      }
+
+      .para {
+        margin: 0 0 20px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 18px;
+        line-height: 1.72;
+      }
+
+      .highlight {
+        border-radius: 3px;
+        background: linear-gradient(transparent 42%, rgba(253, 214, 111, 0.48) 42%);
+      }
+
+      .anchor {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 21px;
+        height: 21px;
+        margin-left: 4px;
+        border-radius: 50%;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-family: Inter, sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        vertical-align: middle;
+      }
+
+      .notebook {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        background: var(--panel);
+      }
+
+      .notebook-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .spark {
+        display: grid;
+        width: 27px;
+        height: 27px;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        background: #fafafa;
+      }
+
+      .tab {
+        display: flex;
+        min-height: 38px;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .tab.active {
+        background: #e8edef;
+        color: var(--ink);
+      }
+
+      .source-bar {
+        padding: 14px 16px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .source-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .section-title {
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .link-btn {
+        background: transparent;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .chip {
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        padding: 5px 10px;
+        color: #30363d;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .chip.checked {
+        border-color: #a9cccb;
+        background: var(--accent-soft);
+        color: #1f5558;
+      }
+
+      .main-panel {
+        display: grid;
+        grid-template-rows: minmax(360px, 1fr) auto;
+        min-height: 0;
+        flex: 1;
+      }
+
+      .mindmap-area {
+        position: relative;
+        overflow: hidden;
+        background:
+          linear-gradient(rgba(80, 86, 92, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(80, 86, 92, 0.05) 1px, transparent 1px), #fbfbfa;
+        background-size: 28px 28px;
+      }
+
+      .map-toolbar {
+        position: absolute;
+        z-index: 2;
+        top: 14px;
+        left: 14px;
+        display: flex;
+        gap: 8px;
+      }
+
+      .tool {
+        display: inline-flex;
+        height: 32px;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.92);
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        box-shadow: 0 8px 20px rgba(30, 35, 41, 0.07);
+      }
+
+      .canvas {
+        position: absolute;
+        inset: 0;
+      }
+
+      .edge {
+        position: absolute;
+        height: 2px;
+        transform-origin: left center;
+        border-radius: 999px;
+        background: #bcc8cc;
+      }
+
+      .edge.one {
+        top: 220px;
+        left: 185px;
+        width: 180px;
+        transform: rotate(-22deg);
+      }
+
+      .edge.two {
+        top: 235px;
+        left: 202px;
+        width: 188px;
+        transform: rotate(20deg);
+      }
+
+      .edge.three {
+        top: 315px;
+        left: 276px;
+        width: 150px;
+        transform: rotate(-2deg);
+      }
+
+      .edge.four {
+        top: 162px;
+        left: 346px;
+        width: 120px;
+        transform: rotate(36deg);
+      }
+
+      .node {
+        position: absolute;
+        display: grid;
+        min-width: 118px;
+        max-width: 168px;
+        gap: 6px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.96);
+        padding: 10px 11px;
+        box-shadow: var(--shadow);
+      }
+
+      .node.active {
+        border-color: #78aeb0;
+        box-shadow: 0 18px 50px rgba(47, 111, 115, 0.2);
+      }
+
+      .node.core {
+        top: 188px;
+        left: 78px;
+        min-width: 150px;
+        border-color: #7fb1b2;
+        background: #f3fbfa;
+      }
+
+      .node.n1 {
+        top: 92px;
+        left: 340px;
+      }
+
+      .node.n2 {
+        top: 246px;
+        left: 386px;
+      }
+
+      .node.n3 {
+        top: 300px;
+        left: 170px;
+      }
+
+      .node.n4 {
+        top: 166px;
+        right: 34px;
+      }
+
+      .node-label {
+        font-size: 13px;
+        font-weight: 780;
+        line-height: 1.25;
+      }
+
+      .node-meta {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: var(--panel-soft);
+        padding: 2px 7px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .evidence {
+        display: grid;
+        gap: 12px;
+        border-top: 1px solid var(--line);
+        background: #fff;
+        padding: 14px 16px 16px;
+      }
+
+      .evidence-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .evidence-title {
+        margin: 0 0 3px;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .evidence-sub {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .ask-btn {
+        display: inline-flex;
+        height: 34px;
+        align-items: center;
+        gap: 7px;
+        border-radius: 8px;
+        background: var(--accent);
+        padding: 0 12px;
+        color: white;
+        font-size: 12px;
+        font-weight: 760;
+        white-space: nowrap;
+      }
+
+      .citation-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .citation {
+        display: grid;
+        gap: 7px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfbfa;
+        padding: 10px;
+      }
+
+      .citation-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .quote {
+        margin: 0;
+        color: #343a40;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 14px;
+        line-height: 1.48;
+      }
+
+      .composer {
+        display: grid;
+        gap: 9px;
+        border-top: 1px solid var(--line);
+        background: #fafafa;
+        padding: 12px 14px;
+      }
+
+      .input-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+
+      .prompt {
+        min-height: 42px;
+        resize: none;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        padding: 11px 12px;
+        color: var(--ink);
+        font: inherit;
+        font-size: 13px;
+      }
+
+      .send {
+        width: 44px;
+        border-radius: 8px;
+        background: #24282d;
+        color: #fff;
+        font-size: 18px;
+      }
+
+      @media (max-width: 900px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .reader {
+          display: none;
+        }
+
+        .notebook {
+          min-height: 100vh;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .tabs {
+          grid-template-columns: repeat(5, minmax(54px, 1fr));
+          overflow-x: auto;
+        }
+
+        .tab {
+          font-size: 11px;
+        }
+
+        .node.n4 {
+          right: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="reader" aria-label="阅读器">
+        <header class="reader-top">
+          <div class="reader-title">
+            <div class="book-dot"></div>
+            <div>
+              <div class="eyebrow">Chapter 3 · 42%</div>
+              <div class="title">The Design of Everyday Things</div>
+            </div>
+          </div>
+          <div class="icon-row">
+            <button class="icon-btn" title="Search">⌕</button>
+            <button class="icon-btn active" title="Notebook">✦</button>
+          </div>
+        </header>
+        <div class="reader-page">
+          <article class="page">
+            <h1 class="chapter">Knowledge in the Head and in the World</h1>
+            <p class="para">
+              Human memory is not a perfect storage cabinet. People rely on signs,
+              constraints, mappings, and feedback in the world to complete routine actions.
+              <span class="highlight">Good design shifts cognitive load from recall to recognition</span
+              ><span class="anchor">A1</span>.
+            </p>
+            <p class="para">
+              A useful interface exposes enough structure that the next action feels legible.
+              The user should not need to memorize an invisible model before acting.
+            </p>
+            <p class="para">
+              When mappings are natural and feedback is immediate, users can recover from
+              mistakes and build reliable habits through interaction.
+              <span class="anchor">A2</span>
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <aside class="notebook" aria-label="Notebook AI research panel">
+        <header class="notebook-top">
+          <div class="notebook-title"><span class="spark">✦</span> Readest Research</div>
+          <div class="icon-row">
+            <button class="icon-btn" title="Regenerate">↻</button>
+            <button class="icon-btn" title="Pin">⌖</button>
+          </div>
+        </header>
+
+        <nav class="tabs" aria-label="Notebook tabs">
+          <button class="tab">Notes</button>
+          <button class="tab">AI</button>
+          <button class="tab">Guide</button>
+          <button class="tab">Studio</button>
+          <button class="tab active">Map</button>
+        </nav>
+
+        <section class="source-bar">
+          <div class="source-line">
+            <div class="section-title">Sources for this map</div>
+            <button class="link-btn">Edit sources</button>
+          </div>
+          <div class="chips">
+            <span class="chip checked">✓ Current book</span>
+            <span class="chip checked">✓ Chapter 3</span>
+            <span class="chip checked">✓ 8 highlights</span>
+            <span class="chip">3 cards</span>
+            <span class="chip">Current selection</span>
+          </div>
+        </section>
+
+        <section class="main-panel">
+          <div class="mindmap-area">
+            <div class="map-toolbar">
+              <button class="tool">＋ Node</button>
+              <button class="tool">⇄ Relayout</button>
+              <button class="tool">▣ Save artifact</button>
+            </div>
+            <div class="canvas" aria-label="Mind map canvas">
+              <div class="edge one"></div>
+              <div class="edge two"></div>
+              <div class="edge three"></div>
+              <div class="edge four"></div>
+              <button class="node core active">
+                <span class="node-label">Cognitive load shifts to the world</span>
+                <span class="node-meta"><span>Theme</span><span>6 refs</span></span>
+              </button>
+              <button class="node n1">
+                <span class="node-label">Recognition over recall</span>
+                <span class="node-meta"><span>Principle</span><span>4 refs</span></span>
+              </button>
+              <button class="node n2">
+                <span class="node-label">Natural mappings</span>
+                <span class="node-meta"><span>Concept</span><span>3 refs</span></span>
+              </button>
+              <button class="node n3">
+                <span class="node-label">Feedback loops</span>
+                <span class="node-meta"><span>Mechanism</span><span>5 refs</span></span>
+              </button>
+              <button class="node n4">
+                <span class="node-label">Error recovery</span>
+                <span class="node-meta"><span>Outcome</span><span>2 refs</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="evidence">
+            <div class="evidence-head">
+              <div>
+                <h2 class="evidence-title">Cognitive load shifts to the world</h2>
+                <p class="evidence-sub">
+                  Generated from Chapter 3 and selected highlights. Each citation can jump back to
+                  the original reading position.
+                </p>
+              </div>
+              <button class="ask-btn">Ask from node</button>
+            </div>
+            <div class="citation-list">
+              <article class="citation">
+                <div class="citation-top">
+                  <span class="badge">A1 · Ch.3 · 42%</span>
+                  <button class="link-btn">Jump to text</button>
+                </div>
+                <p class="quote">
+                  "Good design shifts cognitive load from recall to recognition."
+                </p>
+              </article>
+              <article class="citation">
+                <div class="citation-top">
+                  <span class="badge">A2 · Ch.3 · 44%</span>
+                  <button class="link-btn">Jump to text</button>
+                </div>
+                <p class="quote">
+                  "Mappings and immediate feedback help readers recover from mistakes."
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <footer class="composer">
+          <div class="chips">
+            <span class="chip checked">Using selected node</span>
+            <span class="chip checked">Citations required</span>
+          </div>
+          <div class="input-row">
+            <textarea class="prompt">Explain how this concept connects to natural mappings.</textarea>
+            <button class="send" title="Ask">↑</button>
+          </div>
+        </footer>
+      </aside>
+    </main>
+  </body>
+</html>

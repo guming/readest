@@ -32,6 +32,19 @@ export interface OneQuestionChoice {
   text: string;
 }
 
+export interface OneQuestionSourceBlock {
+  id: string;
+  text: string;
+  cfi: string;
+  endCfi: string;
+}
+
+export interface OneQuestionSourceAnchor {
+  blockId: string;
+  cfi: string;
+  endCfi: string;
+}
+
 export interface OneQuestion {
   id: string;
   type: OneQuestionType;
@@ -40,6 +53,7 @@ export interface OneQuestion {
   correctChoiceId?: string;
   referenceAnswer: string;
   evidenceQuote: string;
+  sourceAnchor?: OneQuestionSourceAnchor;
 }
 
 export type OneQuestionResult =
@@ -93,6 +107,7 @@ export interface ChapterQuizRequest {
 
 export interface OneQuestionRequest {
   sourceText: string;
+  sourceBlocks?: OneQuestionSourceBlock[];
   title?: string;
   targetLanguage: string;
   provider: string;
