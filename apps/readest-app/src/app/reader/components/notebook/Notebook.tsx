@@ -8,7 +8,6 @@ import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { NotebookTab, useNotebookStore } from '@/store/notebookStore';
-import { useAIChatStore } from '@/store/aiChatStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useThemeStore } from '@/store/themeStore';
 import { useEnv } from '@/context/EnvContext';
@@ -32,7 +31,6 @@ import {
   removeEmptyAnnotationPlaceholder,
 } from '../../utils/annotatorUtil';
 import BooknoteItem from '../sidebar/BooknoteItem';
-import AIAssistant from './AIAssistant';
 import NotebookAssistantActions from './NotebookAssistantActions';
 import NotebookReview from './NotebookReview';
 import NotebookHeader from './Header';
@@ -59,7 +57,6 @@ const Notebook: React.FC = ({}) => {
     useNotebookStore();
   const { setNotebookNewAnnotation, setNotebookNewHighlightId } = useNotebookStore();
   const { setNotebookEditAnnotation, setNotebookActiveTab } = useNotebookStore();
-  const { activeConversationId } = useAIChatStore();
 
   const [isSearchBarVisible, setIsSearchBarVisible] = useState(false);
   const [searchResults, setSearchResults] = useState<BookNote[] | null>(null);
@@ -606,11 +603,7 @@ const Notebook: React.FC = ({}) => {
                 <ul>{assistantCards.map(renderNotebookCard)}</ul>
               </div>
             )}
-            {settings.aiSettings?.enabled ? (
-              <div className='min-h-0 flex-1'>
-                <AIAssistant key={activeConversationId ?? 'new'} bookKey={sideBarBookKey} />
-              </div>
-            ) : assistantCards.length === 0 ? (
+            {assistantCards.length === 0 ? (
               <div className='flex flex-1 items-center justify-center overflow-y-auto px-3'>
                 <EmptyState
                   Icon={PiSparkle}

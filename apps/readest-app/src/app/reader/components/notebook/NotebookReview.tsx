@@ -37,6 +37,7 @@ import { useReaderStore } from '@/store/readerStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { NotebookCard } from '@/types/book';
 import { uniqueId } from '@/utils/misc';
+import { eventDispatcher } from '@/utils/event';
 
 interface Props {
   bookKey: string;
@@ -156,7 +157,10 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
       if (!nextContext?.sourceText) {
         throw new Error(_('No readable text found for the current chapter.'));
       }
-      const nextEstimate = estimateOneQuestionTokens(nextContext.sourceText);
+      const nextEstimate = estimateOneQuestionTokens(
+        nextContext.sourceText,
+        nextContext.sourceBlocks,
+      );
       usageContext = nextContext;
       usageEstimate = nextEstimate;
       if (nextEstimate.input > assistant.warnAboveTokens) {
@@ -186,6 +190,7 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
       const result = await runOneQuestionAssistant(
         {
           sourceText: nextContext.sourceText,
+          sourceBlocks: nextContext.sourceBlocks,
           title: nextContext.title,
           targetLanguage,
           provider: assistant.provider,
@@ -292,6 +297,14 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
       questionType: oneQuestion?.type,
       qualityFeedback: feedback,
     });
+  };
+
+  const viewOneQuestionSource = () => {
+    const cfi = oneQuestion?.sourceAnchor?.cfi;
+    if (!cfi) return;
+    trackOneQuestion('one_question_source_opened', { questionType: oneQuestion.type });
+    eventDispatcher.dispatch('navigate', { bookKey, cfi });
+    getView(bookKey)?.goTo(cfi);
   };
 
   const generateQuiz = async () => {
@@ -688,7 +701,18 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
                 <p className='font-medium'>{_('Reference Idea')}</p>
                 <p className='text-base-content/80 mt-1'>{oneQuestion.referenceAnswer}</p>
                 <blockquote className='eink-bordered border-base-300 bg-base-200/40 mt-3 rounded-md border p-2'>
-                  <p className='text-base-content/60 mb-1 text-xs'>{_('From the Chapter')}</p>
+                  <div className='mb-1 flex items-center justify-between gap-2'>
+                    <p className='text-base-content/60 text-xs'>{_('From the Chapter')}</p>
+                    {oneQuestion.sourceAnchor && (
+                      <button
+                        type='button'
+                        className='btn btn-ghost btn-xs eink-bordered'
+                        onClick={viewOneQuestionSource}
+                      >
+                        {_('View in Book')}
+                      </button>
+                    )}
+                  </div>
                   <p>{oneQuestion.evidenceQuote}</p>
                 </blockquote>
 

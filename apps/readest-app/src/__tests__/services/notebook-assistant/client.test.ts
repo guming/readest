@@ -163,6 +163,67 @@ describe('selected-text assistant client', () => {
     });
   });
 
+  test('resolves a model-selected source block to a trusted CFI anchor', () => {
+    const sourceBlocks = [
+      {
+        id: 'block-1',
+        text: 'Rewards can feel controlling and weaken intrinsic motivation.',
+        cfi: 'epubcfi(/6/2!/4/2:0)',
+        endCfi: 'epubcfi(/6/2!/4/2:62)',
+      },
+    ];
+    const parsed = parseOneQuestionResponse(
+      JSON.stringify({
+        question: {
+          id: 'anchored-1',
+          type: 'open',
+          question: 'Why can rewards reduce motivation?',
+          referenceAnswer: 'They can feel controlling.',
+          evidenceQuote: 'Rewards can feel controlling',
+          sourceBlockId: 'block-1',
+        },
+      }),
+      sourceBlocks[0]!.text,
+      sourceBlocks,
+    );
+    expect(parsed.question?.sourceAnchor).toEqual({
+      blockId: 'block-1',
+      cfi: 'epubcfi(/6/2!/4/2:0)',
+      endCfi: 'epubcfi(/6/2!/4/2:62)',
+    });
+  });
+
+  test('rejects a missing or mismatched source block when anchored context is supplied', () => {
+    const sourceBlocks = [
+      {
+        id: 'block-1',
+        text: 'The supported statement appears here.',
+        cfi: 'epubcfi(/6/2!/4/2:0)',
+        endCfi: 'epubcfi(/6/2!/4/2:37)',
+      },
+    ];
+    const response = (sourceBlockId: string) =>
+      JSON.stringify({
+        question: {
+          type: 'open',
+          question: 'What is supported?',
+          referenceAnswer: 'The statement.',
+          evidenceQuote: 'The supported statement',
+          sourceBlockId,
+        },
+      });
+    expect(() =>
+      parseOneQuestionResponse(response('missing'), sourceBlocks[0]!.text, sourceBlocks),
+    ).toThrow(NotebookAssistantError);
+    expect(() =>
+      parseOneQuestionResponse(
+        response('block-1').replace('The supported statement', 'Outside evidence'),
+        sourceBlocks[0]!.text,
+        sourceBlocks,
+      ),
+    ).toThrow(NotebookAssistantError);
+  });
+
   test('parses an open question and explicit abstention', () => {
     expect(
       parseOneQuestionResponse(
@@ -184,6 +245,35 @@ describe('selected-text assistant client', () => {
         'Copyright page',
       ),
     ).toEqual({ question: null, reason: 'insufficient_content' });
+  });
+
+  test('accepts common snake-case fields returned by compatible providers', () => {
+    const sourceBlocks = [
+      {
+        id: 'block-1',
+        text: 'Local-first keeps reading available without a network.',
+        cfi: 'epubcfi(/6/2!/4/2:0)',
+        endCfi: 'epubcfi(/6/2!/4/2:55)',
+      },
+    ];
+    expect(
+      parseOneQuestionResponse(
+        JSON.stringify({
+          question: {
+            type: 'open',
+            question: 'Why is local-first useful?',
+            reference_answer: 'It keeps reading available without a network.',
+            evidence_quote: 'Local-first keeps reading available without a network.',
+            source_block_id: 'block-1',
+          },
+        }),
+        sourceBlocks[0]!.text,
+        sourceBlocks,
+      ).question,
+    ).toMatchObject({
+      type: 'open',
+      referenceAnswer: 'It keeps reading available without a network.',
+    });
   });
 
   test('rejects invalid one-question choices and unsupported evidence', () => {

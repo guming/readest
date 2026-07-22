@@ -5,6 +5,7 @@ import NotebookReview from '@/app/reader/components/notebook/NotebookReview';
 const mocks = vi.hoisted(() => ({
   runOneQuestionAssistant: vi.fn(),
   buildCurrentChapterContext: vi.fn(),
+  goTo: vi.fn(),
 }));
 
 vi.mock('@/components/settings/NotebookAssistantPanel', () => ({ default: () => null }));
@@ -41,8 +42,9 @@ vi.mock('@/store/bookDataStore', () => ({
   }),
 }));
 vi.mock('@/store/readerStore', () => ({
-  useReaderStore: () => ({ getView: () => null, getProgress: () => null }),
+  useReaderStore: () => ({ getView: () => ({ goTo: mocks.goTo }), getProgress: () => null }),
 }));
+vi.mock('@/utils/event', () => ({ eventDispatcher: { dispatch: vi.fn() } }));
 vi.mock('@/store/settingsStore', () => ({
   useSettingsStore: (selector: (state: { settings: object }) => unknown) =>
     selector({
@@ -62,6 +64,7 @@ describe('NotebookReview one-question MVP', () => {
 
   beforeEach(() => {
     mocks.runOneQuestionAssistant.mockReset();
+    mocks.goTo.mockReset();
     mocks.buildCurrentChapterContext.mockResolvedValue({
       contextType: 'chapter',
       sourceText: 'Greater speed increased output while reducing accuracy.',
@@ -87,6 +90,11 @@ describe('NotebookReview one-question MVP', () => {
         question: 'Explain the trade-off in your own words.',
         referenceAnswer: 'Speed improves output but can reduce accuracy.',
         evidenceQuote: 'Greater speed increased output while reducing accuracy.',
+        sourceAnchor: {
+          blockId: 'block-1',
+          cfi: 'epubcfi(/6/2!/4/2:0)',
+          endCfi: 'epubcfi(/6/2!/4/2:58)',
+        },
       },
     });
     render(<NotebookReview bookKey='book-1' />);
@@ -101,6 +109,8 @@ describe('NotebookReview one-question MVP', () => {
       screen.getByText('Greater speed increased output while reducing accuracy.'),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'I Got It' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'View in Book' }));
+    expect(mocks.goTo).toHaveBeenCalledWith('epubcfi(/6/2!/4/2:0)');
     expect(screen.queryByText('Correct')).toBeNull();
     expect(mocks.runOneQuestionAssistant).toHaveBeenCalledTimes(1);
   });
