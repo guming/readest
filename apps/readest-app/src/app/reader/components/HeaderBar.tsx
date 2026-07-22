@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { VscLibrary } from 'react-icons/vsc';
-import { MdOutlineMenu } from 'react-icons/md';
+import { MdLink, MdOutlineMenu } from 'react-icons/md';
 
 import { Insets } from '@/types/misc';
 import { useEnv } from '@/context/EnvContext';
@@ -31,6 +31,8 @@ import SettingsToggler from './SettingsToggler';
 import TranslationToggler from './TranslationToggler';
 import ViewMenu from './ViewMenu';
 import SyncInfoDialog from './SyncInfoDialog';
+import PageReferencesDialog from './PageReferencesDialog';
+import { extractVisiblePageReferences, type PageReference } from '../utils/pageReferences';
 
 interface HeaderBarProps {
   bookKey: string;
@@ -74,6 +76,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMetaHashDialogOpen, setIsMetaHashDialogOpen] = useState(false);
+  const [pageReferences, setPageReferences] = useState<PageReference[] | null>(null);
   const [headerWidth, setHeaderWidth] = useState(0);
   const view = getView(bookKey);
   const iconSize18 = useResponsiveSize(18);
@@ -101,6 +104,10 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   const handleAnnotationQuickActionSelect = (action: AnnotationToolType | null) => {
     if (viewSettings?.annotationQuickAction === action) action = null;
     saveViewSettings(envConfig, bookKey, 'annotationQuickAction', action, false, true);
+  };
+
+  const showPageReferences = () => {
+    setPageReferences(extractVisiblePageReferences(view));
   };
 
   useEffect(() => {
@@ -282,6 +289,15 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
 
         <div className='header-tools-end bg-base-100 z-20 ms-auto flex h-full min-w-max items-center gap-x-4 ps-2 max-[350px]:gap-x-2'>
           {!isHeaderCompact && <SettingsToggler bookKey={bookKey} />}
+          <button
+            type='button'
+            className='btn btn-ghost h-8 min-h-8 w-8 p-0'
+            title={_('References on this page')}
+            aria-label={_('References on this page')}
+            onClick={showPageReferences}
+          >
+            <MdLink size={iconSize18} />
+          </button>
           <NotebookToggler bookKey={bookKey} />
           <Dropdown
             label={_('View Options')}
@@ -293,7 +309,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           >
             <ViewMenu
               bookKey={bookKey}
+              setIsDropdownOpen={handleToggleDropdown}
               onShowMetaHashDialog={() => setIsMetaHashDialogOpen(true)}
+              onShowPageReferences={showPageReferences}
             />
           </Dropdown>
           {isMetaHashDialogOpen && (
@@ -304,6 +322,16 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                 storedMetaHash={bookData?.book?.metaHash}
                 lastSyncedAt={lastSyncedAt}
                 onClose={() => setIsMetaHashDialogOpen(false)}
+              />
+            </ModalPortal>
+          )}
+          {pageReferences && (
+            <ModalPortal showOverlay={false}>
+              <PageReferencesDialog
+                bookKey={bookKey}
+                isOpen={true}
+                references={pageReferences}
+                onClose={() => setPageReferences(null)}
               />
             </ModalPortal>
           )}

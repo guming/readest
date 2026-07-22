@@ -113,23 +113,54 @@
             ++ (optionals isDarwin [
               {
                 name = "RUSTFLAGS";
-                eval = "\"-L framework=$DEVSHELL_DIR/Library/Frameworks\"";
+                eval = "\"-L framework=$DEVSHELL_DIR/Library/Frameworks -L native=${pkgs.darwin.libiconv}/lib\"";
               }
               {
                 name = "RUSTDOCFLAGS";
-                eval = "\"-L framework=$DEVSHELL_DIR/Library/Frameworks\"";
+                eval = "\"-L framework=$DEVSHELL_DIR/Library/Frameworks -L native=${pkgs.darwin.libiconv}/lib\"";
               }
               {
-                name = "PATH";
-                prefix =
-                  let
-                    inherit (pkgs) xcbuild;
-                  in
-                  lib.makeBinPath [
-                    xcbuild
-                    "${xcbuild}/Toolchains/XcodeDefault.xctoolchain"
-                  ];
+                name = "LIBRARY_PATH";
+                prefix = "${pkgs.darwin.libiconv}/lib";
               }
+              {
+                name = "NIX_LDFLAGS";
+                value = "-L${pkgs.darwin.libiconv}/lib";
+              }
+              {
+                name = "CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER";
+                value = "/usr/bin/cc";
+              }
+              {
+                name = "CARGO_TARGET_AARCH64_APPLE_DARWIN_RUSTFLAGS";
+                value = "-L native=${pkgs.darwin.libiconv}/lib";
+              }
+              {
+                name = "CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER";
+                value = "/usr/bin/cc";
+              }
+              {
+                name = "CARGO_TARGET_X86_64_APPLE_DARWIN_RUSTFLAGS";
+                value = "-L native=${pkgs.darwin.libiconv}/lib";
+              }
+              {
+                name = "CC_aarch64_apple_ios";
+                value = "/usr/bin/clang";
+              }
+              {
+                name = "CXX_aarch64_apple_ios";
+                value = "/usr/bin/clang++";
+              }
+              {
+                name = "CARGO_TARGET_AARCH64_APPLE_IOS_LINKER";
+                value = "/usr/bin/clang";
+              }
+              # NOTE: nix's `xcbuild` ships a fake `xcrun` that does not support
+              # `simctl` and breaks Tauri's iOS device detection
+              # (`xcrun simctl list` -> "unable to find sdk: 'macosx'", exit 255).
+              # On macOS the real Xcode at /usr/bin provides xcrun/xcodebuild, and
+              # clang is already supplied via commonPackages, so we deliberately do
+              # NOT prepend xcbuild to PATH here.
             ])
           }:
           pkgs.devshell.mkShell {
@@ -191,6 +222,11 @@
           ios = mkCommonShell {
             name = "readest-ios";
             extraPackages = [ pkgs.cocoapods ];
+            extraTargets = with pkgs.fenix.targets; [
+              aarch64-apple-ios.latest.rust-std
+              aarch64-apple-ios-sim.latest.rust-std
+              x86_64-apple-ios.latest.rust-std
+            ];
           };
 
           android = mkCommonShell rec {

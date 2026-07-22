@@ -1,6 +1,8 @@
 import type { BookDoc, SectionItem } from '@/libs/document';
 import type { BookProgress } from '@/types/book';
 import type { FoliateView } from '@/types/view';
+import { chunkSection } from '@/services/reedy/retrieval/CfiChunker';
+import type { OneQuestionSourceBlock } from './types';
 
 export interface NotebookAssistantContext {
   contextType: 'page' | 'chapter';
@@ -10,6 +12,7 @@ export interface NotebookAssistantContext {
   chapterTitle?: string;
   pageNumber?: number;
   pageCfi?: string;
+  sourceBlocks?: OneQuestionSourceBlock[];
 }
 
 const normalizeText = (value: string): string => value.replace(/\s+/g, ' ').trim();
@@ -82,10 +85,37 @@ export async function buildCurrentChapterContext(
   const section = findCurrentSection(bookDoc, view, progress);
   let sourceText = '';
   if (section?.loadText) {
-    sourceText = stripHtml((await section.loadText()) || '');
-  } else if (view?.renderer.getContents) {
+    try {
+      sourceText = stripHtml((await section.loadText()) || '');
+    } catch {
+      // Some document backends cannot load the section text while the renderer is
+      // still settling. The rendered document below is a valid fallback.
+    }
+  }
+  if (!sourceText && view?.renderer.getContents) {
     const first = view.renderer.getContents()[0];
     sourceText = first ? textFromDocument(first.doc) : '';
+  }
+  let sourceBlocks: OneQuestionSourceBlock[] | undefined;
+  if (section?.createDocument) {
+    try {
+      const sectionIndex = bookDoc.sections.indexOf(section);
+      const doc = await section.createDocument();
+      sourceBlocks = chunkSection(
+        doc,
+        Math.max(0, sectionIndex),
+        progress?.sectionLabel || section.href || section.id,
+        'notebook-assistant',
+      ).map((chunk) => ({
+        id: chunk.id,
+        text: chunk.text,
+        cfi: chunk.startCfi,
+        endCfi: chunk.endCfi,
+      }));
+      if (sourceBlocks.length === 0) sourceBlocks = undefined;
+    } catch {
+      // CFI anchoring is a progressive enhancement; plain chapter context remains usable.
+    }
   }
   return {
     contextType: 'chapter',
@@ -95,5 +125,6 @@ export async function buildCurrentChapterContext(
     chapterTitle: progress?.sectionLabel || section?.href || section?.id || undefined,
     pageNumber: progress?.page,
     pageCfi: progress?.location,
+    sourceBlocks,
   };
 }

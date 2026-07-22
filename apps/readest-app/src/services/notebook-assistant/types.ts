@@ -18,8 +18,47 @@ export interface NotebookAssistantSettings {
 export type SelectedTextAction = 'translation' | 'explanation';
 export type NotebookAssistantContextType = 'selection' | 'page' | 'chapter';
 export type NotebookAssistantCardAction = 'summary' | 'insight' | 'takeaway';
-export type AssistantUsageAction = SelectedTextAction | NotebookAssistantCardAction | 'quiz';
+export type AssistantUsageAction =
+  | SelectedTextAction
+  | NotebookAssistantCardAction
+  | 'quiz'
+  | 'one_question';
 export type QuizQuestionType = 'multiple_choice' | 'true_false' | 'short_answer';
+
+export type OneQuestionType = 'multiple_choice' | 'open';
+
+export interface OneQuestionChoice {
+  id: string;
+  text: string;
+}
+
+export interface OneQuestionSourceBlock {
+  id: string;
+  text: string;
+  cfi: string;
+  endCfi: string;
+}
+
+export interface OneQuestionSourceAnchor {
+  blockId: string;
+  cfi: string;
+  endCfi: string;
+}
+
+export interface OneQuestion {
+  id: string;
+  type: OneQuestionType;
+  question: string;
+  choices?: OneQuestionChoice[];
+  correctChoiceId?: string;
+  referenceAnswer: string;
+  evidenceQuote: string;
+  sourceAnchor?: OneQuestionSourceAnchor;
+}
+
+export type OneQuestionResult =
+  | { question: OneQuestion }
+  | { question: null; reason: 'insufficient_content' };
 
 export interface QuizQuestion {
   id: string;
@@ -66,6 +105,15 @@ export interface ChapterQuizRequest {
   questionCount?: number;
 }
 
+export interface OneQuestionRequest {
+  sourceText: string;
+  sourceBlocks?: OneQuestionSourceBlock[];
+  title?: string;
+  targetLanguage: string;
+  provider: string;
+  model: string;
+}
+
 export const NOTEBOOK_ASSISTANT_TEMPLATES: Record<
   NotebookAssistantProvider,
   Pick<NotebookAssistantSettings, 'baseUrl' | 'model'>
@@ -88,13 +136,18 @@ export const DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS: NotebookAssistantSettings = {
   defaultQuizQuestionCount: 5,
   defaultSummaryStyle: 'structured',
   costMode: 'conservative',
-  dailyTokenLimit: 100_000,
+  dailyTokenLimit: 0,
   usageTrackingEnabled: true,
 };
 
 export const resolveNotebookAssistantSettings = (
   settings?: Partial<NotebookAssistantSettings> | null,
-): NotebookAssistantSettings => ({
-  ...DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
-  ...(settings ?? {}),
-});
+): NotebookAssistantSettings => {
+  const resolved = {
+    ...DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
+    ...(settings ?? {}),
+  };
+  // Migrate the former default so existing installations also become unlimited.
+  if (resolved.dailyTokenLimit === 100_000) resolved.dailyTokenLimit = 0;
+  return resolved;
+};

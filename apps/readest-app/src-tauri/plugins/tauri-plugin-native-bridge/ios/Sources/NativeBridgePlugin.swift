@@ -1202,7 +1202,7 @@ class NativeBridgePlugin: Plugin {
   // CryptoSession reads/writes via these commands so the user's sync
   // passphrase persists across app launches.
 
-  private static let syncKeychainService = "com.bilingify.readest.sync-passphrase"
+  private static let syncKeychainService = "com.miaoshou.readest.sync-passphrase"
   private static let syncKeychainAccount = "default"
 
   private func syncKeychainBaseQuery() -> [String: Any] {
@@ -1280,7 +1280,7 @@ class NativeBridgePlugin: Plugin {
   // store: one service, the caller's `key` as the account, so secrets
   // like the Google Drive token set persist the same way.
 
-  private static let secureItemsService = "com.bilingify.readest.secure-items"
+  private static let secureItemsService = "com.miaoshou.readest.secure-items"
 
   private func secureItemBaseQuery(_ key: String) -> [String: Any] {
     return [

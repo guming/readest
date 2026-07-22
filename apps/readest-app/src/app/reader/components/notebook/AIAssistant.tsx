@@ -336,7 +336,7 @@ const LegacyAIAssistant = ({ bookKey }: AIAssistantProps) => {
     if (!aiSettings) return null;
     const legacy = new LegacyIdbBackend(aiSettings);
     const reedy: RetrievalBackend | null =
-      appService && isTauriAppPlatform()
+      aiSettings.reedy?.enabled && appService && isTauriAppPlatform()
         ? new ReedyBackend(appService as AppService, aiSettings)
         : null;
     return selectBackend({ settings: aiSettings, isTauri: isTauriAppPlatform(), legacy, reedy });

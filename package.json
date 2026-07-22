@@ -8,6 +8,8 @@
     "lint": "pnpm --filter @readest/readest-app lint",
     "lint:lua": "pnpm --filter @readest/readest-app lint:lua",
     "tauri": "pnpm --filter @readest/readest-app tauri",
+    "ios:patch-local-dev": "pnpm --filter @readest/readest-app ios:patch-local-dev",
+    "tauri:ios:dev-local": "pnpm --filter @readest/readest-app tauri:ios:dev-local",
     "dev-web": "pnpm --filter @readest/readest-app dev-web",
     "prepare": "husky",
     "fmt:check": "pnpm --filter @readest/readest-app fmt:check",

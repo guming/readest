@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { PiCheck, PiFloppyDisk, PiSpinner, PiStudent } from 'react-icons/pi';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { PiCheck, PiFloppyDisk, PiSpinner, PiStudent, PiX } from 'react-icons/pi';
 
 import NotebookAssistantPanel from '@/components/settings/NotebookAssistantPanel';
 import { useEnv } from '@/context/EnvContext';
@@ -10,9 +10,17 @@ import {
 } from '@/services/notebook-assistant/context';
 import {
   NotebookAssistantError,
+  estimateOneQuestionTokens,
   estimateQuizTokens,
   runChapterQuizAssistant,
+  runOneQuestionAssistant,
 } from '@/services/notebook-assistant/client';
+import {
+  type OneQuestionQualityFeedback,
+  type OneQuestionSelfAssessment,
+  recordOneQuestionEvent,
+  recordOneQuestionQualityFeedback,
+} from '@/services/notebook-assistant/oneQuestionEvents';
 import { getAssistantApiKey } from '@/services/notebook-assistant/secretStore';
 import {
   evaluateUsageLimit,
@@ -20,6 +28,7 @@ import {
 } from '@/services/notebook-assistant/usage';
 import {
   resolveNotebookAssistantSettings,
+  type OneQuestion,
   type QuizCardContent,
   type QuizQuestion,
 } from '@/services/notebook-assistant/types';
@@ -28,10 +37,13 @@ import { useReaderStore } from '@/store/readerStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { NotebookCard } from '@/types/book';
 import { uniqueId } from '@/utils/misc';
+import { eventDispatcher } from '@/utils/event';
 
 interface Props {
   bookKey: string;
 }
+
+type ReviewMode = 'one_question' | 'chapter_quiz';
 
 const normalizeAnswer = (value: string): string => value.trim().toLowerCase();
 
@@ -50,7 +62,14 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
   const quizQuestionCount = assistant.defaultQuizQuestionCount;
   const targetLanguage = assistant.targetLanguage || navigator.language || 'English';
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [mode, setMode] = useState<ReviewMode>('one_question');
   const [context, setContext] = useState<NotebookAssistantContext | null>(null);
+  const [oneQuestion, setOneQuestion] = useState<OneQuestion | null>(null);
+  const [oneAnswer, setOneAnswer] = useState('');
+  const [oneSubmitted, setOneSubmitted] = useState(false);
+  const [oneAbstained, setOneAbstained] = useState(false);
+  const [selfAssessment, setSelfAssessment] = useState<OneQuestionSelfAssessment | null>(null);
+  const [qualityFeedback, setQualityFeedback] = useState<OneQuestionQualityFeedback | null>(null);
   const [quiz, setQuiz] = useState<QuizCardContent | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -61,9 +80,14 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
   const [savedMissedQuestionIds, setSavedMissedQuestionIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const oneQuestionController = useRef<AbortController | null>(null);
+  const oneQuestionStartedAt = useRef(0);
+  const oneAnswerStartedAt = useRef(0);
+  const oneQuestionInteractionId = useRef('');
 
   useEffect(() => {
     void getAssistantApiKey().then(setApiKey);
+    return () => oneQuestionController.current?.abort();
   }, []);
 
   const configured = !!apiKey && !!assistant.baseUrl && !!assistant.model;
@@ -89,6 +113,198 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
     const bookDoc = getBookData(bookKey)?.bookDoc;
     if (!bookDoc) return null;
     return buildCurrentChapterContext(bookDoc, getView(bookKey), getProgress(bookKey));
+  };
+
+  const trackOneQuestion = (
+    event: Parameters<typeof recordOneQuestionEvent>[0]['event'],
+    details: Partial<Parameters<typeof recordOneQuestionEvent>[0]> = {},
+  ) => {
+    if (!assistant.usageTrackingEnabled) return;
+    recordOneQuestionEvent({
+      event,
+      provider: assistant.provider,
+      model: assistant.model,
+      bookId: bookKey.split('-')[0],
+      ...details,
+    });
+  };
+
+  const resetOneQuestion = () => {
+    setOneQuestion(null);
+    setOneAnswer('');
+    setOneSubmitted(false);
+    setOneAbstained(false);
+    setSelfAssessment(null);
+    setQualityFeedback(null);
+  };
+
+  const generateOneQuestion = async (askedAnother = false) => {
+    if (!apiKey) return;
+    oneQuestionController.current?.abort();
+    const controller = new AbortController();
+    oneQuestionController.current = controller;
+    setMode('one_question');
+    resetOneQuestion();
+    setLoading(true);
+    setError('');
+    oneQuestionStartedAt.current = Date.now();
+    if (askedAnother) trackOneQuestion('one_question_asked_another');
+    trackOneQuestion('one_question_requested');
+    let usageContext: NotebookAssistantContext | null = null;
+    let usageEstimate = estimateOneQuestionTokens('');
+    try {
+      const nextContext = await loadContext();
+      if (!nextContext?.sourceText) {
+        throw new Error(_('No readable text found for the current chapter.'));
+      }
+      const nextEstimate = estimateOneQuestionTokens(
+        nextContext.sourceText,
+        nextContext.sourceBlocks,
+      );
+      usageContext = nextContext;
+      usageEstimate = nextEstimate;
+      if (nextEstimate.input > assistant.warnAboveTokens) {
+        const accepted = window.confirm(
+          _('This chapter is long and may cost more than usual. Continue?'),
+        );
+        if (!accepted) return;
+      }
+      const limit = evaluateUsageLimit(assistant, nextEstimate);
+      if (!limit.allowed) {
+        throw new Error(
+          _(
+            'Daily token limit reached. Adjust the limit or cost mode in Notebook Assistant settings.',
+          ),
+        );
+      }
+      if (limit.needsConfirmation) {
+        const accepted = window.confirm(
+          _(
+            'This request may exceed your daily token limit. Estimated total: {{total}} / {{limit}} tokens. Continue?',
+            { total: limit.projectedTotal, limit: limit.limit },
+          ),
+        );
+        if (!accepted) return;
+      }
+      setContext(nextContext);
+      const result = await runOneQuestionAssistant(
+        {
+          sourceText: nextContext.sourceText,
+          sourceBlocks: nextContext.sourceBlocks,
+          title: nextContext.title,
+          targetLanguage,
+          provider: assistant.provider,
+          model: assistant.model,
+        },
+        assistant,
+        apiKey,
+        controller.signal,
+      );
+      const durationMs = Date.now() - oneQuestionStartedAt.current;
+      if (result.question) {
+        setOneQuestion(result.question);
+        oneQuestionInteractionId.current = `${Date.now()}-${result.question.id}`;
+        oneAnswerStartedAt.current = Date.now();
+        trackOneQuestion('one_question_generated', {
+          questionType: result.question.type,
+          durationMs,
+        });
+      } else {
+        setOneAbstained(true);
+        trackOneQuestion('one_question_abstained', { durationMs });
+      }
+      if (assistant.usageTrackingEnabled) {
+        recordNotebookAssistantUsage({
+          action: 'one_question',
+          contextType: 'chapter',
+          provider: assistant.provider,
+          model: assistant.model,
+          tokenEstimate: nextEstimate,
+          success: true,
+          bookId: bookKey.split('-')[0],
+        });
+      }
+    } catch (oneQuestionError) {
+      if ((oneQuestionError as Error).name === 'AbortError') return;
+      setError((oneQuestionError as Error).message);
+      const errorCode =
+        oneQuestionError instanceof NotebookAssistantError ? oneQuestionError.code : 'unknown';
+      trackOneQuestion('one_question_failed', {
+        durationMs: Date.now() - oneQuestionStartedAt.current,
+        errorCode,
+      });
+      if (assistant.usageTrackingEnabled && usageContext) {
+        recordNotebookAssistantUsage({
+          action: 'one_question',
+          contextType: 'chapter',
+          provider: assistant.provider,
+          model: assistant.model,
+          tokenEstimate: usageEstimate,
+          success: false,
+          errorCode,
+          bookId: bookKey.split('-')[0],
+        });
+      }
+    } finally {
+      if (oneQuestionController.current === controller) {
+        oneQuestionController.current = null;
+        setLoading(false);
+      }
+    }
+  };
+
+  const submitOneQuestion = (answer = oneAnswer) => {
+    if (!oneQuestion || oneSubmitted) return;
+    setOneAnswer(answer);
+    setOneSubmitted(true);
+    if (oneQuestion.type === 'multiple_choice') {
+      trackOneQuestion('one_question_answered', {
+        questionType: oneQuestion.type,
+        durationMs: Date.now() - oneAnswerStartedAt.current,
+      });
+    }
+  };
+
+  const chooseSelfAssessment = (assessment: OneQuestionSelfAssessment) => {
+    const isFirstAssessment = selfAssessment === null;
+    setSelfAssessment(assessment);
+    if (!isFirstAssessment || !oneQuestion) return;
+    trackOneQuestion('one_question_answered', {
+      questionType: oneQuestion.type,
+      durationMs: Date.now() - oneAnswerStartedAt.current,
+      selfAssessment: assessment,
+    });
+  };
+
+  const skipOneQuestion = () => {
+    trackOneQuestion('one_question_skipped', { questionType: oneQuestion?.type });
+    resetOneQuestion();
+  };
+
+  const continueReading = () => {
+    trackOneQuestion('one_question_continued_reading', { questionType: oneQuestion?.type });
+    resetOneQuestion();
+  };
+
+  const chooseQualityFeedback = (feedback: OneQuestionQualityFeedback) => {
+    setQualityFeedback(feedback);
+    if (!assistant.usageTrackingEnabled || !oneQuestionInteractionId.current) return;
+    recordOneQuestionQualityFeedback({
+      interactionId: oneQuestionInteractionId.current,
+      provider: assistant.provider,
+      model: assistant.model,
+      bookId: bookKey.split('-')[0],
+      questionType: oneQuestion?.type,
+      qualityFeedback: feedback,
+    });
+  };
+
+  const viewOneQuestionSource = () => {
+    const cfi = oneQuestion?.sourceAnchor?.cfi;
+    if (!cfi) return;
+    trackOneQuestion('one_question_source_opened', { questionType: oneQuestion.type });
+    eventDispatcher.dispatch('navigate', { bookKey, cfi });
+    getView(bookKey)?.goTo(cfi);
   };
 
   const generateQuiz = async () => {
@@ -283,47 +499,295 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
       <div className='border-base-300 border-b p-3'>
         <div className='mb-2 flex items-center gap-2'>
           <PiStudent className='shrink-0' />
-          <h2 className='text-sm font-semibold'>{_('Chapter Quiz')}</h2>
+          <h2 className='text-sm font-semibold'>
+            {mode === 'one_question' ? _('Ask Me One') : _('Chapter Quiz')}
+          </h2>
         </div>
         <p className='text-base-content/60 mb-2 text-xs'>
-          {context
+          {mode === 'chapter_quiz' && context
             ? `${context.title} · ~${estimate.input} ${_('input tokens')} ${_('max')} ~${estimate.output} ${_('output tokens')}`
             : `${assistant.provider} · ${assistant.model}`}
         </p>
         {error && <p className='mb-2 text-xs text-red-500'>{error}</p>}
-        <div className='flex justify-end gap-1'>
-          {quiz && submitted && (
+        <div className='flex flex-wrap justify-end gap-1'>
+          {mode === 'one_question' ? (
+            <>
+              <button
+                type='button'
+                className='btn btn-ghost btn-xs eink-bordered'
+                onClick={() => {
+                  oneQuestionController.current?.abort();
+                  resetOneQuestion();
+                  setError('');
+                  setMode('chapter_quiz');
+                }}
+                disabled={loading}
+              >
+                {_('Chapter Quiz')}
+              </button>
+              {loading ? (
+                <button
+                  type='button'
+                  className='btn btn-ghost btn-xs eink-bordered'
+                  onClick={() => {
+                    oneQuestionController.current?.abort();
+                    setLoading(false);
+                  }}
+                >
+                  <PiX /> {_('Cancel')}
+                </button>
+              ) : (
+                !oneQuestion &&
+                !oneAbstained && (
+                  <button
+                    type='button'
+                    className='btn btn-primary btn-xs'
+                    onClick={() => void generateOneQuestion()}
+                  >
+                    <PiStudent /> {_('Ask Me One')}
+                  </button>
+                )
+              )}
+            </>
+          ) : (
             <button
               type='button'
-              className='btn btn-ghost btn-xs'
+              className='btn btn-ghost btn-xs eink-bordered'
+              onClick={() => {
+                setMode('one_question');
+                setError('');
+              }}
+              disabled={loading}
+            >
+              {_('Ask Me One')}
+            </button>
+          )}
+          {mode === 'chapter_quiz' && quiz && submitted && (
+            <button
+              type='button'
+              className='btn btn-ghost btn-xs eink-bordered'
               onClick={() => setShowAnswers((current) => !current)}
             >
               {showAnswers ? _('Hide Answers') : _('Show Answers')}
             </button>
           )}
-          {quiz && submitted && (
+          {mode === 'chapter_quiz' && quiz && submitted && (
             <button
               type='button'
-              className='btn btn-ghost btn-xs'
+              className='btn btn-ghost btn-xs eink-bordered'
               onClick={saveQuiz}
               disabled={saved}
             >
               {saved ? <PiCheck /> : <PiFloppyDisk />} {saved ? _('Saved') : _('Save')}
             </button>
           )}
-          <button
-            type='button'
-            className='btn btn-primary btn-xs'
-            onClick={generateQuiz}
-            disabled={loading}
-          >
-            {loading ? <PiSpinner className='animate-spin' /> : <PiStudent />}
-            {quiz ? _('Regenerate') : _('Generate Quiz')}
-          </button>
+          {mode === 'chapter_quiz' && (
+            <button
+              type='button'
+              className='btn btn-primary btn-xs'
+              onClick={generateQuiz}
+              disabled={loading}
+            >
+              {loading ? <PiSpinner className='animate-spin' /> : <PiStudent />}
+              {quiz ? _('Regenerate') : _('Generate Quiz')}
+            </button>
+          )}
         </div>
       </div>
 
-      {quiz && (
+      {mode === 'one_question' && loading && (
+        <div className='flex min-h-24 items-center justify-center gap-2 p-4 text-sm'>
+          <PiSpinner className='animate-spin' /> {_('Creating a question from this chapter…')}
+        </div>
+      )}
+
+      {mode === 'one_question' && oneAbstained && !loading && (
+        <div className='p-3'>
+          <div className='eink-bordered border-base-300 bg-base-100 rounded-md border p-3'>
+            <p className='text-sm'>
+              {_('No useful question could be generated from this chapter.')}
+            </p>
+            <div className='mt-3 flex justify-end gap-2'>
+              <button
+                type='button'
+                className='btn btn-ghost btn-sm eink-bordered'
+                onClick={continueReading}
+              >
+                {_('Continue Reading')}
+              </button>
+              <button
+                type='button'
+                className='btn btn-primary btn-sm'
+                onClick={() => void generateOneQuestion()}
+              >
+                {_('Try Again')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mode === 'one_question' && oneQuestion && !loading && (
+        <div className='min-h-0 flex-1 overflow-y-auto p-3'>
+          <article className='eink-bordered border-base-300 bg-base-100 rounded-md border p-3'>
+            <p className='text-base-content/60 mb-2 text-xs'>
+              {_('Current Chapter')} · {_('About 1 minute')}
+            </p>
+            <h3 className='mb-3 text-sm font-semibold'>{oneQuestion.question}</h3>
+
+            {oneQuestion.type === 'multiple_choice' ? (
+              <fieldset className='space-y-2' disabled={oneSubmitted}>
+                <legend className='sr-only'>{oneQuestion.question}</legend>
+                {oneQuestion.choices?.map((choice) => (
+                  <label
+                    key={choice.id}
+                    className='eink-bordered border-base-300 flex cursor-pointer items-start gap-2 rounded-md border p-2 text-sm'
+                  >
+                    <input
+                      type='radio'
+                      className='radio radio-xs mt-0.5'
+                      name={`one-question-${oneQuestion.id}`}
+                      value={choice.id}
+                      checked={oneAnswer === choice.id}
+                      onChange={() => setOneAnswer(choice.id)}
+                    />
+                    <span>{choice.text}</span>
+                  </label>
+                ))}
+              </fieldset>
+            ) : (
+              <textarea
+                className='textarea textarea-bordered eink-bordered min-h-24 w-full bg-base-100 text-sm'
+                value={oneAnswer}
+                disabled={oneSubmitted}
+                onChange={(event) => setOneAnswer(event.target.value)}
+                placeholder={_('Your answer')}
+                aria-label={_('Your answer')}
+              />
+            )}
+
+            {!oneSubmitted ? (
+              <div className='mt-3 flex flex-wrap justify-end gap-2'>
+                <button
+                  type='button'
+                  className='btn btn-ghost btn-sm eink-bordered'
+                  onClick={skipOneQuestion}
+                >
+                  {_('Skip')}
+                </button>
+                <button
+                  type='button'
+                  className='btn btn-ghost btn-sm eink-bordered'
+                  onClick={() => submitOneQuestion('')}
+                >
+                  {_("I Don't Know")}
+                </button>
+                <button
+                  type='button'
+                  className='btn btn-primary btn-sm'
+                  disabled={!oneAnswer.trim()}
+                  onClick={() => submitOneQuestion()}
+                >
+                  {_('Submit')}
+                </button>
+              </div>
+            ) : (
+              <div className='border-base-300 mt-4 border-t pt-3 text-sm'>
+                {oneQuestion.type === 'multiple_choice' && (
+                  <p className='mb-2 font-semibold'>
+                    {oneAnswer === oneQuestion.correctChoiceId ? _('Correct') : _('Not quite')}
+                  </p>
+                )}
+                <p className='font-medium'>{_('Reference Idea')}</p>
+                <p className='text-base-content/80 mt-1'>{oneQuestion.referenceAnswer}</p>
+                <blockquote className='eink-bordered border-base-300 bg-base-200/40 mt-3 rounded-md border p-2'>
+                  <div className='mb-1 flex items-center justify-between gap-2'>
+                    <p className='text-base-content/60 text-xs'>{_('From the Chapter')}</p>
+                    {oneQuestion.sourceAnchor && (
+                      <button
+                        type='button'
+                        className='btn btn-ghost btn-xs eink-bordered'
+                        onClick={viewOneQuestionSource}
+                      >
+                        {_('View in Book')}
+                      </button>
+                    )}
+                  </div>
+                  <p>{oneQuestion.evidenceQuote}</p>
+                </blockquote>
+
+                {oneQuestion.type === 'open' && (
+                  <div className='mt-3'>
+                    <p className='text-base-content/70 mb-2 text-xs'>
+                      {_('How much did your answer cover?')}
+                    </p>
+                    <div className='flex flex-wrap gap-2'>
+                      {(
+                        [
+                          ['got_it', _('I Got It')],
+                          ['partly', _('Partly')],
+                          ['missed', _('I Missed It')],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type='button'
+                          className={`btn btn-xs ${selfAssessment === value ? 'btn-primary' : 'btn-outline eink-bordered'}`}
+                          onClick={() => chooseSelfAssessment(value)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className='mt-4'>
+                  <p className='text-base-content/70 mb-2 text-xs'>{_('Was this helpful?')}</p>
+                  <div className='flex flex-wrap gap-2'>
+                    {(
+                      [
+                        ['insightful', _('Insightful')],
+                        ['too_easy', _('Too Easy')],
+                        ['too_trivial', _('Too Trivial')],
+                        ['not_supported', _('Not Supported')],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type='button'
+                        className={`btn btn-xs ${qualityFeedback === value ? 'btn-primary' : 'btn-outline eink-bordered'}`}
+                        onClick={() => chooseQualityFeedback(value)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className='mt-4 flex flex-wrap justify-end gap-2'>
+                  <button
+                    type='button'
+                    className='btn btn-ghost btn-sm eink-bordered'
+                    onClick={continueReading}
+                  >
+                    {_('Continue Reading')}
+                  </button>
+                  <button
+                    type='button'
+                    className='btn btn-primary btn-sm'
+                    onClick={() => void generateOneQuestion(true)}
+                  >
+                    {_('Ask Another')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </article>
+        </div>
+      )}
+
+      {mode === 'chapter_quiz' && quiz && (
         <div className='min-h-0 flex-1 overflow-y-auto px-3 py-2'>
           {submitted && (
             <p className='text-base-content/70 mb-2 text-sm'>

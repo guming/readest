@@ -91,6 +91,22 @@ describe('mergeNotes (element-set CRDT)', () => {
     expect(lr.note).toBe('remote');
     expect(rl.note).toBe('remote');
   });
+
+  test('preserves native reference data from the winning note', () => {
+    const reference: BookNote = {
+      ...note('reference', 9),
+      type: 'reference',
+      referenceData: {
+        kind: 'external',
+        href: 'https://example.com/paper',
+        url: 'https://example.com/paper',
+        description: 'Paper abstract',
+      },
+    };
+    const out = mergeNotes([note('reference', 1)], [reference]);
+    expect(out[0]?.type).toBe('reference');
+    expect(out[0]?.referenceData).toEqual(reference.referenceData);
+  });
 });
 
 describe('mergeNotebookCards', () => {
