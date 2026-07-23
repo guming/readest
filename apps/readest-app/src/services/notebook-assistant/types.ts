@@ -16,6 +16,34 @@ export interface NotebookAssistantSettings {
 }
 
 export type SelectedTextAction = 'translation' | 'explanation';
+
+export interface BookExpertProfile {
+  schemaVersion: 1;
+  revision: number;
+  primaryDomain: string;
+  relatedDomains: string[];
+  expertRole: string;
+  teachingPrinciples: string[];
+  domainRules: string[];
+  confidence: number;
+  initializedFrom: string[];
+  updatedAt: string;
+}
+
+export interface ExplanationFollowUp {
+  id: string;
+  label: string;
+}
+
+export interface ExpertExplanationResult {
+  domain: string;
+  subdomain: string;
+  contentType: string;
+  label: string;
+  explanation: string;
+  followUps: ExplanationFollowUp[];
+  expertProfile?: BookExpertProfile;
+}
 export type NotebookAssistantContextType = 'selection' | 'page' | 'chapter';
 export type NotebookAssistantCardAction = 'summary' | 'insight' | 'takeaway';
 export type AssistantUsageAction =
@@ -83,6 +111,19 @@ export interface SelectedTextRequest {
   targetLanguage: string;
   provider: string;
   model: string;
+  bookTitle?: string;
+  bookAuthor?: string;
+  chapterId?: string;
+  chapterTitle?: string;
+  surroundingContext?: {
+    before: string[];
+    selectedBlock: string;
+    after: string[];
+  };
+  expertProfile?: BookExpertProfile;
+  rebuildExpertProfile?: boolean;
+  followUp?: ExplanationFollowUp;
+  previousExplanation?: string;
 }
 
 export interface NotebookContextRequest {

@@ -15,6 +15,63 @@ export interface NotebookAssistantContext {
   sourceBlocks?: OneQuestionSourceBlock[];
 }
 
+export interface SelectionReadingContext {
+  before: string[];
+  selectedBlock: string;
+  after: string[];
+}
+
+const EMPTY_SELECTION_CONTEXT: SelectionReadingContext = {
+  before: [],
+  selectedBlock: '',
+  after: [],
+};
+
+const SELECTION_BLOCK_SELECTOR =
+  'p, li, blockquote, pre, td, th, figcaption, h1, h2, h3, h4, h5, h6';
+const MAX_SELECTION_BLOCK_CHARS = 1_500;
+const MAX_SELECTION_CONTEXT_CHARS = 6_000;
+
+const boundedBlockText = (element: Element): string =>
+  normalizeText(element.textContent || '').slice(0, MAX_SELECTION_BLOCK_CHARS);
+
+export function buildSelectionContext(range: Range): SelectionReadingContext {
+  try {
+    const container = range.commonAncestorContainer;
+    if (!container || range.collapsed) return { ...EMPTY_SELECTION_CONTEXT };
+    const startElement =
+      range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? (range.startContainer as Element)
+        : range.startContainer.parentElement;
+    const selectedElement = startElement?.closest(SELECTION_BLOCK_SELECTOR);
+    const root = selectedElement?.parentElement;
+    if (!selectedElement || !root) return { ...EMPTY_SELECTION_CONTEXT };
+    const blocks = Array.from(root.querySelectorAll(SELECTION_BLOCK_SELECTOR)).filter(
+      (element) => element.parentElement === root,
+    );
+    const index = blocks.indexOf(selectedElement);
+    if (index < 0) return { ...EMPTY_SELECTION_CONTEXT };
+    const before = blocks
+      .slice(Math.max(0, index - 2), index)
+      .map(boundedBlockText)
+      .filter(Boolean);
+    const selectedBlock = boundedBlockText(selectedElement);
+    const after = blocks
+      .slice(index + 1, index + 3)
+      .map(boundedBlockText)
+      .filter(Boolean);
+    const result = { before, selectedBlock, after };
+    if (JSON.stringify(result).length <= MAX_SELECTION_CONTEXT_CHARS) return result;
+    return {
+      before: before.map((text) => text.slice(0, 900)),
+      selectedBlock: selectedBlock.slice(0, 1_500),
+      after: after.map((text) => text.slice(0, 900)),
+    };
+  } catch {
+    return { ...EMPTY_SELECTION_CONTEXT };
+  }
+}
+
 const normalizeText = (value: string): string => value.replace(/\s+/g, ' ').trim();
 
 const textFromDocument = (doc: Document): string =>

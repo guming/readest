@@ -1,6 +1,9 @@
 import { getAIFetch } from '@/services/ai/utils/httpFetch';
 import type {
   ChapterQuizRequest,
+  BookExpertProfile,
+  ExpertExplanationResult,
+  ExplanationFollowUp,
   NotebookAssistantSettings,
   NotebookContextRequest,
   OneQuestion,
@@ -32,6 +35,26 @@ export class NotebookAssistantError extends Error {
   }
 }
 
+function createRequestSignal(parent: AbortSignal | undefined, timeoutMs: number) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const abortFromParent = () => controller.abort();
+  if (parent?.aborted) controller.abort();
+  else parent?.addEventListener('abort', abortFromParent, { once: true });
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  return {
+    signal: controller.signal,
+    didTimeout: () => timedOut,
+    cleanup: () => {
+      clearTimeout(timer);
+      parent?.removeEventListener('abort', abortFromParent);
+    },
+  };
+}
+
 export function normalizeAssistantBaseUrl(baseUrl: string): string {
   const value = baseUrl.trim().replace(/\/+$/, '');
   try {
@@ -46,9 +69,11 @@ export function normalizeAssistantBaseUrl(baseUrl: string): string {
 export function estimateSelectedTextTokens(
   sourceText: string,
   action: SelectedTextRequest['action'],
+  extraContext = '',
 ) {
   const input =
-    Math.max(1, Math.ceil(sourceText.length / 3)) + (action === 'translation' ? 80 : 140);
+    Math.max(1, Math.ceil((sourceText.length + extraContext.length) / 3)) +
+    (action === 'translation' ? 80 : 300);
   const output = Math.min(
     2_000,
     Math.max(128, Math.ceil(input * (action === 'translation' ? 1.2 : 0.8))),
@@ -99,7 +124,47 @@ function systemPrompt(request: SelectedTextRequest): string {
   if (request.action === 'translation') {
     return `${untrusted} Translate it faithfully into ${request.targetLanguage || 'the user interface language'}. Return only the translation, with no preface, notes, or quotation marks.`;
   }
-  return `${untrusted} Explain it concisely in ${request.targetLanguage || 'the user interface language'}. Use the headings "Explanation", "Context" only when needed, and "Key terms" only when needed. Do not add facts you cannot support.`;
+  const profile = request.rebuildExpertProfile ? undefined : request.expertProfile;
+  const profileText = profile
+    ? JSON.stringify({
+        schemaVersion: profile.schemaVersion,
+        revision: profile.revision,
+        primaryDomain: profile.primaryDomain,
+        relatedDomains: profile.relatedDomains,
+        expertRole: profile.expertRole,
+        teachingPrinciples: profile.teachingPrinciples,
+        domainRules: profile.domainRules,
+        confidence: profile.confidence,
+        initializedFrom: profile.initializedFrom,
+        updatedAt: profile.updatedAt,
+      })
+    : 'NONE. Infer and return one from the book metadata and reading context.';
+  return `${untrusted}
+You are a cross-domain reading teacher. Internally identify the selected content's domain and content type, then teach it using the most suitable method for that field. Do not merely translate or paraphrase. For concepts explain definition, intuition, example, and boundaries; for arguments explain premises, reasoning, conclusion, and conditions; for formulas explain symbols, relationships, necessary derivation, and a simple example; for code explain purpose and execution; for history explain background, process, and impact; for literature explain context, language, and possible meanings without claiming one interpretation is uniquely correct; for philosophy explain concepts, arguments, disputes, and counterexamples. State uncertainty when context is insufficient. Medical, legal, and financial material is educational explanation, not professional advice.
+Respond in ${request.targetLanguage || 'the user interface language'} and return only one valid JSON object with: domain, subdomain, contentType, label, explanation, followUps. followUps must contain at most three objects with stable id and localized label. ${profile ? 'Do not return expertProfile.' : 'Also return expertProfile with schemaVersion 1, revision, primaryDomain, relatedDomains, expertRole, teachingPrinciples, domainRules, confidence, initializedFrom, and updatedAt.'}
+BOOK EXPERT PROFILE:
+${profileText}`;
+}
+
+function explanationUserPrompt(request: SelectedTextRequest): string {
+  const context = request.surroundingContext;
+  return [
+    `BOOK TITLE: ${request.bookTitle || 'Unknown'}`,
+    `BOOK AUTHOR: ${request.bookAuthor || 'Unknown'}`,
+    `CHAPTER ID: ${request.chapterId || 'Unknown'}`,
+    `CHAPTER TITLE: ${request.chapterTitle || 'Unknown'}`,
+    `SOURCE LANGUAGE: ${request.sourceLanguage || 'Unknown'}`,
+    `CONTEXT BEFORE:\n${context?.before.join('\n') || 'Unavailable'}`,
+    `SELECTED BLOCK:\n${context?.selectedBlock || 'Unavailable'}`,
+    `CONTEXT AFTER:\n${context?.after.join('\n') || 'Unavailable'}`,
+    `SELECTED TEXT:\n${request.sourceText}`,
+    request.followUp
+      ? `FOLLOW-UP OPERATION: ${request.followUp.id} — ${request.followUp.label}`
+      : 'FOLLOW-UP OPERATION: initial explanation',
+    request.previousExplanation
+      ? `PREVIOUS EXPLANATION:\n${request.previousExplanation}`
+      : 'PREVIOUS EXPLANATION: None',
+  ].join('\n\n');
 }
 
 function contextSystemPrompt(request: NotebookContextRequest): string {
@@ -142,9 +207,103 @@ function extractJsonObject(text: string): unknown {
     return JSON.parse(text);
   } catch {
     const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new NotebookAssistantError('invalid_response', 'Quiz response was not JSON.');
-    return JSON.parse(match[0]);
+    if (!match)
+      throw new NotebookAssistantError('invalid_response', 'Assistant response was not JSON.');
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      throw new NotebookAssistantError(
+        'invalid_response',
+        'Assistant response was not valid JSON.',
+      );
+    }
   }
+}
+
+const explanationString = (value: unknown, field: string, maxLength: number): string => {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!text || text.length > maxLength) {
+    throw new NotebookAssistantError(
+      'invalid_response',
+      `The provider returned an invalid ${field}.`,
+    );
+  }
+  return text;
+};
+
+function parseExpertProfile(value: unknown): BookExpertProfile {
+  if (!value || typeof value !== 'object') {
+    throw new NotebookAssistantError(
+      'invalid_response',
+      'The provider returned no expert profile.',
+    );
+  }
+  const profile = value as Record<string, unknown>;
+  const stringList = (field: string, maxItems: number): string[] =>
+    (Array.isArray(profile[field]) ? profile[field] : [])
+      .map((item) => String(item).trim())
+      .filter(Boolean)
+      .slice(0, maxItems);
+  const confidence = Number(profile['confidence']);
+  return {
+    schemaVersion: 1,
+    revision: Math.max(1, Math.floor(Number(profile['revision']) || 1)),
+    primaryDomain: explanationString(profile['primaryDomain'], 'primary domain', 120),
+    relatedDomains: stringList('relatedDomains', 8),
+    expertRole: explanationString(profile['expertRole'], 'expert role', 300),
+    teachingPrinciples: stringList('teachingPrinciples', 8),
+    domainRules: stringList('domainRules', 8),
+    confidence: Number.isFinite(confidence) ? Math.min(1, Math.max(0, confidence)) : 0.5,
+    initializedFrom: stringList('initializedFrom', 8),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function parseExplanationResponse(
+  content: string,
+  requireExpertProfile = false,
+): ExpertExplanationResult {
+  const parsed = extractJsonObject(content) as Record<string, unknown>;
+  const rawFollowUps = Array.isArray(parsed['followUps']) ? parsed['followUps'] : [];
+  const seen = new Set<string>();
+  const followUps = rawFollowUps
+    .flatMap((value) => {
+      if (!value || typeof value !== 'object') return [];
+      const item = value as Record<string, unknown>;
+      const id = typeof item['id'] === 'string' ? item['id'].trim().slice(0, 60) : '';
+      const label = typeof item['label'] === 'string' ? item['label'].trim().slice(0, 160) : '';
+      if (!id || !label || seen.has(id)) return [];
+      seen.add(id);
+      return [{ id, label }];
+    })
+    .slice(0, 3);
+  const expertProfile = parsed['expertProfile']
+    ? parseExpertProfile(parsed['expertProfile'])
+    : undefined;
+  if (requireExpertProfile && !expertProfile) {
+    throw new NotebookAssistantError(
+      'invalid_response',
+      'The provider returned no expert profile.',
+    );
+  }
+  return {
+    domain: explanationString(parsed['domain'], 'domain', 120),
+    subdomain:
+      typeof parsed['subdomain'] === 'string' ? parsed['subdomain'].trim().slice(0, 120) : '',
+    contentType: explanationString(parsed['contentType'], 'content type', 120),
+    label: explanationString(parsed['label'], 'label', 240),
+    explanation: explanationString(parsed['explanation'], 'explanation', 20_000),
+    followUps,
+    expertProfile,
+  };
+}
+
+export function appendFollowUpExplanation(
+  previous: string,
+  followUp: ExplanationFollowUp,
+  explanation: string,
+): string {
+  return [previous.trim(), followUp.label.trim(), explanation.trim()].filter(Boolean).join('\n\n');
 }
 
 function normalizeQuizQuestion(value: unknown, index: number): QuizQuestion {
@@ -290,17 +449,28 @@ export function parseOneQuestionResponse(
 }
 
 export async function runSelectedTextAssistant(
+  request: SelectedTextRequest & { action: 'translation' },
+  settings: NotebookAssistantSettings,
+  apiKey: string,
+  signal?: AbortSignal,
+): Promise<string>;
+export async function runSelectedTextAssistant(
+  request: SelectedTextRequest & { action: 'explanation' },
+  settings: NotebookAssistantSettings,
+  apiKey: string,
+  signal?: AbortSignal,
+): Promise<ExpertExplanationResult>;
+export async function runSelectedTextAssistant(
   request: SelectedTextRequest,
   settings: NotebookAssistantSettings,
   apiKey: string,
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<string | ExpertExplanationResult> {
   if (!apiKey || !settings.model.trim()) {
     throw new NotebookAssistantError('not_configured', 'Configure an API key and model first.');
   }
   const baseUrl = normalizeAssistantBaseUrl(settings.baseUrl);
-  const timeout = AbortSignal.timeout(60_000);
-  const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const requestSignal = createRequestSignal(signal, 60_000);
   try {
     const response = await getAIFetch()(`${baseUrl}/chat/completions`, {
       method: 'POST',
@@ -308,26 +478,43 @@ export async function runSelectedTextAssistant(
       body: JSON.stringify({
         model: settings.model.trim(),
         temperature: request.action === 'translation' ? 0.1 : 0.3,
-        max_tokens: estimateSelectedTextTokens(request.sourceText, request.action).output,
+        max_tokens: estimateSelectedTextTokens(
+          request.sourceText,
+          request.action,
+          request.action === 'explanation' ? explanationUserPrompt(request) : '',
+        ).output,
         messages: [
           { role: 'system', content: systemPrompt(request) },
-          { role: 'user', content: request.sourceText },
+          {
+            role: 'user',
+            content:
+              request.action === 'explanation'
+                ? explanationUserPrompt(request)
+                : request.sourceText,
+          },
         ],
       }),
-      signal: combinedSignal,
+      signal: requestSignal.signal,
     });
     if (!response.ok) throw statusError(response.status);
     const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content?.trim();
     if (!content)
       throw new NotebookAssistantError('invalid_response', 'The provider returned no usable text.');
-    return content;
+    return request.action === 'explanation'
+      ? parseExplanationResponse(
+          content,
+          !request.expertProfile || request.rebuildExpertProfile === true,
+        )
+      : content;
   } catch (error) {
     if (error instanceof NotebookAssistantError) throw error;
-    if ((error as Error).name === 'TimeoutError')
+    if (requestSignal.didTimeout())
       throw new NotebookAssistantError('timeout', 'The request timed out.');
     if ((error as Error).name === 'AbortError') throw error;
     throw new NotebookAssistantError('network', 'Unable to reach the configured provider.');
+  } finally {
+    requestSignal.cleanup();
   }
 }
 
@@ -341,8 +528,10 @@ export async function runNotebookContextAssistant(
     throw new NotebookAssistantError('not_configured', 'Configure an API key and model first.');
   }
   const baseUrl = normalizeAssistantBaseUrl(settings.baseUrl);
-  const timeout = AbortSignal.timeout(request.contextType === 'chapter' ? 120_000 : 60_000);
-  const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const requestSignal = createRequestSignal(
+    signal,
+    request.contextType === 'chapter' ? 120_000 : 60_000,
+  );
   try {
     const response = await getAIFetch()(`${baseUrl}/chat/completions`, {
       method: 'POST',
@@ -359,7 +548,7 @@ export async function runNotebookContextAssistant(
           },
         ],
       }),
-      signal: combinedSignal,
+      signal: requestSignal.signal,
     });
     if (!response.ok) throw statusError(response.status);
     const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
@@ -369,10 +558,12 @@ export async function runNotebookContextAssistant(
     return content;
   } catch (error) {
     if (error instanceof NotebookAssistantError) throw error;
-    if ((error as Error).name === 'TimeoutError')
+    if (requestSignal.didTimeout())
       throw new NotebookAssistantError('timeout', 'The request timed out.');
     if ((error as Error).name === 'AbortError') throw error;
     throw new NotebookAssistantError('network', 'Unable to reach the configured provider.');
+  } finally {
+    requestSignal.cleanup();
   }
 }
 
@@ -386,8 +577,7 @@ export async function runChapterQuizAssistant(
     throw new NotebookAssistantError('not_configured', 'Configure an API key and model first.');
   }
   const baseUrl = normalizeAssistantBaseUrl(settings.baseUrl);
-  const timeout = AbortSignal.timeout(120_000);
-  const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const requestSignal = createRequestSignal(signal, 120_000);
   const questionCount = request.questionCount ?? 5;
   try {
     const response = await getAIFetch()(`${baseUrl}/chat/completions`, {
@@ -409,7 +599,7 @@ export async function runChapterQuizAssistant(
           },
         ],
       }),
-      signal: combinedSignal,
+      signal: requestSignal.signal,
     });
     if (!response.ok) throw statusError(response.status);
     const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
@@ -419,10 +609,12 @@ export async function runChapterQuizAssistant(
     return parseQuizResponse(content);
   } catch (error) {
     if (error instanceof NotebookAssistantError) throw error;
-    if ((error as Error).name === 'TimeoutError')
+    if (requestSignal.didTimeout())
       throw new NotebookAssistantError('timeout', 'The request timed out.');
     if ((error as Error).name === 'AbortError') throw error;
     throw new NotebookAssistantError('network', 'Unable to reach the configured provider.');
+  } finally {
+    requestSignal.cleanup();
   }
 }
 
@@ -436,8 +628,7 @@ export async function runOneQuestionAssistant(
     throw new NotebookAssistantError('not_configured', 'Configure an API key and model first.');
   }
   const baseUrl = normalizeAssistantBaseUrl(settings.baseUrl);
-  const timeout = AbortSignal.timeout(120_000);
-  const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const requestSignal = createRequestSignal(signal, 120_000);
   const sourceBlocks = request.sourceBlocks ?? [];
   const formattedContext =
     sourceBlocks.length > 0
@@ -468,7 +659,7 @@ export async function runOneQuestionAssistant(
           },
         ],
       }),
-      signal: combinedSignal,
+      signal: requestSignal.signal,
     });
     if (!response.ok) throw statusError(response.status);
     const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
@@ -479,11 +670,13 @@ export async function runOneQuestionAssistant(
     return parseOneQuestionResponse(content, request.sourceText, sourceBlocks);
   } catch (error) {
     if (error instanceof NotebookAssistantError) throw error;
-    if ((error as Error).name === 'TimeoutError') {
+    if (requestSignal.didTimeout()) {
       throw new NotebookAssistantError('timeout', 'The request timed out.');
     }
     if ((error as Error).name === 'AbortError') throw error;
     throw new NotebookAssistantError('network', 'Unable to reach the configured provider.');
+  } finally {
+    requestSignal.cleanup();
   }
 }
 
@@ -493,14 +686,19 @@ export async function testNotebookAssistantConnection(
 ): Promise<void> {
   const baseUrl = normalizeAssistantBaseUrl(settings.baseUrl);
   if (!apiKey) throw new NotebookAssistantError('not_configured', 'Enter an API key first.');
+  const requestSignal = createRequestSignal(undefined, 15_000);
   try {
     const response = await getAIFetch()(`${baseUrl}/models`, {
       headers: { Authorization: `Bearer ${apiKey}` },
-      signal: AbortSignal.timeout(15_000),
+      signal: requestSignal.signal,
     });
     if (!response.ok) throw statusError(response.status);
   } catch (error) {
     if (error instanceof NotebookAssistantError) throw error;
+    if (requestSignal.didTimeout())
+      throw new NotebookAssistantError('timeout', 'The request timed out.');
     throw new NotebookAssistantError('network', 'Unable to reach the configured provider.');
+  } finally {
+    requestSignal.cleanup();
   }
 }
