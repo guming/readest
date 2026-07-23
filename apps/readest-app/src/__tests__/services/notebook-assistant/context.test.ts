@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import {
   buildCurrentChapterContext,
   buildCurrentPageContext,
+  buildSelectionContext,
 } from '@/services/notebook-assistant/context';
 import type { BookDoc } from '@/libs/document';
 import type { BookProgress } from '@/types/book';
@@ -45,6 +46,35 @@ const makeBookDoc = (): BookDoc =>
   }) as unknown as BookDoc;
 
 describe('notebook assistant reading context', () => {
+  test('selection context includes the selected block and two neighboring blocks per side', () => {
+    const container = document.createElement('main');
+    container.innerHTML = [
+      '<p>First paragraph.</p>',
+      '<p>Second paragraph.</p>',
+      '<p>Selected paragraph with important text.</p>',
+      '<p>Fourth paragraph.</p>',
+      '<p>Fifth paragraph.</p>',
+      '<p>Sixth paragraph must be excluded.</p>',
+    ].join('');
+    const selected = container.children[2]!.firstChild!;
+    const range = document.createRange();
+    range.setStart(selected, 0);
+    range.setEnd(selected, selected.textContent!.length);
+
+    const context = buildSelectionContext(range);
+
+    expect(context.before).toEqual(['First paragraph.', 'Second paragraph.']);
+    expect(context.selectedBlock).toBe('Selected paragraph with important text.');
+    expect(context.after).toEqual(['Fourth paragraph.', 'Fifth paragraph.']);
+    expect(JSON.stringify(context)).not.toContain('Sixth paragraph');
+  });
+
+  test('selection context falls back to empty context for a detached invalid range', () => {
+    const range = document.createRange();
+    range.detach();
+    expect(buildSelectionContext(range)).toEqual({ before: [], selectedBlock: '', after: [] });
+  });
+
   test('current page uses the visible progress range and records page/chapter metadata', async () => {
     const context = await buildCurrentPageContext(makeBookDoc(), null, makeProgress());
     expect(context.sourceText).toBe('Visible page text');

@@ -1,5 +1,5 @@
 import { BookMetadata } from '@/libs/document';
-import type { QuizCardContent } from '@/services/notebook-assistant/types';
+import type { BookExpertProfile, QuizCardContent } from '@/services/notebook-assistant/types';
 import { TTSHighlightOptions } from '@/services/tts/types';
 import { TTSHighlightGranularity } from '@/services/tts/types';
 import { TTSMediaMetadataMode } from '@/services/tts/types';
@@ -532,6 +532,8 @@ export interface BookConfig {
   xpointer?: string; // XPointer of the current location (for Koreader interoperability)
   booknotes?: BookNote[];
   notebookCards?: NotebookCard[];
+  /** Local-only expert teaching profile used by selected-text explanations. */
+  expertProfile?: BookExpertProfile;
   rsvpPosition?: { cfi: string; wordText: string };
   searchConfig?: Partial<BookSearchConfig>;
   viewSettings?: Partial<ViewSettings>;

@@ -1801,6 +1801,11 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
           trianglePosition={trianglePosition}
           popupWidth={transPopupWidth}
           popupHeight={assistantPopupHeight}
+          bookTitle={bookData.book?.title || ''}
+          bookAuthor={bookData.book?.author || ''}
+          chapterId={selection.href || progress.sectionHref}
+          chapterTitle={progress.sectionLabel}
+          sourceLanguage={primaryLang}
           onDismiss={handleDismissPopupAndSelection}
         />
       )}

@@ -68,6 +68,10 @@ const nextConfig = {
     return config;
   },
   turbopack: {
+    // Keep both this app and pnpm's real package store inside Turbopack's
+    // security boundary. `node_modules/next` points into the workspace-root
+    // `node_modules/.pnpm`, so using the app directory here is still too narrow.
+    root: path.join(__dirname, '../..'),
     resolveAlias: {
       nunjucks: 'nunjucks/browser/nunjucks.js',
       // Turbopack rejects absolute paths in resolveAlias ("server relative

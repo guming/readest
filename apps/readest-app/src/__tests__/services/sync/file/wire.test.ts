@@ -42,6 +42,18 @@ const config = {
     },
   ],
   viewSettings: { fontSize: 14 },
+  expertProfile: {
+    schemaVersion: 1,
+    revision: 1,
+    primaryDomain: 'Physics',
+    relatedDomains: [],
+    expertRole: 'Physics teacher',
+    teachingPrinciples: [],
+    domainRules: [],
+    confidence: 0.9,
+    initializedFrom: ['title'],
+    updatedAt: '2026-07-22T00:00:00.000Z',
+  },
 } as unknown as BookConfig;
 
 describe('wire envelope (frozen)', () => {
@@ -55,6 +67,7 @@ describe('wire envelope (frozen)', () => {
     expect(p.config).toEqual({ progress: [3, 10], location: 'loc', xpointer: 'xp', updatedAt: 42 });
     // Device-local fields never travel.
     expect('viewSettings' in p.config).toBe(false);
+    expect('expertProfile' in p.config).toBe(false);
     expect(p.notebookCards?.[0]?.id).toBe('c1');
   });
 

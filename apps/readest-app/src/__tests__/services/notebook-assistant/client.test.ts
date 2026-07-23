@@ -4,11 +4,13 @@ const fetchMock = vi.fn();
 vi.mock('@/services/ai/utils/httpFetch', () => ({ getAIFetch: () => fetchMock }));
 
 import {
+  appendFollowUpExplanation,
   NotebookAssistantError,
   estimateContextTokens,
   estimateQuizTokens,
   estimateSelectedTextTokens,
   normalizeAssistantBaseUrl,
+  parseExplanationResponse,
   parseOneQuestionResponse,
   parseQuizResponse,
   runChapterQuizAssistant,
@@ -33,6 +35,124 @@ describe('selected-text assistant client', () => {
     expect(estimateSelectedTextTokens('hello', 'explanation').input).toBeGreaterThan(100);
     expect(estimateContextTokens('chapter text', 'summary')).toEqual({ input: 224, output: 900 });
     expect(estimateQuizTokens('chapter text', 5)).toEqual({ input: 264, output: 1600 });
+  });
+
+  test('parses a structured expert explanation and de-duplicates follow-ups', () => {
+    const result = parseExplanationResponse(
+      `Here is the result:\n\`\`\`json\n${JSON.stringify({
+        domain: 'Economics',
+        subdomain: 'Macroeconomics',
+        contentType: 'causal argument',
+        label: 'Macroeconomics · Argument',
+        explanation: 'The passage explains a causal relationship.',
+        followUps: [
+          { id: 'example', label: 'Give an example' },
+          { id: 'example', label: 'Duplicate' },
+          { id: 'deeper', label: 'Go deeper' },
+        ],
+        expertProfile: {
+          schemaVersion: 1,
+          revision: 1,
+          primaryDomain: 'Economics',
+          relatedDomains: ['Political economy'],
+          expertRole: 'Economics teacher',
+          teachingPrinciples: ['Build intuition first'],
+          domainRules: ['Distinguish claims from evidence'],
+          confidence: 0.9,
+          initializedFrom: ['title', 'author'],
+          updatedAt: '2026-07-22T00:00:00.000Z',
+        },
+      })}\n\`\`\``,
+      true,
+    );
+    expect(result.label).toBe('Macroeconomics · Argument');
+    expect(result.followUps).toEqual([
+      { id: 'example', label: 'Give an example' },
+      { id: 'deeper', label: 'Go deeper' },
+    ]);
+    expect(result.expertProfile?.primaryDomain).toBe('Economics');
+  });
+
+  test('classifies malformed explanation JSON as an invalid response', () => {
+    expect(() => parseExplanationResponse('{not valid json}', false)).toThrowError(
+      expect.objectContaining({ code: 'invalid_response' }),
+    );
+  });
+
+  test('appends a follow-up question and answer to the existing explanation', () => {
+    expect(
+      appendFollowUpExplanation(
+        'Initial explanation.',
+        { id: 'example', label: 'Give an example' },
+        'Here is the example.',
+      ),
+    ).toBe('Initial explanation.\n\nGive an example\n\nHere is the example.');
+  });
+
+  test('keeps the expert profile in a stable prompt prefix across selections', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    domain: 'Economics',
+                    subdomain: '',
+                    contentType: 'concept',
+                    label: 'Economics · Concept',
+                    explanation: 'Explanation',
+                    followUps: [],
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    const settings = {
+      ...DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
+      baseUrl: 'https://api.example.com/v1',
+    };
+    const baseRequest = {
+      action: 'explanation' as const,
+      targetLanguage: 'English',
+      provider: 'custom',
+      model: settings.model,
+      bookTitle: 'The Economy',
+      bookAuthor: 'A. Writer',
+      chapterTitle: 'Money',
+      expertProfile: {
+        schemaVersion: 1 as const,
+        revision: 1,
+        primaryDomain: 'Economics',
+        relatedDomains: [],
+        expertRole: 'Economics teacher',
+        teachingPrinciples: ['Build intuition first'],
+        domainRules: [],
+        confidence: 0.9,
+        initializedFrom: ['title'],
+        updatedAt: '2026-07-22T00:00:00.000Z',
+      },
+    };
+    await runSelectedTextAssistant(
+      { ...baseRequest, sourceText: 'First selection' },
+      settings,
+      'secret',
+    );
+    await runSelectedTextAssistant(
+      { ...baseRequest, sourceText: 'Second selection' },
+      settings,
+      'secret',
+    );
+    const firstBody = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
+    const secondBody = JSON.parse(fetchMock.mock.calls[1]![1].body as string);
+    expect(firstBody.messages[0]).toEqual(secondBody.messages[0]);
+    expect(firstBody.messages[1].content).toContain('First selection');
+    expect(secondBody.messages[1].content).toContain('Second selection');
   });
 
   test('sends only the system prompt and selected source text', async () => {
@@ -62,6 +182,37 @@ describe('selected-text assistant client', () => {
     expect(body.messages).toHaveLength(2);
     expect(body.messages[1]).toEqual({ role: 'user', content: 'hello' });
     expect(JSON.stringify(body)).not.toContain('secret');
+  });
+
+  test('clears the timeout signal after a completed request', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify({ choices: [{ message: { content: 'done' } }] }), {
+          status: 200,
+        }),
+      );
+      const settings = {
+        ...DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
+        baseUrl: 'https://api.example.com/v1',
+      };
+      await runSelectedTextAssistant(
+        {
+          action: 'translation',
+          sourceText: 'hello',
+          targetLanguage: 'English',
+          provider: 'custom',
+          model: settings.model,
+        },
+        settings,
+        'secret',
+      );
+      const requestSignal = fetchMock.mock.calls[0]![1].signal as AbortSignal;
+      vi.advanceTimersByTime(60_000);
+      expect(requestSignal.aborted).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test('classifies authentication failures without exposing response content', async () => {

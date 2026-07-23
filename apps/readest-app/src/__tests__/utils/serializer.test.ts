@@ -53,6 +53,28 @@ describe('BookConfig serialization', () => {
     expect(config.schemaVersion).toBeUndefined();
   });
 
+  it('round-trips a local book expert profile', () => {
+    const expertProfile = {
+      schemaVersion: 1 as const,
+      revision: 2,
+      primaryDomain: 'Physics',
+      relatedDomains: ['Cosmology'],
+      expertRole: 'Physics teacher',
+      teachingPrinciples: ['Build intuition first'],
+      domainRules: ['Separate evidence from speculation'],
+      confidence: 0.92,
+      initializedFrom: ['title', 'author'],
+      updatedAt: '2026-07-22T00:00:00.000Z',
+    };
+    const serialized = serializeConfig(
+      { updatedAt: 1, expertProfile },
+      globalViewSettings,
+      defaultSearchConfig,
+    );
+    const restored = deserializeConfig(serialized, globalViewSettings, defaultSearchConfig);
+    expect(restored.expertProfile).toEqual(expertProfile);
+  });
+
   it('hydrates legacy config JSON without schemaVersion', () => {
     const config = deserializeConfig(
       JSON.stringify({
