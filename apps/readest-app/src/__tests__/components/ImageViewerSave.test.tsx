@@ -46,6 +46,28 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('ImageViewer save/share button', () => {
+  it('exposes image explanation beside the existing image tools', () => {
+    const onExplain = vi.fn();
+    const { getByLabelText, getAllByRole } = render(
+      <ImageViewer
+        src={PNG_DATA_URL}
+        onClose={vi.fn()}
+        onExplain={onExplain}
+        gridInsets={gridInsets}
+      />,
+    );
+
+    fireEvent.click(getByLabelText('Explain Image'));
+
+    expect(onExplain).toHaveBeenCalledTimes(1);
+    expect(getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual(
+      expect.arrayContaining(['Save Image', 'Explain Image', 'Zoom In']),
+    );
+    const labels = getAllByRole('button').map((button) => button.getAttribute('aria-label'));
+    expect(labels.indexOf('Save Image')).toBeLessThan(labels.indexOf('Explain Image'));
+    expect(labels.indexOf('Explain Image')).toBeLessThan(labels.indexOf('Zoom In'));
+  });
+
   it('exports the image and toasts when sharing is unavailable', async () => {
     const saveFile = vi.fn().mockResolvedValue(true);
     h.appService = { isMobileApp: false, isMacOSApp: false, saveFile };

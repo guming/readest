@@ -19,6 +19,7 @@ interface ImageViewerProps {
   onClose: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
+  onExplain?: () => void;
 }
 
 const MIN_SCALE = 0.5;
@@ -42,6 +43,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
   onClose,
   onPrevious,
   onNext,
+  onExplain,
   gridInsets,
 }) => {
   const _ = useTranslation();
@@ -602,6 +604,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onReset={handleReset}
+          onExplain={onExplain}
         />
       )}
 

@@ -35,7 +35,7 @@ export class OllamaProvider implements AIProvider {
   }
 
   getModel(): LanguageModel {
-    return this.ollama(this.settings.ollamaModel || 'llama3.2');
+    return this.ollama(this.settings.ollamaModel || 'llama3.2', { think: false });
   }
 
   getEmbeddingModel(): EmbeddingModel {
@@ -66,11 +66,13 @@ export class OllamaProvider implements AIProvider {
       clearTimeout(timeout);
       if (!response.ok) return false;
       const data = await response.json();
-      const modelName = this.settings.ollamaModel?.split(':')[0] ?? '';
-      const embeddingModelName = this.settings.ollamaEmbeddingModel?.split(':')[0] ?? '';
+      const modelName = this.settings.ollamaModel?.trim() ?? '';
       return (
-        data.models?.some((m: { name: string }) => m.name.includes(modelName)) &&
-        data.models?.some((m: { name: string }) => m.name.includes(embeddingModelName))
+        !!modelName &&
+        data.models?.some((model: { name: string }) => {
+          if (model.name === modelName) return true;
+          return !modelName.includes(':') && model.name.split(':')[0] === modelName;
+        })
       );
     } catch (e) {
       aiLogger.provider.error('ollama', (e as Error).message);

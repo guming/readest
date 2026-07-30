@@ -106,6 +106,7 @@ import AutoScrollSpeedOverlay from './AutoScrollSpeedOverlay';
 import Spinner from '@/components/Spinner';
 import KOSyncConflictResolver from './KOSyncResolver';
 import ImageViewer from './ImageViewer';
+import ImageAssistantDialog from './annotator/ImageAssistantDialog';
 import TableViewer from './TableViewer';
 import ExternalLinkConfirm from './ExternalLinkConfirm';
 import { getTTSMiniPlayerClearance } from '../utils/ttsMiniPlayerPosition';
@@ -626,6 +627,12 @@ const FoliateViewer: React.FC<{
   const [selectedTableHtml, setSelectedTableHtml] = useState<string | null>(null);
   const [imageList, setImageList] = useState<DocumentImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
+  const [imageToExplain, setImageToExplain] = useState<{
+    element: Element;
+    chapterTitle: string;
+    chapterId?: string;
+    pageCfi?: string;
+  } | null>(null);
 
   const handleImagePress = useCallback(async (src: string) => {
     try {
@@ -1139,6 +1146,30 @@ const FoliateViewer: React.FC<{
           onClose={handleCloseImage}
           onPrevious={currentImageIndex > 0 ? handlePreviousImage : undefined}
           onNext={currentImageIndex < imageList.length - 1 ? handleNextImage : undefined}
+          onExplain={
+            bookData?.book?.format === 'EPUB' && !bookData.isFixedLayout
+              ? () => {
+                  const currentImage = imageList[currentImageIndex];
+                  if (!currentImage) return;
+                  setImageToExplain({
+                    element: currentImage.element,
+                    chapterTitle: getProgress(bookKey)?.sectionLabel || '',
+                    chapterId: getProgress(bookKey)?.sectionHref,
+                    pageCfi: currentImage.cfi || undefined,
+                  });
+                }
+              : undefined
+          }
+        />
+      )}
+      {imageToExplain && (
+        <ImageAssistantDialog
+          bookKey={bookKey}
+          imageElement={imageToExplain.element}
+          chapterTitle={imageToExplain.chapterTitle}
+          chapterId={imageToExplain.chapterId}
+          pageCfi={imageToExplain.pageCfi}
+          onClose={() => setImageToExplain(null)}
         />
       )}
       {selectedTableHtml && (

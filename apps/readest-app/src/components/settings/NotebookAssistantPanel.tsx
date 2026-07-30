@@ -1,19 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { MdVisibility, MdVisibilityOff } from 'react-icons/md';
+import React, { useMemo, useState } from 'react';
 import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useSettingsStore } from '@/store/settingsStore';
 import {
-  NOTEBOOK_ASSISTANT_TEMPLATES,
   resolveNotebookAssistantSettings,
-  type NotebookAssistantProvider,
   type NotebookAssistantSettings,
 } from '@/services/notebook-assistant/types';
-import {
-  getAssistantApiKey,
-  isAssistantKeySecure,
-  setAssistantApiKey,
-} from '@/services/notebook-assistant/secretStore';
+import { isNotebookAssistantConfigured } from '@/services/notebook-assistant/provider';
 import { testNotebookAssistantConnection } from '@/services/notebook-assistant/client';
 import {
   buildNotebookAssistantDiagnostics,
@@ -21,11 +14,11 @@ import {
   getTodayNotebookAssistantTokens,
 } from '@/services/notebook-assistant/usage';
 import { writeTextToClipboard } from '@/utils/clipboard';
+import { getAIConnections, resolveAIConnection } from '@/services/ai/connections';
 import { BoxedList, SectionTitle, SettingsRow, Tips } from './primitives';
 
 interface Props {
   compact?: boolean;
-  onConfigured?: () => void;
 }
 
 const clampInteger = (value: number, fallback: number, min: number, max: number): number => {
@@ -33,31 +26,32 @@ const clampInteger = (value: number, fallback: number, min: number, max: number)
   return Math.max(min, Math.min(max, next));
 };
 
-const NotebookAssistantPanel: React.FC<Props> = ({ compact = false, onConfigured }) => {
+const NotebookAssistantPanel: React.FC<Props> = ({ compact = false }) => {
   const _ = useTranslation();
   const { envConfig } = useEnv();
-  const { settings, setSettings, saveSettings } = useSettingsStore();
+  const { settings, setSettings, saveSettings, setActiveSettingsItemId } = useSettingsStore();
   const initial = resolveNotebookAssistantSettings(settings.notebookAssistant);
   const [draft, setDraft] = useState<NotebookAssistantSettings>(initial);
-  const [apiKey, setApiKey] = useState('');
-  const [showKey, setShowKey] = useState(false);
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [usageVersion, setUsageVersion] = useState(0);
+  const connections = getAIConnections(settings.aiSettings);
+  const configured = isNotebookAssistantConfigured(draft, settings.aiSettings, '');
 
-  useEffect(() => {
-    void getAssistantApiKey().then(setApiKey);
-  }, []);
+  const selectNotebookConnection = async (connectionId: string) => {
+    const latest = useSettingsStore.getState().settings;
+    const next = {
+      ...latest,
+      aiSettings: { ...latest.aiSettings, notebookConnectionId: connectionId },
+    };
+    setSettings(next);
+    await saveSettings(envConfig, next);
+  };
 
   const patch = <K extends keyof NotebookAssistantSettings>(
     key: K,
     value: NotebookAssistantSettings[K],
   ) => setDraft((current) => ({ ...current, [key]: value }));
-
-  const changeProvider = (provider: NotebookAssistantProvider) => {
-    setDraft((current) => ({ ...current, provider, ...NOTEBOOK_ASSISTANT_TEMPLATES[provider] }));
-    setStatus('idle');
-  };
 
   const save = async () => {
     const normalized = {
@@ -73,20 +67,18 @@ const NotebookAssistantPanel: React.FC<Props> = ({ compact = false, onConfigured
         20,
       ),
     };
-    await setAssistantApiKey(apiKey.trim());
     const latest = useSettingsStore.getState().settings;
     const next = { ...latest, notebookAssistant: normalized };
     setSettings(next);
     await saveSettings(envConfig, next);
     setDraft(normalized);
-    onConfigured?.();
   };
 
   const test = async () => {
     setStatus('testing');
     setMessage('');
     try {
-      await testNotebookAssistantConnection(draft, apiKey.trim());
+      await testNotebookAssistantConnection(draft, '', settings.aiSettings);
       setStatus('success');
       setMessage(_('Connection successful'));
     } catch (error) {
@@ -98,8 +90,8 @@ const NotebookAssistantPanel: React.FC<Props> = ({ compact = false, onConfigured
   const copyDiagnostics = async () => {
     const diagnostics = buildNotebookAssistantDiagnostics({
       settings: normalizedDraft(),
-      apiKeyConfigured: !!apiKey.trim(),
-      secureKeyStorage: isAssistantKeySecure(),
+      apiKeyConfigured: configured,
+      secureKeyStorage: false,
       platform: typeof navigator === 'undefined' ? 'unknown' : navigator.userAgent || 'unknown',
       lastError: status === 'error' ? message : undefined,
     });
@@ -128,53 +120,28 @@ const NotebookAssistantPanel: React.FC<Props> = ({ compact = false, onConfigured
     <div className={compact ? 'space-y-3' : 'my-4 space-y-5'}>
       {!compact && <SectionTitle>{_('AI Provider')}</SectionTitle>}
       <BoxedList>
-        <SettingsRow label={_('Provider Template')}>
-          <select
-            className='select select-sm select-bordered max-w-44 bg-base-100'
-            value={draft.provider}
-            onChange={(event) => changeProvider(event.target.value as NotebookAssistantProvider)}
-          >
-            {(['openai', 'deepseek', 'qwen', 'openrouter', 'custom'] as const).map((value) => (
-              <option key={value} value={value}>
-                {value === 'qwen' ? 'Qwen' : value[0]!.toUpperCase() + value.slice(1)}
-              </option>
-            ))}
-          </select>
-        </SettingsRow>
-        <SettingsRow label={_('API Base URL')}>
-          <input
-            className={inputClass}
-            value={draft.baseUrl}
-            onChange={(e) => patch('baseUrl', e.target.value)}
-            placeholder='https://api.openai.com/v1'
-          />
-        </SettingsRow>
-        <SettingsRow label={_('API Key')}>
-          <div className='flex w-full max-w-xs items-center gap-1'>
-            <input
-              className={inputClass}
-              type={showKey ? 'text' : 'password'}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              autoComplete='off'
-            />
+        <SettingsRow label={_('Active Provider')}>
+          {connections.length > 0 ? (
+            <select
+              className='select select-bordered select-sm eink-bordered bg-base-100'
+              value={resolveAIConnection(settings.aiSettings, 'notebook')?.id || ''}
+              onChange={(event) => void selectNotebookConnection(event.target.value)}
+            >
+              {connections.map((connection) => (
+                <option key={connection.id} value={connection.id}>
+                  {connection.name} · {connection.model}
+                </option>
+              ))}
+            </select>
+          ) : (
             <button
               type='button'
-              className='btn btn-ghost btn-sm btn-square'
-              onClick={() => setShowKey((value) => !value)}
-              aria-label={showKey ? _('Hide API key') : _('Show API key')}
+              className='btn btn-outline btn-sm eink-bordered'
+              onClick={() => setActiveSettingsItemId('settings.ai.provider')}
             >
-              {showKey ? <MdVisibilityOff /> : <MdVisibility />}
+              {_('Configure AI Provider')}
             </button>
-          </div>
-        </SettingsRow>
-        <SettingsRow label={_('Model')}>
-          <input
-            className={inputClass}
-            value={draft.model}
-            onChange={(e) => patch('model', e.target.value)}
-            placeholder='gpt-4o-mini'
-          />
+          )}
         </SettingsRow>
         <SettingsRow label={_('Target Language')}>
           <input
@@ -260,17 +227,7 @@ const NotebookAssistantPanel: React.FC<Props> = ({ compact = false, onConfigured
           'Usage history is stored only on this device and never includes source text or AI responses.',
         )}
       </Tips>
-      <Tips>
-        {isAssistantKeySecure()
-          ? _('Your API key is stored only on this device in the system keychain.')
-          : _(
-              'Your API key is stored only in this browser. Browser storage is less secure than a system keychain.',
-            )}{' '}
-        {_('Selected text is sent directly to your configured AI provider.')}
-        {!apiKey.trim() && settings.notebookAssistant && (
-          <> {_('This device needs its own API key.')}</>
-        )}
-      </Tips>
+      <Tips>{_('Notebook Assistant uses the active provider from the global AI settings.')}</Tips>
       {message && (
         <p className={status === 'error' ? 'text-sm text-red-500' : 'text-sm text-green-600'}>
           {message}
@@ -293,17 +250,12 @@ const NotebookAssistantPanel: React.FC<Props> = ({ compact = false, onConfigured
         <button
           type='button'
           className='btn btn-ghost btn-sm'
-          disabled={status === 'testing' || !apiKey || !draft.baseUrl}
+          disabled={status === 'testing' || !configured}
           onClick={test}
         >
           {status === 'testing' ? _('Testing...') : _('Test Connection')}
         </button>
-        <button
-          type='button'
-          className='btn btn-primary btn-sm'
-          disabled={!apiKey || !draft.baseUrl || !draft.model}
-          onClick={save}
-        >
+        <button type='button' className='btn btn-primary btn-sm' onClick={save}>
           {_('Save')}
         </button>
       </div>

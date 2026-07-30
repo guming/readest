@@ -5,7 +5,6 @@ import { useEnv } from '@/context/EnvContext';
 import { useReaderStore } from '@/store/readerStore';
 import { saveViewSettings } from '@/helpers/settings';
 import { useAuth } from '@/context/AuthContext';
-import { useSettingsStore } from '@/store/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useTranslator } from '@/hooks/useTranslator';
 import { TRANSLATOR_LANGS } from '@/services/constants';
@@ -35,9 +34,11 @@ interface TranslatorPopupProps {
   popupWidth: number;
   popupHeight: number;
   currentProvider: string;
+  currentTargetLang: string;
   onDismiss?: () => void;
   onSelectCustomAI?: () => void;
   onProviderChange?: (provider: string) => void;
+  onTargetLangChange?: (targetLang: string) => void;
 }
 
 interface TranslatorType {
@@ -63,9 +64,11 @@ const TranslatorPopup: React.FC<TranslatorPopupProps> = ({
   popupWidth,
   popupHeight,
   currentProvider,
+  currentTargetLang,
   onDismiss,
   onSelectCustomAI,
   onProviderChange,
+  onTargetLangChange,
 }) => {
   const _ = useTranslation();
   const { token } = useAuth();
@@ -101,9 +104,9 @@ const TranslatorPopup: React.FC<TranslatorPopupProps> = ({
   };
 
   const handleTargetLangChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    settings.globalReadSettings.translateTargetLang = event.target.value;
-    setSettings(settings);
-    setTargetLang(event.target.value);
+    const nextTargetLang = event.target.value;
+    setTargetLang(nextTargetLang);
+    onTargetLangChange?.(nextTargetLang);
   };
 
   const handleProviderChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -124,6 +127,10 @@ const TranslatorPopup: React.FC<TranslatorPopupProps> = ({
   useEffect(() => {
     setProvider(resolveAvailableProvider(currentProvider, !!token));
   }, [currentProvider, token]);
+
+  useEffect(() => {
+    setTargetLang(currentTargetLang);
+  }, [currentTargetLang]);
 
   useEffect(() => {
     const availableProviders = translators.map((t) => ({

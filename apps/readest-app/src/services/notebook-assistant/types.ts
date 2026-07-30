@@ -1,8 +1,18 @@
-export type NotebookAssistantProvider = 'openai' | 'deepseek' | 'qwen' | 'openrouter' | 'custom';
+import { OPENAI_COMPATIBLE_TEMPLATES } from '@/services/ai/constants';
+import type { OpenAICompatibleTemplate } from '@/services/ai/types';
+
+export type NotebookAssistantProvider = OpenAICompatibleTemplate;
+export type NotebookAssistantConnectionSource = 'legacy' | 'global';
 export type NotebookAssistantSummaryStyle = 'structured' | 'brief' | 'detailed';
 export type NotebookAssistantCostMode = 'conservative' | 'balanced' | 'full_context';
 
 export interface NotebookAssistantSettings {
+  /**
+   * Existing installations remain on `legacy` until the user explicitly
+   * chooses the global AI provider. This prevents a local configuration from
+   * silently switching to a cloud endpoint (or vice versa).
+   */
+  connectionSource: NotebookAssistantConnectionSource;
   provider: NotebookAssistantProvider;
   baseUrl: string;
   model: string;
@@ -158,18 +168,10 @@ export interface OneQuestionRequest {
 export const NOTEBOOK_ASSISTANT_TEMPLATES: Record<
   NotebookAssistantProvider,
   Pick<NotebookAssistantSettings, 'baseUrl' | 'model'>
-> = {
-  openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
-  deepseek: { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
-  qwen: {
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model: 'qwen-plus',
-  },
-  openrouter: { baseUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o-mini' },
-  custom: { baseUrl: '', model: '' },
-};
+> = OPENAI_COMPATIBLE_TEMPLATES;
 
 export const DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS: NotebookAssistantSettings = {
+  connectionSource: 'legacy',
   provider: 'openai',
   ...NOTEBOOK_ASSISTANT_TEMPLATES.openai,
   targetLanguage: '',
@@ -190,5 +192,9 @@ export const resolveNotebookAssistantSettings = (
   };
   // Migrate the former default so existing installations also become unlimited.
   if (resolved.dailyTokenLimit === 100_000) resolved.dailyTokenLimit = 0;
+  // Notebook Assistant now always follows the active global AI provider.
+  // Keep legacy connection fields in storage for backwards-compatible
+  // deserialization, but never select that connection at runtime.
+  resolved.connectionSource = 'global';
   return resolved;
 };

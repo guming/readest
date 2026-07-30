@@ -1,4 +1,21 @@
-import type { AISettings } from './types';
+import type { AISettings, OpenAICompatibleTemplate } from './types';
+
+export const OPENAI_COMPATIBLE_TEMPLATES: Record<
+  OpenAICompatibleTemplate,
+  { baseUrl: string; model: string }
+> = {
+  openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  deepseek: { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  qwen: {
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen-plus',
+  },
+  openrouter: {
+    baseUrl: 'https://openrouter.ai/api/v1',
+    model: 'openai/gpt-4o-mini',
+  },
+  custom: { baseUrl: '', model: '' },
+};
 
 // cheapest popular models as of 2025
 export const GATEWAY_MODELS = {
@@ -31,6 +48,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
   aiGatewayEmbeddingModel: 'openai/text-embedding-3-small',
 
   openrouterBaseUrl: 'https://openrouter.ai/api/v1',
+  openrouterTemplate: 'openrouter',
   openrouterModel: '',
   openrouterEmbeddingModel: '',
 

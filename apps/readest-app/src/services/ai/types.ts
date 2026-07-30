@@ -1,6 +1,21 @@
 import type { LanguageModel, EmbeddingModel } from 'ai';
 
 export type AIProviderName = 'ollama' | 'ai-gateway' | 'openrouter';
+export type OpenAICompatibleTemplate = 'openai' | 'deepseek' | 'qwen' | 'openrouter' | 'custom';
+export type AICapability = 'default' | 'translation' | 'notebook';
+
+export interface AIConnection {
+  id: string;
+  name: string;
+  provider: AIProviderName;
+  baseUrl?: string;
+  apiKey?: string;
+  model: string;
+  embeddingModel?: string;
+  template?: OpenAICompatibleTemplate;
+  /** User-confirmed capability; unknown models must not receive book images. */
+  supportsVision?: boolean;
+}
 
 export interface AIProvider {
   id: AIProviderName;
@@ -30,9 +45,15 @@ export interface AISettings {
   // OpenAI-compatible provider (OpenRouter, Together, Groq, vLLM, ...).
   // Default base URL is OpenRouter's, but any compatible endpoint works.
   openrouterApiKey?: string;
+  openrouterTemplate?: OpenAICompatibleTemplate;
   openrouterBaseUrl?: string;
   openrouterModel?: string;
   openrouterEmbeddingModel?: string;
+
+  connections?: AIConnection[];
+  defaultConnectionId?: string;
+  translationConnectionId?: string;
+  notebookConnectionId?: string;
 
   spoilerProtection: boolean;
   maxContextChunks: number;
