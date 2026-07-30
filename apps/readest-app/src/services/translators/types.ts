@@ -27,7 +27,7 @@ export interface TranslationCache {
 }
 
 export interface UseTranslatorOptions {
-  provider?: TranslatorName;
+  provider?: TranslatorName | 'custom-ai';
   sourceLang?: string;
   targetLang?: string;
   enablePolishing?: boolean;

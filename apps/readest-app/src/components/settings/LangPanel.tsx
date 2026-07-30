@@ -28,6 +28,7 @@ import {
 import CustomDictionaries from './CustomDictionaries';
 import WordLensPanel from './WordLensPanel';
 import { PiTranslate } from 'react-icons/pi';
+import { resolveAIConnection } from '@/services/ai/connections';
 
 const LangPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }) => {
   const _ = useTranslation();
@@ -122,18 +123,30 @@ const LangPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
   };
 
   const getTranslationProviderOptions = () => {
-    return getTranslators().map((t) => ({
-      value: t.name,
-      label: getTranslatorDisplayLabel(t, !!token, _),
-      // Providers marked `disabled` (e.g. upstream relay is down) stay in the
-      // dropdown so users can see them, but cannot be selected.
-      disabled: !!t.disabled,
-    }));
+    const customAIConfigured =
+      settings.aiSettings.enabled && !!resolveAIConnection(settings.aiSettings, 'translation');
+    return [
+      {
+        value: 'custom-ai',
+        label: _('Custom AI'),
+        disabled: !customAIConfigured,
+      },
+      ...getTranslators().map((t) => ({
+        value: t.name,
+        label: getTranslatorDisplayLabel(t, !!token, _),
+        // Providers marked `disabled` (e.g. upstream relay is down) stay in the
+        // dropdown so users can see them, but cannot be selected.
+        disabled: !!t.disabled,
+      })),
+    ];
   };
 
   const getCurrentTranslationProviderOption = () => {
     const value = translationProvider;
     const allProviders = getTranslationProviderOptions();
+    if (value === 'custom-ai' && !allProviders[0]?.disabled) {
+      return allProviders[0]!;
+    }
     const availableTranslators = getTranslators().filter((t) => isTranslatorAvailable(t, !!token));
     const currentProvider = availableTranslators.find((t) => t.name === value)
       ? value

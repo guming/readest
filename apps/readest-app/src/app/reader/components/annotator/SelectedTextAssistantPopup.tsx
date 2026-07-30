@@ -16,7 +16,6 @@ import {
   estimateSelectedTextTokens,
   runSelectedTextAssistant,
 } from '@/services/notebook-assistant/client';
-import { getAssistantApiKey } from '@/services/notebook-assistant/secretStore';
 import {
   evaluateUsageLimit,
   recordNotebookAssistantUsage,
@@ -27,7 +26,13 @@ import {
   type ExpertExplanationResult,
   type SelectedTextAction,
 } from '@/services/notebook-assistant/types';
+import {
+  getAITranslationTargetLanguage,
+  getNotebookAssistantIdentity,
+  isNotebookAssistantConfigured,
+} from '@/services/notebook-assistant/provider';
 import { buildSelectionContext } from '@/services/notebook-assistant/context';
+import { getAIConnections, resolveAIConnection } from '@/services/ai/connections';
 
 interface Props {
   action: SelectedTextAction;
@@ -42,6 +47,7 @@ interface Props {
   chapterId?: string;
   chapterTitle?: string;
   sourceLanguage?: string;
+  targetLanguageCode?: string;
   onDismiss: () => void;
 }
 
@@ -58,13 +64,13 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
   chapterId,
   chapterTitle,
   sourceLanguage,
+  targetLanguageCode,
   onDismiss,
 }) => {
   const _ = useTranslation();
   const { envConfig } = useEnv();
-  const settings = useSettingsStore((state) => state.settings);
+  const { settings, setSettings, saveSettings } = useSettingsStore();
   const { getConfig, setConfig, saveConfig } = useBookDataStore();
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const [result, setResult] = useState('');
   const [explanationResult, setExplanationResult] = useState<ExpertExplanationResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -74,7 +80,19 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollAfterUpdateRef = useRef(false);
   const assistant = resolveNotebookAssistantSettings(settings.notebookAssistant);
-  const targetLanguage = assistant.targetLanguage || navigator.language || 'English';
+  const assistantIdentity = getNotebookAssistantIdentity(
+    assistant,
+    settings.aiSettings,
+    action === 'translation' ? 'translation' : 'notebook',
+  );
+  const providerOptions = getAIConnections(settings.aiSettings);
+  const targetLanguage =
+    action === 'translation'
+      ? getAITranslationTargetLanguage(
+          targetLanguageCode || settings.globalViewSettings.translateTargetLang,
+          navigator.language,
+        )
+      : assistant.targetLanguage || navigator.language || 'English';
   const expertProfile = getConfig(bookKey)?.expertProfile;
   const surroundingContext = useMemo(
     () => buildSelectionContext(selection.range),
@@ -92,9 +110,23 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
     [selection.text, action, estimateContext],
   );
 
-  useEffect(() => {
-    void getAssistantApiKey().then(setApiKey);
-  }, []);
+  const selectAssistantConnection = async (connectionId: string) => {
+    const latest = useSettingsStore.getState().settings;
+    const connectionIdField =
+      action === 'translation' ? 'translationConnectionId' : 'notebookConnectionId';
+    const next = {
+      ...latest,
+      aiSettings: {
+        ...latest.aiSettings,
+        [connectionIdField]: connectionId,
+      },
+    };
+    setSettings(next);
+    await saveSettings(envConfig, next);
+    setResult('');
+    setExplanationResult(null);
+    setError('');
+  };
 
   useEffect(() => {
     if (!scrollAfterUpdateRef.current) return;
@@ -104,9 +136,14 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
     });
   }, [result]);
 
-  const configured = !!apiKey && !!assistant.baseUrl && !!assistant.model;
+  const configured = isNotebookAssistantConfigured(
+    assistant,
+    settings.aiSettings,
+    '',
+    action === 'translation' ? 'translation' : 'notebook',
+  );
   const run = async (options?: { followUp?: ExplanationFollowUp; rebuildProfile?: boolean }) => {
-    if (!apiKey) return;
+    if (!configured) return;
     if (estimate.input > assistant.warnAboveTokens) {
       const accepted = window.confirm(
         _('This selection is long and may cost more than usual. Continue?'),
@@ -142,11 +179,13 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
             action,
             sourceText: selection.text,
             targetLanguage,
-            provider: assistant.provider,
-            model: assistant.model,
+            provider: assistantIdentity.provider,
+            model: assistantIdentity.model,
           },
           assistant,
-          apiKey,
+          '',
+          undefined,
+          settings.aiSettings,
         );
         setResult(content);
       } else {
@@ -156,8 +195,8 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
             sourceText: selection.text,
             sourceLanguage,
             targetLanguage,
-            provider: assistant.provider,
-            model: assistant.model,
+            provider: assistantIdentity.provider,
+            model: assistantIdentity.model,
             bookTitle,
             bookAuthor,
             chapterId,
@@ -169,7 +208,9 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
             previousExplanation: options?.followUp ? result : undefined,
           },
           assistant,
-          apiKey,
+          '',
+          undefined,
+          settings.aiSettings,
         );
         setExplanationResult(content);
         if (options?.followUp) {
@@ -200,8 +241,8 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
         recordNotebookAssistantUsage({
           action,
           contextType: 'selection',
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           tokenEstimate: estimate,
           success: true,
           bookId: bookKey.split('-')[0],
@@ -213,8 +254,8 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
         recordNotebookAssistantUsage({
           action,
           contextType: 'selection',
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           tokenEstimate: estimate,
           success: false,
           errorCode: requestError instanceof NotebookAssistantError ? requestError.code : 'unknown',
@@ -247,8 +288,8 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
           : result,
       contextType: 'selection',
       targetLanguage,
-      provider: assistant.provider,
-      model: assistant.model,
+      provider: assistantIdentity.provider,
+      model: assistantIdentity.model,
       tokenEstimate: estimate,
       createdAt: now,
       updatedAt: now,
@@ -289,9 +330,30 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
             {_('Selection')} · {selection.text.length} {_('characters')} · ~{estimate.input}{' '}
             {_('input tokens')} · {_('max')} ~{estimate.output} {_('output tokens')}
           </p>
-          <p className='text-base-content/60 text-xs'>
-            {assistant.provider} · {assistant.model}
-          </p>
+          {providerOptions.length > 0 && (
+            <label className='mt-1 flex items-center gap-2 text-xs'>
+              <span className='text-base-content/60'>
+                {action === 'translation' ? _('Translation Provider') : _('Explanation Provider')}
+              </span>
+              <select
+                className='select select-bordered select-xs eink-bordered bg-base-100'
+                value={
+                  resolveAIConnection(
+                    settings.aiSettings,
+                    action === 'translation' ? 'translation' : 'notebook',
+                  )?.id || ''
+                }
+                onChange={(event) => void selectAssistantConnection(event.target.value)}
+                disabled={loading}
+              >
+                {providerOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name} · {option.model}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
         {action === 'explanation' && configured && expertProfile && (
           <button
@@ -307,16 +369,9 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
         )}
       </div>
 
-      {apiKey === null ? (
-        <div className='flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 pb-4'>
-          <PiSpinner className='animate-spin' />
-        </div>
-      ) : !configured ? (
+      {!configured ? (
         <div className='min-h-0 flex-1 overflow-y-auto px-4 pb-4'>
-          <NotebookAssistantPanel
-            compact
-            onConfigured={() => void getAssistantApiKey().then(setApiKey)}
-          />
+          <NotebookAssistantPanel compact />
         </div>
       ) : (
         <>

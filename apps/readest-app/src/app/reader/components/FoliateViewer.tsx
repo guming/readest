@@ -87,6 +87,7 @@ import AutoScrollControl from './AutoScrollControl';
 import Spinner from '@/components/Spinner';
 import KOSyncConflictResolver from './KOSyncResolver';
 import ImageViewer from './ImageViewer';
+import ImageAssistantDialog from './annotator/ImageAssistantDialog';
 import TableViewer from './TableViewer';
 import { TTS_MINI_PLAYER_CLEARANCE } from './tts/TTSMiniPlayer';
 
@@ -547,14 +548,22 @@ const FoliateViewer: React.FC<{
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedTableHtml, setSelectedTableHtml] = useState<string | null>(null);
-  const [imageList, setImageList] = useState<{ src: string; cfi: string | null }[]>([]);
+  const [imageList, setImageList] = useState<
+    { src: string; cfi: string | null; element: Element }[]
+  >([]);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
+  const [imageToExplain, setImageToExplain] = useState<{
+    element: Element;
+    chapterTitle: string;
+    chapterId?: string;
+    pageCfi?: string;
+  } | null>(null);
 
   const handleImagePress = useCallback(async (src: string) => {
     try {
       // Get all images from the current document
       const docs = viewRef.current?.renderer.getContents();
-      const allImages: { src: string; cfi: string | null }[] = [];
+      const allImages: { src: string; cfi: string | null; element: Element }[] = [];
 
       docs?.forEach(({ doc, index }) => {
         const elements = doc.querySelectorAll('img, svg');
@@ -566,7 +575,7 @@ const FoliateViewer: React.FC<{
               const range = doc.createRange();
               range.selectNodeContents(img);
               const cfi = viewRef.current?.getCFI(index, range) || null;
-              allImages.push({ src: img.src, cfi });
+              allImages.push({ src: img.src, cfi, element: img });
             }
           } else if (el.localName === 'svg') {
             const svg = el as unknown as SVGSVGElement;
@@ -578,7 +587,7 @@ const FoliateViewer: React.FC<{
               const range = doc.createRange();
               range.selectNodeContents(svg);
               const cfi = viewRef.current?.getCFI(index, range) || null;
-              allImages.push({ src: href, cfi });
+              allImages.push({ src: href, cfi, element: svg });
             }
           }
         });
@@ -984,6 +993,30 @@ const FoliateViewer: React.FC<{
           onClose={handleCloseImage}
           onPrevious={currentImageIndex > 0 ? handlePreviousImage : undefined}
           onNext={currentImageIndex < imageList.length - 1 ? handleNextImage : undefined}
+          onExplain={
+            bookData?.book?.format === 'EPUB' && !bookData.isFixedLayout
+              ? () => {
+                  const currentImage = imageList[currentImageIndex];
+                  if (!currentImage) return;
+                  setImageToExplain({
+                    element: currentImage.element,
+                    chapterTitle: getProgress(bookKey)?.sectionLabel || '',
+                    chapterId: getProgress(bookKey)?.sectionHref,
+                    pageCfi: currentImage.cfi || undefined,
+                  });
+                }
+              : undefined
+          }
+        />
+      )}
+      {imageToExplain && (
+        <ImageAssistantDialog
+          bookKey={bookKey}
+          imageElement={imageToExplain.element}
+          chapterTitle={imageToExplain.chapterTitle}
+          chapterId={imageToExplain.chapterId}
+          pageCfi={imageToExplain.pageCfi}
+          onClose={() => setImageToExplain(null)}
         />
       )}
       {selectedTableHtml && (

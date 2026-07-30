@@ -39,6 +39,7 @@ import { OpenRouterProvider } from '@/services/ai/providers/OpenRouterProvider';
 import { getAIProvider } from '@/services/ai/providers';
 import type { AISettings } from '@/services/ai/types';
 import { DEFAULT_AI_SETTINGS } from '@/services/ai/constants';
+import { createOllama } from 'ai-sdk-ollama';
 
 describe('OllamaProvider', () => {
   beforeEach(() => {
@@ -52,6 +53,20 @@ describe('OllamaProvider', () => {
     expect(provider.id).toBe('ollama');
     expect(provider.name).toBe('Ollama (Local)');
     expect(provider.requiresAuth).toBe(false);
+  });
+
+  test('disables thinking for text generation', () => {
+    const settings: AISettings = {
+      ...DEFAULT_AI_SETTINGS,
+      enabled: true,
+      ollamaModel: 'gemma4:e4b',
+    };
+    const provider = new OllamaProvider(settings);
+
+    provider.getModel();
+
+    const ollama = vi.mocked(createOllama).mock.results.at(-1)?.value;
+    expect(ollama).toHaveBeenCalledWith('gemma4:e4b', { think: false });
   });
 
   test('isAvailable should return true when Ollama responds', async () => {
@@ -88,6 +103,22 @@ describe('OllamaProvider', () => {
 
     const result = await provider.healthCheck();
     expect(result).toBe(true);
+  });
+
+  test('healthCheck should not require an embedding model for text generation', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ models: [{ name: 'gemma4:e4b' }] }),
+    });
+    const settings: AISettings = {
+      ...DEFAULT_AI_SETTINGS,
+      enabled: true,
+      ollamaModel: 'gemma4:e4b',
+      ollamaEmbeddingModel: 'nomic-embed-text',
+    };
+    const provider = new OllamaProvider(settings);
+
+    expect(await provider.healthCheck()).toBe(true);
   });
 
   test('healthCheck should return false if model not found', async () => {

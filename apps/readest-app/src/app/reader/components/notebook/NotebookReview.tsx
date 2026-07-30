@@ -21,7 +21,6 @@ import {
   recordOneQuestionEvent,
   recordOneQuestionQualityFeedback,
 } from '@/services/notebook-assistant/oneQuestionEvents';
-import { getAssistantApiKey } from '@/services/notebook-assistant/secretStore';
 import {
   evaluateUsageLimit,
   recordNotebookAssistantUsage,
@@ -32,6 +31,10 @@ import {
   type QuizCardContent,
   type QuizQuestion,
 } from '@/services/notebook-assistant/types';
+import {
+  getNotebookAssistantIdentity,
+  isNotebookAssistantConfigured,
+} from '@/services/notebook-assistant/provider';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -59,9 +62,9 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
   const { getBookData, getConfig, setConfig, saveConfig } = useBookDataStore();
   const { getView, getProgress } = useReaderStore();
   const assistant = resolveNotebookAssistantSettings(settings.notebookAssistant);
+  const assistantIdentity = getNotebookAssistantIdentity(assistant, settings.aiSettings);
   const quizQuestionCount = assistant.defaultQuizQuestionCount;
   const targetLanguage = assistant.targetLanguage || navigator.language || 'English';
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const [mode, setMode] = useState<ReviewMode>('one_question');
   const [context, setContext] = useState<NotebookAssistantContext | null>(null);
   const [oneQuestion, setOneQuestion] = useState<OneQuestion | null>(null);
@@ -86,11 +89,10 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
   const oneQuestionInteractionId = useRef('');
 
   useEffect(() => {
-    void getAssistantApiKey().then(setApiKey);
     return () => oneQuestionController.current?.abort();
   }, []);
 
-  const configured = !!apiKey && !!assistant.baseUrl && !!assistant.model;
+  const configured = isNotebookAssistantConfigured(assistant, settings.aiSettings, '');
   const estimate = useMemo(
     () => estimateQuizTokens(context?.sourceText || '', quizQuestionCount),
     [context?.sourceText, quizQuestionCount],
@@ -122,8 +124,8 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
     if (!assistant.usageTrackingEnabled) return;
     recordOneQuestionEvent({
       event,
-      provider: assistant.provider,
-      model: assistant.model,
+      provider: assistantIdentity.provider,
+      model: assistantIdentity.model,
       bookId: bookKey.split('-')[0],
       ...details,
     });
@@ -139,7 +141,7 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
   };
 
   const generateOneQuestion = async (askedAnother = false) => {
-    if (!apiKey) return;
+    if (!configured) return;
     oneQuestionController.current?.abort();
     const controller = new AbortController();
     oneQuestionController.current = controller;
@@ -193,12 +195,13 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
           sourceBlocks: nextContext.sourceBlocks,
           title: nextContext.title,
           targetLanguage,
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
         },
         assistant,
-        apiKey,
+        '',
         controller.signal,
+        settings.aiSettings,
       );
       const durationMs = Date.now() - oneQuestionStartedAt.current;
       if (result.question) {
@@ -217,8 +220,8 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
         recordNotebookAssistantUsage({
           action: 'one_question',
           contextType: 'chapter',
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           tokenEstimate: nextEstimate,
           success: true,
           bookId: bookKey.split('-')[0],
@@ -237,8 +240,8 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
         recordNotebookAssistantUsage({
           action: 'one_question',
           contextType: 'chapter',
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           tokenEstimate: usageEstimate,
           success: false,
           errorCode,
@@ -291,8 +294,8 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
     if (!assistant.usageTrackingEnabled || !oneQuestionInteractionId.current) return;
     recordOneQuestionQualityFeedback({
       interactionId: oneQuestionInteractionId.current,
-      provider: assistant.provider,
-      model: assistant.model,
+      provider: assistantIdentity.provider,
+      model: assistantIdentity.model,
       bookId: bookKey.split('-')[0],
       questionType: oneQuestion?.type,
       qualityFeedback: feedback,
@@ -308,7 +311,7 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
   };
 
   const generateQuiz = async () => {
-    if (!apiKey) return;
+    if (!configured) return;
     setLoading(true);
     setError('');
     setQuiz(null);
@@ -356,20 +359,22 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
           sourceText: nextContext.sourceText,
           title: nextContext.title,
           targetLanguage,
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           questionCount: quizQuestionCount,
         },
         assistant,
-        apiKey,
+        '',
+        undefined,
+        settings.aiSettings,
       );
       setQuiz(nextQuiz);
       if (assistant.usageTrackingEnabled) {
         recordNotebookAssistantUsage({
           action: 'quiz',
           contextType: 'chapter',
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           tokenEstimate: nextEstimate,
           success: true,
           bookId: bookKey.split('-')[0],
@@ -381,8 +386,8 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
         recordNotebookAssistantUsage({
           action: 'quiz',
           contextType: 'chapter',
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           tokenEstimate: usageEstimate,
           success: false,
           errorCode: quizError instanceof NotebookAssistantError ? quizError.code : 'unknown',
@@ -419,8 +424,8 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
       },
       contextType: 'chapter',
       targetLanguage,
-      provider: assistant.provider,
-      model: assistant.model,
+      provider: assistantIdentity.provider,
+      model: assistantIdentity.model,
       tokenEstimate: estimateQuizTokens(context.sourceText, quizQuestionCount),
       createdAt: now,
       updatedAt: now,
@@ -458,8 +463,8 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
       },
       contextType: 'chapter',
       targetLanguage,
-      provider: assistant.provider,
-      model: assistant.model,
+      provider: assistantIdentity.provider,
+      model: assistantIdentity.model,
       tokenEstimate: estimateQuizTokens(context.sourceText, quizQuestionCount),
       createdAt: now,
       updatedAt: now,
@@ -475,21 +480,10 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
     setSavedMissedQuestionIds((current) => new Set(current).add(question.id));
   };
 
-  if (apiKey === null) {
-    return (
-      <div className='flex min-h-16 items-center justify-center'>
-        <PiSpinner className='animate-spin' />
-      </div>
-    );
-  }
-
   if (!configured) {
     return (
       <div className='border-base-300 border-b p-3'>
-        <NotebookAssistantPanel
-          compact
-          onConfigured={() => void getAssistantApiKey().then(setApiKey)}
-        />
+        <NotebookAssistantPanel compact />
       </div>
     );
   }
@@ -506,7 +500,7 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
         <p className='text-base-content/60 mb-2 text-xs'>
           {mode === 'chapter_quiz' && context
             ? `${context.title} · ~${estimate.input} ${_('input tokens')} ${_('max')} ~${estimate.output} ${_('output tokens')}`
-            : `${assistant.provider} · ${assistant.model}`}
+            : `${assistantIdentity.provider} · ${assistantIdentity.model}`}
         </p>
         {error && <p className='mb-2 text-xs text-red-500'>{error}</p>}
         <div className='flex flex-wrap justify-end gap-1'>

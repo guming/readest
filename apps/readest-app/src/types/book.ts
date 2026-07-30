@@ -183,6 +183,7 @@ export interface BookNote {
 export type NotebookCardType =
   | 'translation'
   | 'explanation'
+  | 'image_explanation'
   | 'summary'
   | 'insight'
   | 'takeaway'

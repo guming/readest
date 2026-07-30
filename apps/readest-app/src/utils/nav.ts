@@ -6,12 +6,17 @@ import { BOOK_IDS_SEPARATOR } from '@/services/constants';
 import { AppService } from '@/types/system';
 
 let nextReaderWindowId = 0;
+// A page reload resets module state while previously created Tauri windows can
+// remain open. Include a per-module session id so the counter cannot reuse an
+// existing label after HMR/reload.
+const readerWindowSessionId = Date.now().toString(36);
 const createReaderWindow = (appService: AppService, url: string) => {
   const currentWindow = getCurrentWindow();
   const label = currentWindow.label;
   const newLabelPrefix = label === 'main' ? 'reader' : label;
   const windowId = nextReaderWindowId++;
-  const win = new WebviewWindow(`${newLabelPrefix}-${windowId}`, {
+  const windowLabel = `${newLabelPrefix}-${readerWindowSessionId}-${windowId}`;
+  const win = new WebviewWindow(windowLabel, {
     url,
     width: 800,
     height: 600,
@@ -33,7 +38,11 @@ const createReaderWindow = (appService: AppService, url: string) => {
     console.log('new window created');
   });
   win.once('tauri://error', (e) => {
-    console.error('error creating window', e);
+    console.error('error creating window', {
+      label: windowLabel,
+      url,
+      error: e.payload,
+    });
   });
 };
 

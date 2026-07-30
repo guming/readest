@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { RiDeleteBinLine } from 'react-icons/ri';
 
 import * as CFI from 'foliate-js/epubcfi.js';
@@ -79,6 +80,8 @@ import DictionaryPopup from './DictionaryPopup';
 import DictionarySheet from './DictionarySheet';
 import TranslatorPopup from './TranslatorPopup';
 import SelectedTextAssistantPopup from './SelectedTextAssistantPopup';
+import ImageAssistantDialog from './ImageAssistantDialog';
+import { findExplainableImage } from '@/services/image-assistant';
 import type { SelectedTextAction } from '@/services/notebook-assistant/types';
 import useShortcuts from '@/hooks/useShortcuts';
 import ProofreadPopup from './ProofreadPopup';
@@ -150,6 +153,17 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
   const [showDeepLPopup, setShowDeepLPopup] = useState(false);
   const [assistantAction, setAssistantAction] = useState<SelectedTextAction | null>(null);
   const [showProofreadPopup, setShowProofreadPopup] = useState(false);
+  const [imageMenu, setImageMenu] = useState<{
+    element: Element;
+    point: Point;
+    chapterId?: string;
+    pageCfi?: string;
+  } | null>(null);
+  const [imageToExplain, setImageToExplain] = useState<{
+    element: Element;
+    chapterId?: string;
+    pageCfi?: string;
+  } | null>(null);
   const [trianglePosition, setTrianglePosition] = useState<Position>();
   const [annotPopupPosition, setAnnotPopupPosition] = useState<Position>();
   const [dictPopupPosition, setDictPopupPosition] = useState<Position>();
@@ -415,6 +429,49 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
     detail.doc?.addEventListener('pointercancel', handlePointerCancel.bind(null, doc, index));
     detail.doc?.addEventListener('pointerup', handlePointerUp.bind(null, doc, index));
     detail.doc?.addEventListener('selectionchange', handleSelectionchange.bind(null, doc, index));
+
+    if (
+      bookData.book?.format === 'EPUB' &&
+      !bookData.isFixedLayout &&
+      !appService?.isAndroidApp &&
+      !appService?.isIOSApp
+    ) {
+      detail.doc?.addEventListener('contextmenu', (event: Event) => {
+        const contextEvent = event as MouseEvent;
+        const image = findExplainableImage(contextEvent.target);
+        if (!image) return;
+        const imageRange = detail.doc?.createRange();
+        imageRange?.selectNode(image);
+        const iframe = detail.doc?.defaultView?.frameElement as HTMLElement | null;
+        const iframeRect = iframe?.getBoundingClientRect();
+        const scaleX =
+          iframe && iframeRect && iframe.clientWidth > 0
+            ? iframeRect.width / iframe.clientWidth
+            : 1;
+        const scaleY =
+          iframe && iframeRect && iframe.clientHeight > 0
+            ? iframeRect.height / iframe.clientHeight
+            : 1;
+        setImageMenu({
+          element: image,
+          chapterId: progress.sectionHref,
+          pageCfi: imageRange ? view?.getCFI(index, imageRange) : undefined,
+          point: {
+            x: Math.min(
+              window.innerWidth - 180,
+              Math.max(8, (iframeRect?.left ?? 0) + contextEvent.clientX * scaleX),
+            ),
+            y: Math.min(
+              window.innerHeight - 52,
+              Math.max(8, (iframeRect?.top ?? 0) + contextEvent.clientY * scaleY),
+            ),
+          },
+        });
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+      });
+    }
 
     // For PDF selections, enable right-click context menu to directly open translator popup.
     if (bookData.isFixedLayout) {
@@ -1723,6 +1780,42 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
 
   return (
     <div ref={containerRef} role='toolbar' tabIndex={-1}>
+      {imageMenu &&
+        ReactDOM.createPortal(
+          <div
+            className='fixed inset-0 z-[120]'
+            onPointerDown={() => setImageMenu(null)}
+            role='presentation'
+          >
+            <button
+              type='button'
+              className='bg-base-100 text-base-content eink-bordered absolute min-w-40 rounded-lg px-4 py-2 text-left text-sm shadow-xl'
+              style={{ left: imageMenu.point.x, top: imageMenu.point.y }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => {
+                setImageToExplain({
+                  element: imageMenu.element,
+                  chapterId: imageMenu.chapterId,
+                  pageCfi: imageMenu.pageCfi,
+                });
+                setImageMenu(null);
+              }}
+            >
+              {_('Explain Image')}
+            </button>
+          </div>,
+          document.body,
+        )}
+      {imageToExplain && (
+        <ImageAssistantDialog
+          bookKey={bookKey}
+          imageElement={imageToExplain.element}
+          chapterTitle={progress.sectionLabel || ''}
+          chapterId={imageToExplain.chapterId}
+          pageCfi={imageToExplain.pageCfi}
+          onClose={() => setImageToExplain(null)}
+        />
+      )}
       {showDictionaryPopup &&
         (() => {
           // Below `sm` (or short landscape) we present the dictionary as a
@@ -1769,6 +1862,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
           trianglePosition={trianglePosition}
           popupWidth={transPopupWidth}
           popupHeight={transPopupHeight}
+          currentTargetLang={viewSettings.translateTargetLang}
           currentProvider={
             viewSettings.translationProvider === 'custom-ai'
               ? 'google'
@@ -1782,6 +1876,16 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
               bookKey,
               'translationProvider',
               provider,
+              false,
+              false,
+            );
+          }}
+          onTargetLangChange={(targetLang) => {
+            void saveViewSettings(
+              envConfig,
+              bookKey,
+              'translateTargetLang',
+              targetLang,
               false,
               false,
             );
@@ -1806,6 +1910,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
           chapterId={selection.href || progress.sectionHref}
           chapterTitle={progress.sectionLabel}
           sourceLanguage={primaryLang}
+          targetLanguageCode={viewSettings.translateTargetLang}
           onDismiss={handleDismissPopupAndSelection}
         />
       )}

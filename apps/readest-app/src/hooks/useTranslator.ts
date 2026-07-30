@@ -12,6 +12,14 @@ import { polish, preprocess } from '@/services/translators';
 import { eventDispatcher } from '@/utils/event';
 import { getLocale } from '@/utils/misc';
 import { useTranslation } from './useTranslation';
+import { useSettingsStore } from '@/store/settingsStore';
+import {
+  getAITranslationTargetLanguage,
+  getNotebookAssistantIdentity,
+} from '@/services/notebook-assistant/provider';
+import { resolveNotebookAssistantSettings } from '@/services/notebook-assistant/types';
+import { runSelectedTextAssistant } from '@/services/notebook-assistant/client';
+import { resolveAIConnection } from '@/services/ai/connections';
 
 export function useTranslator({
   provider = 'deepl',
@@ -22,9 +30,12 @@ export function useTranslator({
 }: UseTranslatorOptions = {}) {
   const _ = useTranslation();
   const { token } = useAuth();
+  const settings = useSettingsStore((state) => state.settings);
   const [loading, setLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(provider);
-  const [translator, setTransltor] = useState(() => getTranslator(provider));
+  const [translator, setTransltor] = useState(() =>
+    provider === 'custom-ai' ? undefined : getTranslator(provider),
+  );
   const [translators] = useState(() => getTranslators());
 
   useEffect(() => {
@@ -32,6 +43,15 @@ export function useTranslator({
   }, [provider, sourceLang, targetLang]);
 
   useEffect(() => {
+    if (
+      provider === 'custom-ai' &&
+      settings.aiSettings.enabled &&
+      resolveAIConnection(settings.aiSettings, 'translation')
+    ) {
+      setTransltor(undefined);
+      setSelectedProvider('custom-ai');
+      return;
+    }
     const availableTranslators = getTranslators().filter((t) => isTranslatorAvailable(t, !!token));
     const selectedTranslator =
       availableTranslators.find((t) => t.name === provider) || availableTranslators[0]!;
@@ -39,7 +59,7 @@ export function useTranslator({
     setTransltor(getTranslator(selectedProviderName));
     setSelectedProvider(selectedProviderName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provider]);
+  }, [provider, settings.aiSettings, token]);
 
   const translate = useCallback(
     async (
@@ -50,6 +70,11 @@ export function useTranslator({
       const targetLanguage = options?.target || targetLang || getLocale();
       const useCache = options?.useCache ?? false;
       const textsToTranslate = enablePreprocessing ? preprocess(input) : input;
+      const aiConnection = resolveAIConnection(settings.aiSettings, 'translation');
+      const cacheProvider =
+        selectedProvider === 'custom-ai' && aiConnection
+          ? `custom-ai:${aiConnection.id}`
+          : selectedProvider;
 
       if (textsToTranslate.length === 0 || textsToTranslate.every((t) => !t?.trim())) {
         return textsToTranslate;
@@ -66,7 +91,7 @@ export function useTranslator({
             text,
             sourceLanguage,
             targetLanguage,
-            selectedProvider,
+            cacheProvider,
           );
           if (cachedTranslation) return;
 
@@ -78,7 +103,7 @@ export function useTranslator({
       if (textsNeedingTranslation.length === 0) {
         const results = await Promise.all(
           textsToTranslate.map((text) =>
-            getFromCache(text, sourceLanguage, targetLanguage, selectedProvider).then(
+            getFromCache(text, sourceLanguage, targetLanguage, cacheProvider).then(
               (cached) => cached || text,
             ),
           ),
@@ -90,6 +115,55 @@ export function useTranslator({
       setLoading(true);
 
       try {
+        if (selectedProvider === 'custom-ai') {
+          const assistant = resolveNotebookAssistantSettings(settings.notebookAssistant);
+          const identity = getNotebookAssistantIdentity(
+            assistant,
+            settings.aiSettings,
+            'translation',
+          );
+          const translatedTexts = await Promise.all(
+            textsNeedingTranslation.map((sourceText) =>
+              runSelectedTextAssistant(
+                {
+                  action: 'translation',
+                  sourceText,
+                  sourceLanguage,
+                  targetLanguage: getAITranslationTargetLanguage(
+                    targetLanguage,
+                    navigator.language,
+                  ),
+                  provider: identity.provider,
+                  model: identity.model,
+                },
+                assistant,
+                '',
+                undefined,
+                settings.aiSettings,
+              ),
+            ),
+          );
+
+          await Promise.all(
+            textsNeedingTranslation.map((text, index) =>
+              storeInCache(
+                text,
+                translatedTexts[index] || '',
+                sourceLanguage,
+                targetLanguage,
+                cacheProvider,
+              ),
+            ),
+          );
+
+          const results = [...textsToTranslate];
+          indicesNeedingTranslation.forEach((originalIndex, translationIndex) => {
+            results[originalIndex] = translatedTexts[translationIndex] || '';
+          });
+          setLoading(false);
+          return enablePolishing ? polish(results, targetLanguage) : results;
+        }
+
         const translator = translators.find((t) => t.name === selectedProvider);
         if (!translator) {
           throw new Error(`No translator found for provider: ${selectedProvider}`);
@@ -109,7 +183,7 @@ export function useTranslator({
               translatedTexts[index] || '',
               sourceLanguage,
               targetLanguage,
-              selectedProvider,
+              cacheProvider,
             );
           }),
         );
@@ -129,7 +203,7 @@ export function useTranslator({
                 originalText,
                 sourceLanguage,
                 targetLanguage,
-                selectedProvider,
+                cacheProvider,
               );
 
               if (cachedTranslation) {
@@ -157,7 +231,7 @@ export function useTranslator({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedProvider, sourceLang, targetLang, translator, token],
+    [selectedProvider, sourceLang, targetLang, translator, token, settings],
   );
 
   return {

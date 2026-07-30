@@ -1,25 +1,30 @@
 import { OllamaProvider } from './OllamaProvider';
 import { AIGatewayProvider } from './AIGatewayProvider';
 import { OpenRouterProvider } from './OpenRouterProvider';
-import type { AIProvider, AISettings } from '../types';
+import type { AICapability, AIProvider, AISettings } from '../types';
+import { toAIProviderSettings } from '../connections';
 
 export { OllamaProvider, AIGatewayProvider, OpenRouterProvider };
 
-export function getAIProvider(settings: AISettings): AIProvider {
-  switch (settings.provider) {
+export function getAIProvider(
+  settings: AISettings,
+  capability: AICapability = 'default',
+): AIProvider {
+  const resolved = toAIProviderSettings(settings, capability);
+  switch (resolved.provider) {
     case 'ollama':
-      return new OllamaProvider(settings);
+      return new OllamaProvider(resolved);
     case 'ai-gateway':
-      if (!settings.aiGatewayApiKey) {
+      if (!resolved.aiGatewayApiKey) {
         throw new Error('API key required for AI Gateway');
       }
-      return new AIGatewayProvider(settings);
+      return new AIGatewayProvider(resolved);
     case 'openrouter':
-      if (!settings.openrouterApiKey) {
+      if (!resolved.openrouterApiKey) {
         throw new Error('API key required for OpenRouter');
       }
-      return new OpenRouterProvider(settings);
+      return new OpenRouterProvider(resolved);
     default:
-      throw new Error(`Unknown provider: ${settings.provider}`);
+      throw new Error(`Unknown provider: ${resolved.provider}`);
   }
 }

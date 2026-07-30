@@ -344,6 +344,16 @@ describe('provider registry disabled handling', () => {
     expect(names).toContain('yandex');
   });
 
+  it('keeps the unavailable Azure relay visible but unselectable', async () => {
+    const { getTranslators, isTranslatorAvailable } = await import(
+      '@/services/translators/providers'
+    );
+    const azure = getTranslators().find((translator) => translator.name === 'azure');
+
+    expect(azure?.disabled).toBe(true);
+    expect(isTranslatorAvailable(azure!, true)).toBe(false);
+  });
+
   it('exposes yandex as disabled so callers can grey it out', async () => {
     const { getTranslator } = await import('@/services/translators/providers');
     const yandex = getTranslator('yandex');

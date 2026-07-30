@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-const fetchMock = vi.fn();
+const { fetchMock, generateTextMock, getAIProviderMock } = vi.hoisted(() => ({
+  fetchMock: vi.fn(),
+  generateTextMock: vi.fn(),
+  getAIProviderMock: vi.fn(),
+}));
 vi.mock('@/services/ai/utils/httpFetch', () => ({ getAIFetch: () => fetchMock }));
+vi.mock('ai', () => ({ generateText: generateTextMock }));
+vi.mock('@/services/ai/providers', () => ({ getAIProvider: getAIProviderMock }));
 
 import {
   appendFollowUpExplanation,
@@ -19,9 +25,105 @@ import {
   runSelectedTextAssistant,
 } from '@/services/notebook-assistant/client';
 import { DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS } from '@/services/notebook-assistant/types';
+import { DEFAULT_AI_SETTINGS } from '@/services/ai/constants';
 
 describe('selected-text assistant client', () => {
-  beforeEach(() => fetchMock.mockReset());
+  beforeEach(() => {
+    fetchMock.mockReset();
+    generateTextMock.mockReset();
+    getAIProviderMock.mockReset();
+  });
+
+  test('uses the active global AI provider without a legacy API key', async () => {
+    const model = { specificationVersion: 'v3' };
+    getAIProviderMock.mockReturnValue({ getModel: () => model });
+    generateTextMock.mockResolvedValue({ text: '你好' });
+    const settings = {
+      ...DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
+      connectionSource: 'global' as const,
+    };
+    const aiSettings = {
+      ...DEFAULT_AI_SETTINGS,
+      enabled: true,
+      provider: 'ollama' as const,
+      ollamaModel: 'gemma4:e4b',
+    };
+
+    const result = await runSelectedTextAssistant(
+      {
+        action: 'translation',
+        sourceText: 'hello',
+        targetLanguage: 'Chinese',
+        provider: 'ollama',
+        model: 'gemma4:e4b',
+      },
+      settings,
+      '',
+      undefined,
+      aiSettings,
+    );
+
+    expect(result).toBe('你好');
+    expect(getAIProviderMock).toHaveBeenCalledWith(aiSettings, 'translation');
+    expect(generateTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model,
+        temperature: 0.1,
+        messages: expect.arrayContaining([
+          expect.objectContaining({ role: 'user', content: 'hello' }),
+        ]),
+      }),
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('disables DeepSeek thinking for bounded reader actions', async () => {
+    const model = { specificationVersion: 'v3' };
+    getAIProviderMock.mockReturnValue({ getModel: () => model });
+    generateTextMock.mockResolvedValue({ text: 'CoT means chain of thought.' });
+    const settings = {
+      ...DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
+      connectionSource: 'global' as const,
+    };
+    const aiSettings = {
+      ...DEFAULT_AI_SETTINGS,
+      enabled: true,
+      connections: [
+        {
+          id: 'deepseek',
+          name: 'DeepSeek',
+          provider: 'openrouter' as const,
+          template: 'deepseek' as const,
+          baseUrl: 'https://api.deepseek.com/v1',
+          apiKey: 'secret',
+          model: 'deepseek-v4-flash',
+        },
+      ],
+      notebookConnectionId: 'deepseek',
+    };
+
+    await runSelectedTextAssistant(
+      {
+        action: 'translation',
+        sourceText: 'CoT',
+        targetLanguage: 'English',
+        provider: 'openrouter',
+        model: 'deepseek-v4-flash',
+      },
+      settings,
+      '',
+      undefined,
+      { ...aiSettings, translationConnectionId: 'deepseek' },
+    );
+
+    expect(generateTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerOptions: {
+          openrouter: { thinking: { type: 'disabled' } },
+        },
+      }),
+    );
+  });
 
   test('normalizes the base URL and rejects non-http URLs', () => {
     expect(normalizeAssistantBaseUrl('https://api.example.com/v1///')).toBe(

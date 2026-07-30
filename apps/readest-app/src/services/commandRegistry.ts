@@ -153,6 +153,7 @@ const panelIcons: Record<SettingsPanelType, IconType> = {
   Control: LiaHandPointerSolid,
   TTS: PiSpeakerHigh,
   Language: RiTranslate,
+  AI: PiSparkle,
   NotebookAssistant: PiSparkle,
   Integrations: RiShareLine,
   Custom: IoAccessibilityOutline,

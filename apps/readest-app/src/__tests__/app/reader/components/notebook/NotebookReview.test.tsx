@@ -49,6 +49,13 @@ vi.mock('@/store/settingsStore', () => ({
   useSettingsStore: (selector: (state: { settings: object }) => unknown) =>
     selector({
       settings: {
+        aiSettings: {
+          enabled: true,
+          provider: 'ollama',
+          ollamaBaseUrl: 'http://127.0.0.1:11434',
+          ollamaModel: 'gemma4:e4b',
+          ollamaEmbeddingModel: 'nomic-embed-text',
+        },
         notebookAssistant: {
           provider: 'openai',
           baseUrl: 'https://api.example.com/v1',

@@ -10,8 +10,19 @@ import {
   fetchOpenRouterModels,
   type OpenRouterModelInfo,
 } from '@/services/ai/providers/OpenRouterProvider';
-import { DEFAULT_AI_SETTINGS, GATEWAY_MODELS, MODEL_PRICING } from '@/services/ai/constants';
-import type { AISettings, AIProviderName } from '@/services/ai/types';
+import {
+  DEFAULT_AI_SETTINGS,
+  GATEWAY_MODELS,
+  MODEL_PRICING,
+  OPENAI_COMPATIBLE_TEMPLATES,
+} from '@/services/ai/constants';
+import type {
+  AIConnection,
+  AISettings,
+  AIProviderName,
+  OpenAICompatibleTemplate,
+} from '@/services/ai/types';
+import { getAIConnections, resolveAIConnection } from '@/services/ai/connections';
 import { exportReedyMetricsBundle } from '@/services/reedy/instrumentation';
 import { isTauriAppPlatform } from '@/services/environment';
 import { BoxedList, SettingLabel, SettingsRow, SettingsSwitchRow } from './primitives';
@@ -88,6 +99,9 @@ const AIPanel: React.FC = () => {
   const [gatewayKey, setGatewayKey] = useState(aiSettings.aiGatewayApiKey ?? '');
 
   // ---- OpenRouter (OpenAI-compatible) state ----
+  const [openrouterTemplate, setOpenrouterTemplate] = useState<OpenAICompatibleTemplate>(
+    aiSettings.openrouterTemplate ?? 'custom',
+  );
   const [openrouterKey, setOpenrouterKey] = useState(aiSettings.openrouterApiKey ?? '');
   const [openrouterUrl, setOpenrouterUrl] = useState(
     aiSettings.openrouterBaseUrl ?? DEFAULT_AI_SETTINGS.openrouterBaseUrl ?? '',
@@ -118,6 +132,7 @@ const AIPanel: React.FC = () => {
   const [customModelError, setCustomModelError] = useState('');
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
+  const [connectionName, setConnectionName] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const isMounted = useRef(false);
@@ -256,6 +271,14 @@ const AIPanel: React.FC = () => {
   }, [gatewayKey]);
 
   // ---- OpenRouter save effects ----
+  useEffect(() => {
+    if (!isMounted.current) return;
+    if (openrouterTemplate !== (aiSettings.openrouterTemplate ?? 'custom')) {
+      saveAiSetting('openrouterTemplate', openrouterTemplate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openrouterTemplate]);
+
   useEffect(() => {
     if (!isMounted.current) return;
     if (openrouterKey !== (aiSettings.openrouterApiKey ?? '')) {
@@ -401,6 +424,112 @@ const AIPanel: React.FC = () => {
     }
   };
 
+  const saveCurrentConnection = async () => {
+    const name = connectionName.trim();
+    if (!name) return;
+    const id = `connection-${Date.now().toString(36)}`;
+    const connection: AIConnection =
+      provider === 'ollama'
+        ? {
+            id,
+            name,
+            provider,
+            baseUrl: ollamaUrl,
+            model: ollamaModel,
+            embeddingModel: ollamaEmbeddingModel,
+          }
+        : provider === 'ai-gateway'
+          ? {
+              id,
+              name,
+              provider,
+              apiKey: gatewayKey,
+              model: getEffectiveModelId(),
+              embeddingModel: aiSettings.aiGatewayEmbeddingModel,
+            }
+          : {
+              id,
+              name,
+              provider,
+              template: openrouterTemplate,
+              baseUrl: openrouterUrl,
+              apiKey: openrouterKey,
+              model: openrouterModel,
+              embeddingModel: openrouterEmbeddingModel,
+            };
+    const latest = useSettingsStore.getState().settings;
+    const next = {
+      ...latest,
+      aiSettings: {
+        ...latest.aiSettings,
+        connections: [...getAIConnections(latest.aiSettings), connection],
+        defaultConnectionId: latest.aiSettings.defaultConnectionId || connection.id,
+      },
+    };
+    setSettings(next);
+    await saveSettings(envConfig, next);
+    setConnectionName('');
+  };
+
+  const setDefaultConnection = async (connection: AIConnection) => {
+    const latest = useSettingsStore.getState().settings;
+    const next = {
+      ...latest,
+      aiSettings: {
+        ...latest.aiSettings,
+        provider: connection.provider,
+        defaultConnectionId: connection.id,
+      },
+    };
+    setSettings(next);
+    await saveSettings(envConfig, next);
+  };
+
+  const setVisionConnection = async (connectionId: string, supportsVision: boolean) => {
+    const latest = useSettingsStore.getState().settings;
+    const connections = getAIConnections(latest.aiSettings).map((connection) =>
+      connection.id === connectionId ? { ...connection, supportsVision } : connection,
+    );
+    const next = {
+      ...latest,
+      aiSettings: {
+        ...latest.aiSettings,
+        connections,
+      },
+    };
+    setSettings(next);
+    await saveSettings(envConfig, next);
+  };
+
+  const removeConnection = async (connectionId: string) => {
+    const latest = useSettingsStore.getState().settings;
+    const connections = getAIConnections(latest.aiSettings).filter(
+      (connection) => connection.id !== connectionId,
+    );
+    const replacement =
+      latest.aiSettings.defaultConnectionId === connectionId
+        ? connections[0]?.id
+        : latest.aiSettings.defaultConnectionId;
+    const next = {
+      ...latest,
+      aiSettings: {
+        ...latest.aiSettings,
+        connections,
+        defaultConnectionId: replacement,
+        translationConnectionId:
+          latest.aiSettings.translationConnectionId === connectionId
+            ? replacement
+            : latest.aiSettings.translationConnectionId,
+        notebookConnectionId:
+          latest.aiSettings.notebookConnectionId === connectionId
+            ? replacement
+            : latest.aiSettings.notebookConnectionId,
+      },
+    };
+    setSettings(next);
+    await saveSettings(envConfig, next);
+  };
+
   const disabledSection = !enabled ? 'opacity-50 pointer-events-none select-none' : '';
 
   return (
@@ -413,7 +542,47 @@ const AIPanel: React.FC = () => {
         />
       </BoxedList>
 
-      <BoxedList title={_('Provider')} className={disabledSection}>
+      <BoxedList
+        title={_('Saved AI Connections')}
+        description={_('Save multiple provider configurations and choose the default connection.')}
+        className={disabledSection}
+      >
+        {getAIConnections(settings.aiSettings).map((connection) => (
+          <SettingsRow key={connection.id} label={`${connection.name} · ${connection.model}`}>
+            <div className='flex items-center gap-2'>
+              <label className='flex items-center gap-1 text-xs'>
+                <input
+                  type='checkbox'
+                  className='checkbox checkbox-sm'
+                  checked={connection.supportsVision === true}
+                  onChange={(event) =>
+                    void setVisionConnection(connection.id, event.target.checked)
+                  }
+                  aria-label={_('Supports Image Understanding')}
+                />
+                <span>{_('Vision')}</span>
+              </label>
+              <input
+                type='radio'
+                className='radio radio-sm'
+                checked={connection.id === resolveAIConnection(settings.aiSettings, 'default')?.id}
+                onChange={() => void setDefaultConnection(connection)}
+                aria-label={_('Set as Default')}
+              />
+              <button
+                type='button'
+                className='btn btn-ghost btn-xs'
+                onClick={() => void removeConnection(connection.id)}
+                disabled={getAIConnections(settings.aiSettings).length <= 1}
+              >
+                {_('Remove')}
+              </button>
+            </div>
+          </SettingsRow>
+        ))}
+      </BoxedList>
+
+      <BoxedList title={_('Provider Configuration')} className={disabledSection}>
         <SettingsRow label={_('Ollama (Local)')} asLabel>
           <input
             type='radio'
@@ -612,6 +781,32 @@ const AIPanel: React.FC = () => {
           )}
           className={disabledSection}
         >
+          <div className='flex flex-col gap-2 pe-4 py-3'>
+            <SettingLabel>{_('Provider Template')}</SettingLabel>
+            <select
+              className='select select-bordered select-sm bg-base-100 text-base-content w-full'
+              value={openrouterTemplate}
+              onChange={(event) => {
+                const template = event.target.value as OpenAICompatibleTemplate;
+                const defaults = OPENAI_COMPATIBLE_TEMPLATES[template];
+                setOpenrouterTemplate(template);
+                if (template !== 'custom') {
+                  setOpenrouterUrl(defaults.baseUrl);
+                  setOpenrouterModel(defaults.model);
+                  setOpenrouterModels([]);
+                  setOpenrouterModelsError('');
+                }
+              }}
+              disabled={!enabled}
+            >
+              <option value='openai'>OpenAI</option>
+              <option value='deepseek'>DeepSeek</option>
+              <option value='qwen'>Qwen</option>
+              <option value='openrouter'>OpenRouter</option>
+              <option value='custom'>{_('Custom')}</option>
+            </select>
+          </div>
+
           {/* API key */}
           <div className='flex flex-col gap-2 pe-4 py-3'>
             <div className='flex w-full items-center justify-between'>
@@ -810,6 +1005,26 @@ const AIPanel: React.FC = () => {
       </BoxedList>
 
       <BoxedList title={_('Connection')} className={disabledSection}>
+        <div className='flex flex-col gap-2 py-3 pe-4'>
+          <SettingLabel>{_('Connection Name')}</SettingLabel>
+          <div className='flex gap-2'>
+            <input
+              className='input input-bordered input-sm min-w-0 flex-1'
+              value={connectionName}
+              onChange={(event) => setConnectionName(event.target.value)}
+              placeholder={_('For example: DeepSeek')}
+              disabled={!enabled}
+            />
+            <button
+              type='button'
+              className='btn btn-primary btn-sm'
+              onClick={() => void saveCurrentConnection()}
+              disabled={!enabled || !connectionName.trim()}
+            >
+              {_('Save Connection')}
+            </button>
+          </div>
+        </div>
         <div className='flex min-h-14 items-center justify-between gap-3 pe-4'>
           <button
             className='btn btn-outline btn-sm'

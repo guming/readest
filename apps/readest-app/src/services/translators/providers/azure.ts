@@ -49,6 +49,10 @@ const getAuthToken = async (): Promise<string> => {
 export const azureProvider: TranslationProvider = {
   name: 'azure',
   label: _('Azure Translator'),
+  // This provider relies on Edge's undocumented anonymous token endpoint,
+  // which currently fails before a token can be issued. Keep it visible so
+  // existing selections are understandable, but do not auto-select or call it.
+  disabled: true,
   translate: async (text: string[], sourceLang: string, targetLang: string): Promise<string[]> => {
     if (!text.length) return [];
 

@@ -7,6 +7,7 @@ import {
   IoShareOutline,
   IoDownloadOutline,
 } from 'react-icons/io5';
+import { PiSparkle } from 'react-icons/pi';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useThemeStore } from '@/store/themeStore';
 import { Insets } from '@/types/misc';
@@ -17,6 +18,7 @@ interface ZoomControlsProps {
   canShare?: boolean;
   onClose: () => void;
   onSave?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onExplain?: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
@@ -27,6 +29,7 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
   canShare,
   onClose,
   onSave,
+  onExplain,
   onZoomIn,
   onZoomOut,
   onReset,
@@ -63,6 +66,17 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
           ) : (
             <IoDownloadOutline className='h-6 w-6' />
           )}
+        </button>
+      )}
+
+      {onExplain && (
+        <button
+          onClick={onExplain}
+          className='eink-bordered flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70'
+          aria-label={_('Explain Image')}
+          title={_('Explain Image')}
+        >
+          <PiSparkle className='h-6 w-6' />
         </button>
       )}
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { PiCheck, PiCopy, PiFloppyDisk, PiLightbulb, PiSpinner, PiSparkle } from 'react-icons/pi';
 
 import NotebookAssistantPanel from '@/components/settings/NotebookAssistantPanel';
@@ -14,7 +14,6 @@ import {
   buildCurrentPageContext,
   type NotebookAssistantContext,
 } from '@/services/notebook-assistant/context';
-import { getAssistantApiKey } from '@/services/notebook-assistant/secretStore';
 import {
   evaluateUsageLimit,
   recordNotebookAssistantUsage,
@@ -23,6 +22,10 @@ import {
   resolveNotebookAssistantSettings,
   type NotebookAssistantCardAction,
 } from '@/services/notebook-assistant/types';
+import {
+  getNotebookAssistantIdentity,
+  isNotebookAssistantConfigured,
+} from '@/services/notebook-assistant/provider';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -47,8 +50,8 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey }) => {
   const { getBookData, getConfig, setConfig, saveConfig } = useBookDataStore();
   const { getView, getProgress } = useReaderStore();
   const assistant = resolveNotebookAssistantSettings(settings.notebookAssistant);
+  const assistantIdentity = getNotebookAssistantIdentity(assistant, settings.aiSettings);
   const targetLanguage = assistant.targetLanguage || navigator.language || 'English';
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const [contextType, setContextType] = useState<'page' | 'chapter'>('page');
   const [action, setAction] = useState<NotebookAssistantCardAction>('summary');
   const [context, setContext] = useState<NotebookAssistantContext | null>(null);
@@ -57,11 +60,7 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey }) => {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    void getAssistantApiKey().then(setApiKey);
-  }, []);
-
-  const configured = !!apiKey && !!assistant.baseUrl && !!assistant.model;
+  const configured = isNotebookAssistantConfigured(assistant, settings.aiSettings, '');
   const estimate = useMemo(
     () => estimateContextTokens(context?.sourceText || '', action),
     [context?.sourceText, action],
@@ -78,7 +77,7 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey }) => {
   };
 
   const run = async () => {
-    if (!apiKey) return;
+    if (!configured) return;
     setLoading(true);
     setError('');
     setResult('');
@@ -124,20 +123,22 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey }) => {
           sourceText: nextContext.sourceText,
           title: nextContext.title,
           targetLanguage,
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           summaryStyle: assistant.defaultSummaryStyle,
         },
         assistant,
-        apiKey,
+        '',
+        undefined,
+        settings.aiSettings,
       );
       setResult(content);
       if (assistant.usageTrackingEnabled) {
         recordNotebookAssistantUsage({
           action,
           contextType: nextContext.contextType,
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           tokenEstimate: nextEstimate,
           success: true,
           bookId: bookKey.split('-')[0],
@@ -149,8 +150,8 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey }) => {
         recordNotebookAssistantUsage({
           action,
           contextType: usageContext.contextType,
-          provider: assistant.provider,
-          model: assistant.model,
+          provider: assistantIdentity.provider,
+          model: assistantIdentity.model,
           tokenEstimate: usageEstimate,
           success: false,
           errorCode: runError instanceof NotebookAssistantError ? runError.code : 'unknown',
@@ -180,8 +181,8 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey }) => {
       content: result,
       contextType: context.contextType,
       targetLanguage,
-      provider: assistant.provider,
-      model: assistant.model,
+      provider: assistantIdentity.provider,
+      model: assistantIdentity.model,
       tokenEstimate: estimateContextTokens(context.sourceText, action),
       createdAt: now,
       updatedAt: now,
@@ -197,21 +198,10 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey }) => {
     setSaved(true);
   };
 
-  if (apiKey === null) {
-    return (
-      <div className='flex min-h-16 items-center justify-center'>
-        <PiSpinner className='animate-spin' />
-      </div>
-    );
-  }
-
   if (!configured) {
     return (
       <div className='border-base-300 border-b p-3'>
-        <NotebookAssistantPanel
-          compact
-          onConfigured={() => void getAssistantApiKey().then(setApiKey)}
-        />
+        <NotebookAssistantPanel compact />
       </div>
     );
   }
@@ -257,7 +247,7 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey }) => {
           </>
         ) : (
           <>
-            {assistant.provider} · {assistant.model}
+            {assistantIdentity.provider} · {assistantIdentity.model}
           </>
         )}
       </p>
