@@ -139,7 +139,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
   // progress store. This is the only piece of data we need to react to
   // per page turn — the `useEffect(..., [progress])` below uses it to
   // re-apply local-page annotations after each relocate.
-  const progress = useBookProgress(bookKey)!;
+  const progress = useBookProgress(bookKey);
   const bookData = getBookData(bookKey)!;
   const view = getView(bookKey);
   const viewSettings = getViewSettings(bookKey)!;
@@ -454,7 +454,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
             : 1;
         setImageMenu({
           element: image,
-          chapterId: progress.sectionHref,
+          chapterId: progress?.sectionHref,
           pageCfi: imageRange ? view?.getCFI(index, imageRange) : undefined,
           point: {
             x: Math.min(
@@ -626,7 +626,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
       cfi,
       index,
       range,
-      page: annotation.page || progress.page,
+      page: annotation.page || progress?.page || 0,
     };
     if (isNote) {
       setShowAnnotationNotes(true);
@@ -1200,7 +1200,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
       color,
       text: selection.text,
       note: '',
-      page: progress.page,
+      page: progress?.page,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -1318,8 +1318,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
 
   const handleAnnotate = () => {
     if (!selection || !selection.text) return;
-    const { sectionHref: href } = progress;
-    selection.href = href;
+    selection.href = progress?.sectionHref;
     const created = handleHighlight(true);
     setNotebookVisible(true);
     setNotebookNewAnnotation(selection);
@@ -1810,7 +1809,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
         <ImageAssistantDialog
           bookKey={bookKey}
           imageElement={imageToExplain.element}
-          chapterTitle={progress.sectionLabel || ''}
+          chapterTitle={progress?.sectionLabel || ''}
           chapterId={imageToExplain.chapterId}
           pageCfi={imageToExplain.pageCfi}
           onClose={() => setImageToExplain(null)}
@@ -1907,8 +1906,8 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
           popupHeight={assistantPopupHeight}
           bookTitle={bookData.book?.title || ''}
           bookAuthor={bookData.book?.author || ''}
-          chapterId={selection.href || progress.sectionHref}
-          chapterTitle={progress.sectionLabel}
+          chapterId={selection.href || progress?.sectionHref}
+          chapterTitle={progress?.sectionLabel || ''}
           sourceLanguage={primaryLang}
           targetLanguageCode={viewSettings.translateTargetLang}
           onDismiss={handleDismissPopupAndSelection}
