@@ -20,7 +20,7 @@ describe('extension i18n locale selection', () => {
   test('uses exact regional bundles for Chrome hyphen locale codes', async () => {
     chromeMock.i18n.getUILanguage.mockReturnValue('zh-CN');
     const { translate } = await import('./i18n');
-    expect(translate('Send to Readest')).toBe('发送到 Readest');
+    expect(translate('Send to Lumen')).toBe('发送到 Lumen');
   });
 
   test('uses exact regional bundles for Chrome underscore locale codes', async () => {
@@ -34,6 +34,6 @@ describe('extension i18n locale selection', () => {
   test('falls back to the base language when no regional bundle exists', async () => {
     chromeMock.i18n.getUILanguage.mockReturnValue('de-CH');
     const { translate } = await import('./i18n');
-    expect(translate('Send to Readest')).toBe('An Readest senden');
+    expect(translate('Send to Lumen')).toBe('An Lumen senden');
   });
 });

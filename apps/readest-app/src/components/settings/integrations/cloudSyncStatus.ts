@@ -11,7 +11,7 @@ export interface ReadestRowInputs {
   signedIn: boolean;
   /** Plan still resolving from the JWT (signed-in only). */
   planLoading: boolean;
-  /** Readest Cloud is the derived provider. */
+  /** Lumen Cloud is the derived provider. */
   selected: boolean;
 }
 

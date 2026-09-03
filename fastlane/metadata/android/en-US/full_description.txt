@@ -1,4 +1,4 @@
-<b>Readest</b> is a modern, open-source ebook reader for people who read a lot, and want their books, notes and progress to follow them everywhere.
+<b>Lumen</b> is a modern, open-source ebook reader for people who read a lot, and want their books, notes and progress to follow them everywhere.
 
 Open EPUB, PDF, MOBI, AZW3, FB2, CBZ, TXT and Markdown, and tune the reading experience down to the last detail.
 
@@ -26,9 +26,9 @@ Open EPUB, PDF, MOBI, AZW3, FB2, CBZ, TXT and Markdown, and tune the reading exp
 • Wikipedia and dictionary lookup without leaving the page
 
 <b>Sync everywhere</b>
-• Readest Cloud, or bring your own: Google Drive, OneDrive, WebDAV, S3
+• Lumen Cloud, or bring your own: Google Drive, OneDrive, WebDAV, S3
 • KOReader sync keeps your progress in step with your e-reader
 • Android, iOS, macOS, Windows, Linux and the web
 
-Readest is open source. Questions or ideas: support@readest.com
+Lumen is open source. Questions or ideas: support@readest.com
 Privacy policy: https://readest.com/privacy-policy

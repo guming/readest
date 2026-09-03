@@ -8,7 +8,7 @@ set -euo pipefail
 pnpm tauri ios build --export-method app-store-connect
 
 BUNDLE_DIR=src-tauri/gen/apple/build/arm64
-IPA_BUNDLE=$BUNDLE_DIR/Readest.ipa
+IPA_BUNDLE=$BUNDLE_DIR/Lumen.ipa
 
 # Tauri signs only the main app binary at archive time, so the widget / share
 # extensions enter -exportArchive unsigned and the export re-sign drops the App

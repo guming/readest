@@ -598,8 +598,8 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         console.log('Open with book:', file);
         try {
           const temp = appService.isMobile ? false : !settings.autoImportBooksOnOpen;
-          // A file shared into Readest on mobile (the OS share-sheet) is a
-          // "Send to Readest" capture — force it to the cloud so it syncs to
+          // A file shared into Lumen on mobile (the OS share-sheet) is a
+          // "Send to Lumen" capture — force it to the cloud so it syncs to
           // every device. Desktop "open with" honors the book sync toggle.
           const book = await ingestFile(
             {
@@ -946,7 +946,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
     const failedPaths: string[] = [];
     const successfulImports: string[] = [];
 
-    // Readest's own Books/ prefix is resolved once at app init and persisted
+    // Lumen's own Books/ prefix is resolved once at app init and persisted
     // in `settings.localBooksDir`. We hand it to `ingestFile` so the in-place
     // decision can exclude files that already live inside our managed hash
     // store WITHOUT misclassifying user-owned folders that happen to be
@@ -1510,7 +1510,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         type: 'warning',
         timeout: 6000,
         message: _(
-          'iOS doesn\'t allow importing the "On My iPhone" root. Open it and pick a specific subfolder (e.g. Readest, Downloads), then try again.',
+          'iOS doesn\'t allow importing the "On My iPhone" root. Open it and pick a specific subfolder (e.g. Lumen, Downloads), then try again.',
         ),
       });
       return false;

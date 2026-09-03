@@ -77,7 +77,7 @@ function render(progress: ClipProgress | null): void {
       break;
     case 'uploading':
       sendBtn.disabled = true;
-      showProgress(_('Sending to Readest…'));
+      showProgress(_('Sending to Lumen…'));
       setStatus('');
       break;
     case 'done':

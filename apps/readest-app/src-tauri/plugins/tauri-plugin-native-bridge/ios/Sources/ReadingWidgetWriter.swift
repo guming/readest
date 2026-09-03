@@ -3,7 +3,7 @@ import UIKit
 import WidgetKit
 
 enum ReadingWidgetWriter {
-  static let suiteName = "group.com.miaoshou.readest"
+  static let suiteName = "group.com.lumen.reader"
   static let snapshotKey = "readingWidgetSnapshot"
   static let thumbMaxPixels: CGFloat = 240
 

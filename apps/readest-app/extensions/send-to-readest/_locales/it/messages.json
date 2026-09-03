@@ -1,14 +1,14 @@
 {
   "app_name": {
-    "message": "Invia a Readest",
+    "message": "Invia a Lumen",
     "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
   },
   "app_description": {
-    "message": "Salva pagine web nella tua libreria Readest",
+    "message": "Salva pagine web nella tua libreria Lumen",
     "description": "Short description shown in the Chrome Web Store listing."
   },
   "action_title": {
-    "message": "Invia a Readest",
+    "message": "Invia a Lumen",
     "description": "Tooltip on the toolbar action button."
   }
 }

@@ -7,9 +7,9 @@ PLUGIN_VERSION = (0, 11, 20)
 
 
 class ReadestPlugin(InterfaceActionBase):
-    name = 'Readest Sync'
+    name = 'Lumen Sync'
     description = (
-        'Push selected books and their metadata into your Readest cloud library. '
+        'Push selected books and their metadata into your Lumen cloud library. '
         'Re-pushing a book updates its existing entry instead of creating a duplicate.'
     )
     supported_platforms = ['windows', 'osx', 'linux']

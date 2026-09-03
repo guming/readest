@@ -18,7 +18,7 @@ describe('microsoftOAuthConfig', () => {
 
   test('isOneDriveOAuthRedirectUrl flags the OneDrive redirect scheme', () => {
     expect(isOneDriveOAuthRedirectUrl('readest-onedrive://auth?code=x&state=y')).toBe(true);
-    expect(isOneDriveOAuthRedirectUrl('readest://auth-callback')).toBe(false);
+    expect(isOneDriveOAuthRedirectUrl('lumen://auth-callback')).toBe(false);
     expect(isOneDriveOAuthRedirectUrl('file:///Users/me/book.epub')).toBe(false);
   });
 });

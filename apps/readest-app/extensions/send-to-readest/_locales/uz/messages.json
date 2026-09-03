@@ -1,14 +1,14 @@
 {
   "app_name": {
-    "message": "Readest'ga yuborish",
+    "message": "Lumen'ga yuborish",
     "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
   },
   "app_description": {
-    "message": "Veb-sahifalarni Readest kutubxonangizga saqlang",
+    "message": "Veb-sahifalarni Lumen kutubxonangizga saqlang",
     "description": "Short description shown in the Chrome Web Store listing."
   },
   "action_title": {
-    "message": "Readest'ga yuborish",
+    "message": "Lumen'ga yuborish",
     "description": "Tooltip on the toolbar action button."
   }
 }

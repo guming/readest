@@ -58,7 +58,7 @@ class LoginDialog(QDialog):
         self.oauth_server = None
         self.oauth_waiter = None
 
-        self.setWindowTitle('Log in to Readest')
+        self.setWindowTitle('Log in to Lumen')
         layout = QVBoxLayout()
         self.setLayout(layout)
 
@@ -171,13 +171,15 @@ class _RunDialog(QDialog):
         self.db = db
         self.marks = {}
 
-        self.setWindowTitle(self.title)
+        self.setWindowTitle('Push to Lumen')
         self.setMinimumSize(520, 380)
         layout = QVBoxLayout()
         self.setLayout(layout)
 
         count = len(book_ids)
-        layout.addWidget(QLabel(self.heading % (count, _plural(count))))
+        layout.addWidget(
+            QLabel('Pushing %d %s to your Lumen library…' % (count, _plural(count)))
+        )
 
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setRange(0, count)
@@ -224,7 +226,7 @@ class _RunDialog(QDialog):
         # apply them to the library view.
         self.marks = dict(self.worker.marks)
         if not ok and self.table.rowCount() == 0:
-            error_dialog(self, self.failure_title, message, show=True)
+            error_dialog(self, 'Push to Lumen failed', message, show=True)
 
     def reject(self):
         if self.worker.isRunning():

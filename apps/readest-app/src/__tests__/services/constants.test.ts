@@ -12,6 +12,7 @@ vi.mock('@/utils/misc', () => ({
 
 import {
   DATA_SUBDIR,
+  CLOUD_DATA_SUBDIR,
   LOCAL_BOOKS_SUBDIR,
   CLOUD_BOOKS_SUBDIR,
   LOCAL_FONTS_SUBDIR,
@@ -108,8 +109,8 @@ describe('services/constants', () => {
       expect(LOCAL_BOOKS_SUBDIR).toContain(DATA_SUBDIR);
     });
 
-    it('CLOUD_BOOKS_SUBDIR contains DATA_SUBDIR', () => {
-      expect(CLOUD_BOOKS_SUBDIR).toContain(DATA_SUBDIR);
+    it('CLOUD_BOOKS_SUBDIR contains the stable cloud data namespace', () => {
+      expect(CLOUD_BOOKS_SUBDIR).toContain(CLOUD_DATA_SUBDIR);
     });
 
     it('LOCAL_FONTS_SUBDIR contains DATA_SUBDIR', () => {

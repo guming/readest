@@ -195,7 +195,7 @@ export class TxtToEpubConverter {
 
     const blob = await this.createEpub(chapters, metadata);
     return {
-      file: new File([blob], fileName),
+      file: new File([await blob.arrayBuffer()], fileName, { type: 'application/epub+zip' }),
       bookTitle,
       chapterCount: chapters.length,
       language,
@@ -260,7 +260,7 @@ export class TxtToEpubConverter {
 
     const blob = await this.createEpub(chapters, metadata);
     return {
-      file: new File([blob], fileName),
+      file: new File([await blob.arrayBuffer()], fileName, { type: 'application/epub+zip' }),
       bookTitle,
       chapterCount: chapters.length,
       language,

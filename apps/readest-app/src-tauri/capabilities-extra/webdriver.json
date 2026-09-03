@@ -20,6 +20,7 @@
         { "path": "**/.readest-test-sandbox-tauri/**" },
         { "path": "**/__tests__" },
         { "path": "**/__tests__/**" },
+        { "path": "**/Lumen" },
         { "path": "**/Readest" },
         { "path": "**/Readest/**" }
       ]

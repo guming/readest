@@ -1,14 +1,14 @@
 {
   "app_name": {
-    "message": "שלח ל-Readest",
+    "message": "שלח ל-Lumen",
     "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
   },
   "app_description": {
-    "message": "שמור דפי אינטרנט בספרייה שלך ב-Readest",
+    "message": "שמור דפי אינטרנט בספרייה שלך ב-Lumen",
     "description": "Short description shown in the Chrome Web Store listing."
   },
   "action_title": {
-    "message": "שלח ל-Readest",
+    "message": "שלח ל-Lumen",
     "description": "Tooltip on the toolbar action button."
   }
 }

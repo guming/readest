@@ -1,11 +1,11 @@
 <div align="center">
   <a href="https://readest.com?utm_source=github&utm_medium=referral&utm_campaign=readme" target="_blank">
-    <img src="https://github.com/readest/readest/blob/main/apps/readest-app/src-tauri/icons/icon.png?raw=true" alt="Readest Logo" width="20%" />
+    <img src="https://github.com/readest/readest/blob/main/apps/readest-app/src-tauri/icons/icon.png?raw=true" alt="Lumen Logo" width="20%" />
   </a>
-  <h1>Readest</h1>
+  <h1>Lumen</h1>
   <br>
 
-[Readest][link-website] is an open-source ebook reader designed for immersive and deep reading experiences. Built as a modern rewrite of [Foliate](https://github.com/johnfactotum/foliate), it leverages [Next.js 16](https://github.com/vercel/next.js) and [Tauri v2](https://github.com/tauri-apps/tauri) to deliver a smooth, cross-platform experience across macOS, Windows, Linux, Android, iOS, and the Web.
+[Lumen][link-website] is an open-source ebook reader designed for immersive and deep reading experiences. Built as a modern rewrite of [Foliate](https://github.com/johnfactotum/foliate), it leverages [Next.js 16](https://github.com/vercel/next.js) and [Tauri v2](https://github.com/tauri-apps/tauri) to deliver a smooth, cross-platform experience across macOS, Windows, Linux, Android, iOS, and the Web.
 
 [![Website][badge-website]][link-website]
 [![Web App][badge-web-app]][link-web-readest]
@@ -38,7 +38,7 @@
 
 <div align="center">
   <a href="https://readest.com" target="_blank">
-    <img src="./data/screenshots/landing_all_platforms.png" alt="Readest Banner" width="100%" />
+    <img src="./data/screenshots/landing_all_platforms.png" alt="Lumen Banner" width="100%" />
   </a>
 </div>
 
@@ -48,25 +48,22 @@
 
 | **Feature**                                | **Description**                                                                                                        | **Status** |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **Multi-Format Support**                   | Support EPUB, PDF, MOBI, KF8 (AZW3), FB2, CBZ, TXT, MD (Markdown)                                                                      | ✅         |
+| **Multi-Format Support**                   | Support EPUB, MOBI, KF8 (AZW3), FB2, CBZ, TXT, PDF                                                                     | ✅         |
 | **Scroll/Page View Modes**                 | Switch between scrolling or paginated reading modes.                                                                   | ✅         |
-| **Full-Text Search**                       | Search inside a book or across the current library shelf to find relevant sections.                                    | ✅         |
+| **Full-Text Search**                       | Search across the entire book to find relevant sections.                                                               | ✅         |
 | **Annotations and Highlighting**           | Add highlights, bookmarks, and notes to enhance your reading experience and use instant mode for quicker interactions. | ✅         |
-| **Dictionary/Wikipedia Lookup**            | Look up words with built-in sources or import local packs, including Yomitan ZIP/RDICT, from Settings → Custom Dictionaries. | ✅         |
+| **Dictionary/Wikipedia Lookup**            | Instantly look up words and terms when reading.                                                                        | ✅         |
 | **[Parallel Read][link-parallel-read]**    | Read two books or documents simultaneously in a split-screen view.                                                     | ✅         |
 | **Customize Font and Layout**              | Adjust font, layout, theme mode, and theme colors for a personalized experience.                                       | ✅         |
 | **Code Syntax Highlighting**               | Read software manuals with rich coloring of code examples.                                                             | ✅         |
-| **File Association and Open With**         | Quickly open files in Readest in your file browser with one-click.                                                     | ✅         |
+| **File Association and Open With**         | Quickly open files in Lumen in your file browser with one-click.                                                     | ✅         |
 | **Library Management**                     | Organize, sort, and manage your entire ebook library.                                                                  | ✅         |
 | **OPDS/Calibre Integration**               | Integrate OPDS/Calibre to access online libraries and catalogs.                                                        | ✅         |
-| **Web Page Clipping**                      | Open websites, sign in, and clip pages with **From Web Browser**. **From Web Novel** can reuse your browser session to import selected chapters and their images. | ✅         |
 | **Translate with DeepL and Yandex**        | From a single sentence to the entire book—translate instantly.                                                         | ✅         |
-| **Audiobook Support**                      | Extend functionality to play and manage audiobooks.                                                        | ✅           |
 | **Text-to-Speech (TTS) Support**           | Enjoy smooth, multilingual narration—even within a single book.                                                        | ✅         |
-| [**Read-Along Narration**][link-readalong] | Play embedded EPUB 3 Media Overlays with timed highlighting, or pair a reflowable EPUB locally with DRM-free MP3, M4A, or M4B narration. [Storyteller][link-storyteller] remains an option for generating phrase-aligned EPUBs. | ✅         |
 | **Sync across Platforms**                  | Synchronize book files, reading progress, notes, and bookmarks across all supported platforms.                         | ✅         |
 | [**Sync with Koreader**][link-kosync-wiki] | Synchronize reading progress, notes, and bookmarks with [Koreader][link-koreader] devices.                             | ✅         |
-| **Accessibility**                          | Provides full keyboard navigation and support for screen readers such as VoiceOver, TalkBack, NVDA, and Orca.         | ✅         |
+| **Accessibility**                          | Provides full keyboard navigation and supports for screen readers such as VoiceOver, TalkBack, NVDA, and Orca.         | ✅         |
 | **Visual & Focus Aids**                    | Reading ruler, paragraph-by-paragraph reading mode, and speed reading features.                                        | ✅         |
 
 ## Planned Features
@@ -78,7 +75,9 @@
 | ------------------------------- | -------------------------------------------------------------------------- | ------------ |
 | **AI-Powered Summarization**    | Generate summaries of books or chapters using AI for quick insights.       | 🛠           |
 | **Advanced Reading Stats**      | Track reading time, pages read, and more for detailed insights.            | 🛠           |
+| **Audiobook Support**           | Extend functionality to play and manage audiobooks.                        | 🔄           |
 | **Handwriting Annotations**     | Add support for handwriting annotations using a pen on compatible devices. | 🔄           |
+| **In-Library Full-Text Search** | Search across your entire ebook library to find topics and quotes.         | 🔄           |
 
 Stay tuned for continuous improvements and updates! Contributions and suggestions are always welcome—let's build the ultimate reading experience together. 😊
 
@@ -111,68 +110,24 @@ Stay tuned for continuous improvements and updates! Contributions and suggestion
 
 ### Platform-Specific Downloads
 
-- macOS / iOS / iPadOS : Search and install **Readest** on the [App Store][link-appstore], _also_ available on TestFlight for beta test (send your Apple ID to <readestapp@gmail.com> to request access).
-- Windows / Linux / Android: Visit and download **Readest** at [https://readest.com][link-website] or the [Releases on GitHub][link-gh-releases].
-- Linux users can also install [Readest on Flathub][link-flathub].
-- Web: Visit and use **Readest for Web** at [https://web.readest.com][link-web-readest].
-
-#### Nix
-
-> [!NOTE]
-> The Nix package supports `x86_64-linux` only. nix-darwin is not supported.
-
-Try it without installing. `--accept-flake-config` opts in to the project's
-binary cache; without it Nix builds the whole Rust/Tauri stack from source.
-
-```sh
-nix run --accept-flake-config github:readest/readest
-```
-
-To install it, add the input to your `flake.nix`:
-
-```nix
-# Due to a limitation in how Nix fetches submodules, a regular GitHub input type will fail to evaluate.
-inputs.readest = {
-  url = "https://github.com/readest/readest.git";
-  type = "git";
-  submodules = true;
-};
-```
-
-then in `configuration.nix` add the package and the cache. The cache is needed
-here as well because a flake input's own `nixConfig` does not apply to your
-system build:
-
-```nix
-environment.systemPackages = [
-  inputs.readest.packages.${pkgs.stdenv.hostPlatform.system}.default
-];
-
-nix.settings = {
-  substituters = [ "https://readest.cachix.org" ];
-  trusted-public-keys = [
-    "readest.cachix.org-1:KvKAePcZZCZB8ytFIAOGdgN3VRdmFHGRMHqMVckbt5c="
-  ];
-};
-```
+- macOS / iOS / iPadOS : Search and install **Lumen** on the [App Store][link-appstore], _also_ available on TestFlight for beta test (send your Apple ID to <readestapp@gmail.com> to request access).
+- Windows / Linux / Android: Visit and download **Lumen** at [https://readest.com][link-website] or the [Releases on GitHub][link-gh-releases].
+- Linux users can also install [Lumen on Flathub][link-flathub].
+- Web: Visit and use **Lumen for Web** at [https://web.readest.com][link-web-readest].
 
 ## Documentation
 
-Guides, tutorials, and FAQs for installing and using Readest live in the official documentation:
+Guides, tutorials, and FAQs for installing and using Lumen live in the official documentation:
 
 📖 **[https://readest.com/docs][link-docs]**
 
-Contributor references live in the repository: [architecture](./apps/readest-app/docs/architecture.md),
-[code layout](./apps/readest-app/docs/code-layout.md), and
-[testing](./apps/readest-app/docs/testing.md).
-
 ## Building from Source
 
-To build Readest from the latest commit, see [Getting Started](./CONTRIBUTING.md#getting-started).
+To build Lumen from the latest commit, see [Getting Started](./CONTRIBUTING.md#getting-started).
 
 ## Troubleshooting
 
-### 1. Readest Won’t Launch on Windows (Missing Edge WebView2 Runtime)
+### 1. Lumen Won’t Launch on Windows (Missing Edge WebView2 Runtime)
 
 **Symptom**
 
@@ -181,7 +136,7 @@ To build Readest from the latest commit, see [Getting Started](./CONTRIBUTING.md
 
 **Cause**
 
-- Microsoft Edge WebView2 Runtime is either missing, outdated, or improperly installed on your system. Readest depends on WebView2 to render the interface on Windows.
+- Microsoft Edge WebView2 Runtime is either missing, outdated, or improperly installed on your system. Lumen depends on WebView2 to render the interface on Windows.
 
 **How to Fix**
 
@@ -190,7 +145,7 @@ To build Readest from the latest commit, see [Getting Started](./CONTRIBUTING.md
 2. Install or Update WebView2
    - Download the WebView2 Runtime directly from Microsoft: [link](https://developer.microsoft.com/en-us/microsoft-edge/webview2?form=MA13LH).
    - If you prefer an offline installer, download the offline package and run it as an Administrator.
-3. Re-run Readest
+3. Re-run Lumen
    - After installing/updating WebView2, launch readest.exe again.
    - If you still encounter problems, reboot your PC and try again.
 
@@ -203,31 +158,35 @@ To build Readest from the latest commit, see [Getting Started](./CONTRIBUTING.md
 
 - See Issue [readest/readest#358](https://github.com/readest/readest/issues/358) for further details, or head over to our [Discord][link-discord] server and open a support discussion with detailed logs of your environment and the steps you’ve taken.
 
-### Linux Fails to Launch on Wayland / Niri
+### 2. AppImage Launches but Only Shows a Taskbar Icon
 
-Current Linux builds, including Flatpak, use CEF with an X11 window backend.
-Wayland sessions therefore need XWayland. Without a `DISPLAY`, older builds exit
-with `Runtime(CreateWindow)` before opening a window.
+On some Arch Linux systems—especially those using Wayland—the Lumen AppImage may briefly show an icon in the taskbar and then exit without opening a window.
 
-On Niri, install `xwayland-satellite` 0.7 or later using your distribution's package manager
-and restart your Niri session. Niri 25.08 and later can start it on demand and
-set `DISPLAY` for applications. See [Niri's XWayland setup instructions](https://niri-wm.github.io/niri/Xwayland.html).
+You might see logs such as:
 
-From a terminal in that session, check `printenv DISPLAY`, then launch Readest:
-
-```sh
-flatpak run com.bilingify.readest
+```
+Could not create default EGL display: EGL_BAD_PARAMETER. Aborting...
 ```
 
-The Flatpak already requests the X11 socket. If you have customized its sandbox
-permissions, allow that socket as well. Setting `DISPLAY` to an arbitrary value
-does not start XWayland; use the value provided by your session.
-`--ozone-platform=wayland` cannot enable native Wayland support in this runtime,
-and WebKitGTK environment variables do not affect CEF.
+This behavior is usually caused by compatibility issues between the bundled AppImage libraries and the system’s EGL / Wayland environment.
+
+**Workaround 1: Launch with LD_PRELOAD (recommended)**
+
+You can preload the system Wayland client library before launching the AppImage:
+
+```
+LD_PRELOAD=/usr/lib/libwayland-client.so /path/to/Lumen.AppImage
+```
+
+This workaround has been confirmed to resolve the issue on affected systems.
+
+**Workaround 2: Use the Flatpak Version**
+
+If you prefer a more reliable out-of-the-box experience on Arch Linux, consider using the [Flatpak build on Flathub][link-flathub] instead. The Flatpak runtime helps avoid system library mismatches and tends to behave more consistently across different Wayland and X11 setups.
 
 ## Contributors
 
-Readest is open-source, and contributions are welcome! Feel free to open issues, suggest features, or submit pull requests. Please **review our [contributing guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before you start**. We also welcome you to join our [Discord][link-discord] community for either support or contributing guidance.
+Lumen is open-source, and contributions are welcome! Feel free to open issues, suggest features, or submit pull requests. Please **review our [contributing guidelines](CONTRIBUTING.md) before you start**. We also welcome you to join our [Discord][link-discord] community for either support or contributing guidance.
 
 <a href="https://github.com/readest/readest/graphs/contributors">
   <p align="left">
@@ -237,19 +196,11 @@ Readest is open-source, and contributions are welcome! Feel free to open issues,
 
 ## Support
 
-If Readest has been useful to you, consider supporting its development at [donate.readest.com](https://donate.readest.com), where you'll find all available donation methods, including GitHub Sponsors, PayPal, card payments, and crypto. Your contribution helps us fix bugs faster, improve performance, and keep building great features.
-
-### Sponsors
-
-<p align="center">
-  <a title="Browser testing via TestMu AI" href="https://www.testmuai.com/?utm_medium=sponsor&utm_source=readest" target="_blank">
-    <img src="https://raw.githubusercontent.com/readest/readest/refs/heads/main/data/sponsors/testmu-ai-logo.png" style="vertical-align: middle;" width="250" />
-  </a>
-</p>
+If Lumen has been useful to you, consider supporting its development at [donate.readest.com](https://donate.readest.com), where you'll find all available donation methods, including GitHub Sponsors, card payments, and crypto. Your contribution helps us fix bugs faster, improve performance, and keep building great features.
 
 ## License
 
-Readest is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.html) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See the [LICENSE](LICENSE) file for details.
+Lumen is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.html) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See the [LICENSE](LICENSE) file for details.
 
 The following libraries and frameworks are used in this software:
 
@@ -272,7 +223,7 @@ We would also like to thank the [Web Chinese Fonts Plan](https://chinese-font.ne
 
 ---
 
-<div align="center" style="color: gray;">Happy reading with Readest!</div>
+<div align="center" style="color: gray;">Happy reading with Lumen!</div>
 
 [badge-website]: https://img.shields.io/badge/website-readest.com-orange
 [badge-web-app]: https://img.shields.io/badge/read%20online-web.readest.com-orange
@@ -304,6 +255,4 @@ We would also like to thank the [Web Chinese Fonts Plan](https://chinese-font.ne
 [link-deepwiki]: https://deepwiki.com/readest/readest
 [link-locales]: https://github.com/readest/readest/tree/main/apps/readest-app/public/locales
 [link-kosync-wiki]: https://github.com/readest/readest/wiki/Sync-with-Koreader-devices
-[link-readalong]: https://github.com/readest/readest/blob/main/apps/readest-app/docs/read-along-narration.md
-[link-storyteller]: https://storyteller-platform.dev/
 [link-reddit]: https://reddit.com/r/readest/

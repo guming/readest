@@ -118,7 +118,7 @@ const WebDAVBrowsePane: React.FC<WebDAVBrowsePaneProps> = ({ settings, onUpdateS
   // —— Cleanup mode ——
   // GC surface for remote orphans (per-hash dirs whose local Book
   // has `deletedAt` set). When on, the listing is pinned to
-  // `Readest/books/`, filtered down to those orphan rows, and the
+  // `Lumen/books/`, filtered down to those orphan rows, and the
   // footer carries a batch Delete from server action.
   const [cleanupMode, setCleanupMode] = useState(false);
   /** Selected rows, keyed by `entry.path` (already the React list key). */
@@ -615,13 +615,13 @@ const WebDAVBrowsePane: React.FC<WebDAVBrowsePaneProps> = ({ settings, onUpdateS
           </div>
         ) : (
           <ul className='divide-base-200 divide-y'>
-            {/* Per-hash subdirectories under Readest/books resolve
+            {/* Per-hash subdirectories under Lumen/books resolve
                 to the local library's title; rows whose hash isn't
                 in the library fall back to the raw hash + mtime. */}
             {displayedEntries.map((entry) => {
               const canDownload = !entry.isDirectory && isSupportedBookExt(entry.name);
               const dlState = downloadStatus[entry.path];
-              // Title decoration only kicks in inside Readest/books
+              // Title decoration only kicks in inside Lumen/books
               // so unrelated directories elsewhere can't be mistaken
               // for content hashes.
               const matchedBook =

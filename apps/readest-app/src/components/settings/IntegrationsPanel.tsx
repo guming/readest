@@ -81,7 +81,7 @@ const IntegrationsPanel: React.FC = () => {
   const [subPage, setSubPage] = useState<SubPage>(null);
 
   // Android Back / Esc: when any integrations sub-page (KOSync, WebDAV,
-  // Readwise, Hardcover, OPDS, Send-to-Readest) is open, intercept and
+  // Readwise, Hardcover, OPDS, Send-to-Lumen) is open, intercept and
   // step back to the integrations list instead of letting <Dialog>'s
   // listener close the whole Settings dialog. The hook registers its
   // sync `native-key-down` listener *after* <Dialog>'s, and
@@ -378,7 +378,7 @@ const IntegrationsPanel: React.FC = () => {
       <div className='w-full px-4'>
         <h2 className='mb-1.5 text-lg font-semibold tracking-tight'>{_('Integrations')}</h2>
         <p className='text-base-content/70 text-sm leading-relaxed'>
-          {_('Connect Readest to external services for sync, highlights, and catalogs.')}
+          {_('Connect Lumen to external services for sync, highlights, and catalogs.')}
         </p>
       </div>
 

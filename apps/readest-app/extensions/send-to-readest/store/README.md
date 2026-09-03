@@ -1,8 +1,8 @@
 # Store screenshots
 
-Generates the Chrome Web Store listing screenshots for the **Send to Readest**
+Generates the Chrome Web Store listing screenshots for the **Send to Lumen**
 extension — the popup composited onto an on-brand background (matching
-readest.com) with a headline.
+lumen product) with a headline.
 
 ## Run
 

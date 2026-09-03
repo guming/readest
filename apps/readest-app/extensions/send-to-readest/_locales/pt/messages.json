@@ -1,14 +1,14 @@
 {
   "app_name": {
-    "message": "Enviar para Readest",
+    "message": "Enviar para Lumen",
     "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
   },
   "app_description": {
-    "message": "Guarde páginas web na sua biblioteca Readest",
+    "message": "Guarde páginas web na sua biblioteca Lumen",
     "description": "Short description shown in the Chrome Web Store listing."
   },
   "action_title": {
-    "message": "Enviar para Readest",
+    "message": "Enviar para Lumen",
     "description": "Tooltip on the toolbar action button."
   }
 }

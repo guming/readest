@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const appRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const entitlementsPath = join(appRoot, 'src-tauri/gen/apple/Readest_iOS/Readest_iOS.entitlements');
+const entitlementsPath = join(appRoot, 'src-tauri/gen/apple/Lumen_iOS/Lumen_iOS.entitlements');
 const projectYmlPath = join(appRoot, 'src-tauri/gen/apple/project.yml');
 const pbxprojPath = join(appRoot, 'src-tauri/gen/apple/Readest.xcodeproj/project.pbxproj');
 

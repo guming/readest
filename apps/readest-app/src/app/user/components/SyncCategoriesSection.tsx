@@ -118,7 +118,7 @@ export function SyncCategoriesSection() {
           // toggles have no immediate effect. The description says so in
           // place (same pattern as `locked`), but the toggle stays
           // interactive and persists: it governs the native channel the
-          // user returns to when Readest Cloud is re-selected.
+          // user returns to when Lumen Cloud is re-selected.
           const managedByProvider =
             cloudProvider !== 'local' &&
             (category === 'book' || category === 'progress' || category === 'note');

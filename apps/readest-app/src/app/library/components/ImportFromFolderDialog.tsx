@@ -65,12 +65,12 @@ export interface ImportFromFolderResult {
   /**
    * When `true`, register the directory as an external library folder
    * (`settings.externalLibraryFolders`) and import its books in place
-   * — Readest will read each file straight from its original location
+   * — Lumen will read each file straight from its original location
    * instead of copying it into Books/<hash>/. Sidecars (cover, config,
-   * notes) still live in Readest's data dir. Deleting such a book from
-   * Readest only removes those Readest-side sidecars; the original
+   * notes) still live in Lumen's data dir. Deleting such a book from
+   * Lumen only removes those Lumen-side sidecars; the original
    * source file under the registered folder is left untouched.
-   * When `false`, books are copied into Readest (the legacy behaviour)
+   * When `false`, books are copied into Lumen (the legacy behaviour)
    * and the directory is removed from `settings.externalLibraryFolders`
    * if it was registered — unchecking the box on a registered folder is
    * how users turn in-place mode off again (#5680).
@@ -78,7 +78,7 @@ export interface ImportFromFolderResult {
   readInPlace: boolean;
   /**
    * When `true`, keep this folder watched: on every library open and app
-   * focus, Readest re-scans it and imports any newly-added books. Recorded
+   * focus, Lumen re-scans it and imports any newly-added books. Recorded
    * in `settings.autoImportFolders`. Only meaningful together with
    * {@link readInPlace} (auto-import reads books in place), so it is forced
    * `false` whenever `readInPlace` is off. Defaults to `false`.
@@ -501,7 +501,7 @@ const ImportFromFolderDialog: React.FC<ImportFromFolderDialogProps> = ({
                 <span className='block'>{_('Auto-import new books from this folder')}</span>
                 <span className='text-base-content/60 block text-xs'>
                   {_(
-                    'When new books are added to this folder, import them automatically the next time Readest opens or returns to the foreground.',
+                    'When new books are added to this folder, import them automatically the next time Lumen opens or returns to the foreground.',
                   )}
                 </span>
               </span>
