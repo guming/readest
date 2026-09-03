@@ -21,33 +21,33 @@ def make_client():
 
 
 class ReadestInterfacePlugin(InterfaceAction):
-    name = 'Readest Sync'
+    name = 'Lumen Sync'
     action_spec = (
-        'Readest',
+        'Lumen',
         None,
-        'Push selected books and metadata to your Readest library',
+        'Push selected books and metadata to your Lumen library',
         None,
     )
 
     def genesis(self):
         self.push_action = self.create_action(
-            spec=('Push selected books to Readest', None, None, None),
-            attr='Push selected books to Readest',
+            spec=('Push selected books to Lumen', None, None, None),
+            attr='Push selected books to Lumen',
         )
         self.push_action.triggered.connect(self.push_selected)
 
         self.login_action = self.create_action(
-            spec=('Log in to Readest…', None, None, None), attr='Log in to Readest'
+            spec=('Log in to Lumen…', None, None, None), attr='Log in to Lumen'
         )
         self.login_action.triggered.connect(self.login)
 
         self.logout_action = self.create_action(
-            spec=('Log out', None, None, None), attr='Log out from Readest'
+            spec=('Log out', None, None, None), attr='Log out from Lumen'
         )
         self.logout_action.triggered.connect(self.logout)
 
         self.config_action = self.create_action(
-            spec=('Customize plugin…', None, None, None), attr='Customize Readest plugin'
+            spec=('Customize plugin…', None, None, None), attr='Customize Lumen plugin'
         )
         self.config_action.triggered.connect(self.show_config)
 
@@ -60,7 +60,7 @@ class ReadestInterfacePlugin(InterfaceAction):
         self.menu.aboutToShow.connect(self.update_menu)
 
         self.qaction.setMenu(self.menu)
-        self.qaction.setIcon(get_icons('images/icon.png', 'Readest Sync'))
+        self.qaction.setIcon(get_icons('images/icon.png', 'Lumen Sync'))
         self.qaction.triggered.connect(self.push_selected)
 
     def update_menu(self):
@@ -79,7 +79,7 @@ class ReadestInterfacePlugin(InterfaceAction):
         book_ids = self.selected_book_ids()
         if not book_ids:
             return error_dialog(
-                self.gui, 'No books selected', 'Select the books to push to Readest.', show=True
+                self.gui, 'No books selected', 'Select the books to push to Lumen.', show=True
             )
         if not prefs['tokens'] and not self.login():
             return
@@ -99,8 +99,8 @@ class ReadestInterfacePlugin(InterfaceAction):
         prefs['user_email'] = user.get('email')
         info_dialog(
             self.gui,
-            'Readest',
-            'Logged in as %s.' % (user.get('email') or 'your Readest account'),
+            'Lumen',
+            'Logged in as %s.' % (user.get('email') or 'your Lumen account'),
             show=True,
         )
         return True

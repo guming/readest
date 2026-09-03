@@ -1,14 +1,14 @@
 {
   "app_name": {
-    "message": "An Readest senden",
+    "message": "An Lumen senden",
     "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
   },
   "app_description": {
-    "message": "Speichere Webseiten in deiner Readest-Bibliothek",
+    "message": "Speichere Webseiten in deiner Lumen-Bibliothek",
     "description": "Short description shown in the Chrome Web Store listing."
   },
   "action_title": {
-    "message": "An Readest senden",
+    "message": "An Lumen senden",
     "description": "Tooltip on the toolbar action button."
   }
 }

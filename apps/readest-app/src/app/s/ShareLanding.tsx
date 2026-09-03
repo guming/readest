@@ -82,7 +82,7 @@ const ShareLanding = () => {
     };
   }, [token, _]);
 
-  const appHref = `readest://share/${encodeURIComponent(token)}`;
+  const appHref = `lumen://share/${encodeURIComponent(token)}`;
 
   const handleAddToLibrary = async () => {
     if (!token || importing || !appService) return;
@@ -149,7 +149,7 @@ const ShareLanding = () => {
               rel='noopener'
               className='btn btn-ghost btn-block mt-6'
             >
-              {_('Get Readest')}
+              {_('Get Lumen')}
             </a>
           </div>
         </Card>
@@ -162,7 +162,7 @@ const ShareLanding = () => {
     return (
       <main className='bg-base-200 flex min-h-dvh flex-col items-center justify-center p-4 sm:p-8'>
         <Card>
-          <BrandHeader title={_('Loading shared book…')} alt={_('Readest logo')} />
+          <BrandHeader title={_('Loading shared book…')} alt={_('Lumen logo')} />
           <div
             className='mt-6 flex flex-col items-center gap-3 py-4'
             role='status'
@@ -186,13 +186,13 @@ const ShareLanding = () => {
           that the shared Card primitive doesn't support. The /o landing
           stays on the narrow Card; only /s gets the wider treatment. */}
       <div className='bg-base-100 border-base-300/60 mx-auto w-full max-w-md overflow-hidden rounded-2xl border shadow-xl sm:max-w-2xl'>
-        {/* Branded header — small Readest mark + headline. Stays compact so
+        {/* Branded header — small Lumen mark + headline. Stays compact so
             the card still fits on common viewports without scroll, but
             gives the page identity at a glance. */}
         <div className='flex flex-col items-center gap-2 px-5 pb-2 pt-5 sm:px-7 sm:pb-3 sm:pt-7'>
           <Image
             src='/icon.png'
-            alt={_('Readest logo')}
+            alt={_('Lumen logo')}
             width={40}
             height={40}
             priority
@@ -235,7 +235,7 @@ const ShareLanding = () => {
             {/* Direct file download is intentionally disabled on the landing
                 page for now (rights / abuse risk). Recipients open the share
                 inside the app — logged-in via "Add to my library", anonymous
-                via the readest:// deep link with a "Get Readest" footnote
+                via the lumen:// deep link with a "Get Lumen" footnote
                 fallback. The /api/share/[token]/download route still exists
                 so we can re-enable the button without a server change. */}
             <div className='mt-4 flex w-full flex-col gap-2 sm:mt-5'>
@@ -301,14 +301,14 @@ const ShareLanding = () => {
                     {_('Open in app')}
                   </a>
                   <p className='text-base-content/60 mt-1 text-center text-xs sm:text-left'>
-                    {_("Don't have Readest?")}{' '}
+                    {_("Don't have Lumen?")}{' '}
                     <a
                       href={DOWNLOAD_READEST_URL}
                       target='_blank'
                       rel='noopener'
                       className='text-primary font-medium hover:underline'
                     >
-                      {_('Download Readest')}
+                      {_('Download Lumen')}
                     </a>
                   </p>
                 </>

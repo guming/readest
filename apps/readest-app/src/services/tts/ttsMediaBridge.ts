@@ -155,7 +155,7 @@ export class TTSMediaBridge {
       await mediaSession.setActive({
         active: true,
         // bookKey is `${hash}-${uniqueId()}`; the hash alone addresses the book
-        // for a readest://book/{hash} resume deep link from the car.
+        // for a lumen://book/{hash} resume deep link from the car.
         bookHash: meta.bookKey.split('-')[0],
         bookTitle: meta.title,
         bookAuthor: meta.author,

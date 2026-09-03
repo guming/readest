@@ -11,7 +11,7 @@ import ShareLanding from './ShareLanding';
 //
 // In the Tauri build (output: 'export'), this whole route is dropped because
 // rewrites and dynamic metadata require a server. Tauri intercepts the
-// readest://share/{token} deep link before /s ever loads.
+// lumen://share/{token} deep link before /s ever loads.
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -25,7 +25,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // keeps the full dynamic implementation below.
   if (process.env['NEXT_PUBLIC_APP_PLATFORM'] !== 'web') {
     return {
-      title: 'Open in Readest',
+      title: 'Open in Lumen',
       description: 'Open-source ebook reader for everyone, on every device.',
     };
   }
@@ -36,7 +36,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
   if (!token) {
     return {
-      title: 'Open in Readest',
+      title: 'Open in Lumen',
       description: 'Open-source ebook reader for everyone, on every device.',
     };
   }
@@ -44,7 +44,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const result = await resolveActiveShare(token);
   if (!result.ok) {
     return {
-      title: 'Share link unavailable · Readest',
+      title: 'Share link unavailable · Lumen',
       description: 'This share link is no longer available.',
     };
   }
@@ -53,25 +53,19 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const ogImage = `${READEST_WEB_BASE_URL}/api/share/${token}/og.png`;
 
   return {
-    title: `${share.bookTitle} · Shared via Readest`,
-    description: share.bookAuthor
-      ? `${share.bookAuthor} · Shared via Readest`
-      : 'Shared via Readest',
+    title: `${share.bookTitle} · Shared via Lumen`,
+    description: share.bookAuthor ? `${share.bookAuthor} · Shared via Lumen` : 'Shared via Lumen',
     openGraph: {
       type: 'book',
       url: shareUrl,
       title: share.bookTitle,
-      description: share.bookAuthor
-        ? `${share.bookAuthor} · Shared via Readest`
-        : 'Shared via Readest',
+      description: share.bookAuthor ? `${share.bookAuthor} · Shared via Lumen` : 'Shared via Lumen',
       images: [{ url: ogImage, width: 1200, height: 630 }],
     },
     twitter: {
       card: 'summary_large_image',
       title: share.bookTitle,
-      description: share.bookAuthor
-        ? `${share.bookAuthor} · Shared via Readest`
-        : 'Shared via Readest',
+      description: share.bookAuthor ? `${share.bookAuthor} · Shared via Lumen` : 'Shared via Lumen',
       images: [ogImage],
     },
   };

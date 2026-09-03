@@ -28,11 +28,11 @@ export interface ClipOptions {
 export function getClipOptions(_: Translate): ClipOptions {
   const { bg, fg } = getThemeCode();
   return {
-    windowTitle: _('Saving to your Readest library…'),
-    overlayTitle: _('Saving to Readest'),
+    windowTitle: _('Saving to your Lumen library…'),
+    overlayTitle: _('Saving to Lumen'),
     loadingStatus: _('Loading article…'),
     capturingStatus: _('Capturing article…'),
-    savedTitle: _('Saved to Readest'),
+    savedTitle: _('Saved to Lumen'),
     background: bg,
     foreground: fg,
   };

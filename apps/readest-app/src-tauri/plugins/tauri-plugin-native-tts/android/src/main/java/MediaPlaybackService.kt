@@ -199,7 +199,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         // Last book read aloud, persisted across process death so the Android
         // Auto browse tree can offer a "Resume last book" entry when opened cold
-        // (no active session). Hash addresses a readest://book/{hash} resume.
+        // (no active session). Hash addresses a lumen://book/{hash} resume.
         @Volatile
         var lastBookHash: String? = null
         @Volatile
@@ -411,7 +411,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             // fall back to the persisted one.
             val hash = mediaId?.substringAfter("$RESUME_MEDIA_ID:", "")?.takeIf { it.isNotEmpty() }
                 ?: lastBookHash ?: return
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("readest://book/$hash?autoplay=tts"))
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lumen://book/$hash?autoplay=tts"))
                 .setPackage(packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             try {

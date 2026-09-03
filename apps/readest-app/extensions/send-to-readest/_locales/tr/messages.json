@@ -1,14 +1,14 @@
 {
   "app_name": {
-    "message": "Readest'e gönder",
+    "message": "Lumen'e gönder",
     "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
   },
   "app_description": {
-    "message": "Web sayfalarını Readest kitaplığınıza kaydedin",
+    "message": "Web sayfalarını Lumen kitaplığınıza kaydedin",
     "description": "Short description shown in the Chrome Web Store listing."
   },
   "action_title": {
-    "message": "Readest'e gönder",
+    "message": "Lumen'e gönder",
     "description": "Tooltip on the toolbar action button."
   }
 }

@@ -530,7 +530,7 @@ describe('renderNoteTemplate', () => {
             {
               text: 'quote',
               webLink: 'https://web.readest.com/o/book/abc/annotation/n1',
-              appLink: 'readest://book/abc/annotation/n1',
+              appLink: 'lumen://book/abc/annotation/n1',
               link: 'https://web.readest.com/o/book/abc/annotation/n1',
             },
           ],
@@ -544,10 +544,10 @@ describe('renderNoteTemplate', () => {
       expect(result).toBe('https://web.readest.com/o/book/abc/annotation/n1');
     });
 
-    it('should render annotation.appLink with readest:// scheme', () => {
+    it('should render annotation.appLink with lumen:// scheme', () => {
       const template = '{{ chapters[0].annotations[0].appLink }}';
       const result = renderNoteTemplate(template, linkData);
-      expect(result).toBe('readest://book/abc/annotation/n1');
+      expect(result).toBe('lumen://book/abc/annotation/n1');
     });
 
     it('should still render legacy annotation.link', () => {

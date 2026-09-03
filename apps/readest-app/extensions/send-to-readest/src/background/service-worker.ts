@@ -1,5 +1,5 @@
 /**
- * Send to Readest — background service worker. Orchestrates the clip:
+ * Send to Lumen — background service worker. Orchestrates the clip:
  *
  *   popup → SW: `send-to-readest:clip` (with tabId)
  *   SW: injects `content/capture.js` into the active tab. The content

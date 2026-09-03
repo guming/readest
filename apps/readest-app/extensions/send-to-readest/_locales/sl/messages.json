@@ -1,14 +1,14 @@
 {
   "app_name": {
-    "message": "Pošlji v Readest",
+    "message": "Pošlji v Lumen",
     "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
   },
   "app_description": {
-    "message": "Spletne strani shranite v svojo knjižnico Readest",
+    "message": "Spletne strani shranite v svojo knjižnico Lumen",
     "description": "Short description shown in the Chrome Web Store listing."
   },
   "action_title": {
-    "message": "Pošlji v Readest",
+    "message": "Pošlji v Lumen",
     "description": "Tooltip on the toolbar action button."
   }
 }

@@ -37,7 +37,7 @@ pub fn app_version() -> &'static str {
 }
 
 /// Joins a crate name and version into Sentry's `name@version` release format
-/// (e.g. `Readest@0.11.17`), matching `sentry::release_name!()`'s shape.
+/// (e.g. `Lumen@0.11.17`), matching `sentry::release_name!()`'s shape.
 pub fn release_name(name: &str, version: &str) -> String {
     format!("{name}@{version}")
 }
@@ -216,7 +216,7 @@ mod tests {
         // The Mac App Store build runs under the App Sandbox, so libsystem_secinit
         // exports the container id. The minidump handler must not re-exec our own
         // binary there (#5053).
-        assert!(app_sandboxed("macos", Some("com.bilingify.readest")));
+        assert!(app_sandboxed("macos", Some("com.lumen.reader")));
     }
 
     #[test]
@@ -227,7 +227,7 @@ mod tests {
         // value in the environment disable minidumps on the other desktops.
         assert!(!app_sandboxed("windows", None));
         assert!(!app_sandboxed("linux", None));
-        assert!(!app_sandboxed("linux", Some("com.bilingify.readest")));
+        assert!(!app_sandboxed("linux", Some("com.lumen.reader")));
     }
 
     /// `tauri-plugin-sentry`'s default `minidump` feature pulls in
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn release_name_joins_crate_name_and_app_version() {
-        assert_eq!(release_name("Readest", "0.11.17"), "Readest@0.11.17");
+        assert_eq!(release_name("Lumen", "0.11.17"), "Lumen@0.11.17");
     }
 
     #[test]

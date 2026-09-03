@@ -1,11 +1,11 @@
 <div align="center">
   <a href="https://readest.com?utm_source=github&utm_medium=referral&utm_campaign=readme" target="_blank">
-    <img src="https://github.com/readest/readest/blob/main/apps/readest-app/src-tauri/icons/icon.png?raw=true" alt="Readest Logo" width="20%" />
+    <img src="https://github.com/readest/readest/blob/main/apps/readest-app/src-tauri/icons/icon.png?raw=true" alt="Lumen Logo" width="20%" />
   </a>
-  <h1>Readest</h1>
+  <h1>Lumen</h1>
   <br>
 
-[Readest][link-website] is an open-source ebook reader designed for immersive and deep reading experiences. Built as a modern rewrite of [Foliate](https://github.com/johnfactotum/foliate), it leverages [Next.js 16](https://github.com/vercel/next.js) and [Tauri v2](https://github.com/tauri-apps/tauri) to deliver a smooth, cross-platform experience across macOS, Windows, Linux, Android, iOS, and the Web.
+[Lumen][link-website] is an open-source ebook reader designed for immersive and deep reading experiences. Built as a modern rewrite of [Foliate](https://github.com/johnfactotum/foliate), it leverages [Next.js 16](https://github.com/vercel/next.js) and [Tauri v2](https://github.com/tauri-apps/tauri) to deliver a smooth, cross-platform experience across macOS, Windows, Linux, Android, iOS, and the Web.
 
 [![Website][badge-website]][link-website]
 [![Web App][badge-web-app]][link-web-readest]
@@ -38,7 +38,7 @@
 
 <div align="center">
   <a href="https://readest.com" target="_blank">
-    <img src="./data/screenshots/landing_all_platforms.png" alt="Readest Banner" width="100%" />
+    <img src="./data/screenshots/landing_all_platforms.png" alt="Lumen Banner" width="100%" />
   </a>
 </div>
 
@@ -56,7 +56,7 @@
 | **[Parallel Read][link-parallel-read]**    | Read two books or documents simultaneously in a split-screen view.                                                     | ✅         |
 | **Customize Font and Layout**              | Adjust font, layout, theme mode, and theme colors for a personalized experience.                                       | ✅         |
 | **Code Syntax Highlighting**               | Read software manuals with rich coloring of code examples.                                                             | ✅         |
-| **File Association and Open With**         | Quickly open files in Readest in your file browser with one-click.                                                     | ✅         |
+| **File Association and Open With**         | Quickly open files in Lumen in your file browser with one-click.                                                     | ✅         |
 | **Library Management**                     | Organize, sort, and manage your entire ebook library.                                                                  | ✅         |
 | **OPDS/Calibre Integration**               | Integrate OPDS/Calibre to access online libraries and catalogs.                                                        | ✅         |
 | **Translate with DeepL and Yandex**        | From a single sentence to the entire book—translate instantly.                                                         | ✅         |
@@ -110,24 +110,24 @@ Stay tuned for continuous improvements and updates! Contributions and suggestion
 
 ### Platform-Specific Downloads
 
-- macOS / iOS / iPadOS : Search and install **Readest** on the [App Store][link-appstore], _also_ available on TestFlight for beta test (send your Apple ID to <readestapp@gmail.com> to request access).
-- Windows / Linux / Android: Visit and download **Readest** at [https://readest.com][link-website] or the [Releases on GitHub][link-gh-releases].
-- Linux users can also install [Readest on Flathub][link-flathub].
-- Web: Visit and use **Readest for Web** at [https://web.readest.com][link-web-readest].
+- macOS / iOS / iPadOS : Search and install **Lumen** on the [App Store][link-appstore], _also_ available on TestFlight for beta test (send your Apple ID to <readestapp@gmail.com> to request access).
+- Windows / Linux / Android: Visit and download **Lumen** at [https://readest.com][link-website] or the [Releases on GitHub][link-gh-releases].
+- Linux users can also install [Lumen on Flathub][link-flathub].
+- Web: Visit and use **Lumen for Web** at [https://web.readest.com][link-web-readest].
 
 ## Documentation
 
-Guides, tutorials, and FAQs for installing and using Readest live in the official documentation:
+Guides, tutorials, and FAQs for installing and using Lumen live in the official documentation:
 
 📖 **[https://readest.com/docs][link-docs]**
 
 ## Building from Source
 
-To build Readest from the latest commit, see [Getting Started](./CONTRIBUTING.md#getting-started).
+To build Lumen from the latest commit, see [Getting Started](./CONTRIBUTING.md#getting-started).
 
 ## Troubleshooting
 
-### 1. Readest Won’t Launch on Windows (Missing Edge WebView2 Runtime)
+### 1. Lumen Won’t Launch on Windows (Missing Edge WebView2 Runtime)
 
 **Symptom**
 
@@ -136,7 +136,7 @@ To build Readest from the latest commit, see [Getting Started](./CONTRIBUTING.md
 
 **Cause**
 
-- Microsoft Edge WebView2 Runtime is either missing, outdated, or improperly installed on your system. Readest depends on WebView2 to render the interface on Windows.
+- Microsoft Edge WebView2 Runtime is either missing, outdated, or improperly installed on your system. Lumen depends on WebView2 to render the interface on Windows.
 
 **How to Fix**
 
@@ -145,7 +145,7 @@ To build Readest from the latest commit, see [Getting Started](./CONTRIBUTING.md
 2. Install or Update WebView2
    - Download the WebView2 Runtime directly from Microsoft: [link](https://developer.microsoft.com/en-us/microsoft-edge/webview2?form=MA13LH).
    - If you prefer an offline installer, download the offline package and run it as an Administrator.
-3. Re-run Readest
+3. Re-run Lumen
    - After installing/updating WebView2, launch readest.exe again.
    - If you still encounter problems, reboot your PC and try again.
 
@@ -160,7 +160,7 @@ To build Readest from the latest commit, see [Getting Started](./CONTRIBUTING.md
 
 ### 2. AppImage Launches but Only Shows a Taskbar Icon
 
-On some Arch Linux systems—especially those using Wayland—the Readest AppImage may briefly show an icon in the taskbar and then exit without opening a window.
+On some Arch Linux systems—especially those using Wayland—the Lumen AppImage may briefly show an icon in the taskbar and then exit without opening a window.
 
 You might see logs such as:
 
@@ -175,7 +175,7 @@ This behavior is usually caused by compatibility issues between the bundled AppI
 You can preload the system Wayland client library before launching the AppImage:
 
 ```
-LD_PRELOAD=/usr/lib/libwayland-client.so /path/to/Readest.AppImage
+LD_PRELOAD=/usr/lib/libwayland-client.so /path/to/Lumen.AppImage
 ```
 
 This workaround has been confirmed to resolve the issue on affected systems.
@@ -186,7 +186,7 @@ If you prefer a more reliable out-of-the-box experience on Arch Linux, consider 
 
 ## Contributors
 
-Readest is open-source, and contributions are welcome! Feel free to open issues, suggest features, or submit pull requests. Please **review our [contributing guidelines](CONTRIBUTING.md) before you start**. We also welcome you to join our [Discord][link-discord] community for either support or contributing guidance.
+Lumen is open-source, and contributions are welcome! Feel free to open issues, suggest features, or submit pull requests. Please **review our [contributing guidelines](CONTRIBUTING.md) before you start**. We also welcome you to join our [Discord][link-discord] community for either support or contributing guidance.
 
 <a href="https://github.com/readest/readest/graphs/contributors">
   <p align="left">
@@ -196,11 +196,11 @@ Readest is open-source, and contributions are welcome! Feel free to open issues,
 
 ## Support
 
-If Readest has been useful to you, consider supporting its development at [donate.readest.com](https://donate.readest.com), where you'll find all available donation methods, including GitHub Sponsors, card payments, and crypto. Your contribution helps us fix bugs faster, improve performance, and keep building great features.
+If Lumen has been useful to you, consider supporting its development at [donate.readest.com](https://donate.readest.com), where you'll find all available donation methods, including GitHub Sponsors, card payments, and crypto. Your contribution helps us fix bugs faster, improve performance, and keep building great features.
 
 ## License
 
-Readest is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.html) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See the [LICENSE](LICENSE) file for details.
+Lumen is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.html) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See the [LICENSE](LICENSE) file for details.
 
 The following libraries and frameworks are used in this software:
 
@@ -223,7 +223,7 @@ We would also like to thank the [Web Chinese Fonts Plan](https://chinese-font.ne
 
 ---
 
-<div align="center" style="color: gray;">Happy reading with Readest!</div>
+<div align="center" style="color: gray;">Happy reading with Lumen!</div>
 
 [badge-website]: https://img.shields.io/badge/website-readest.com-orange
 [badge-web-app]: https://img.shields.io/badge/read%20online-web.readest.com-orange

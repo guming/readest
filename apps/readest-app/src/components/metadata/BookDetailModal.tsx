@@ -220,7 +220,7 @@ const BookDetailModal: React.FC<BookDetailModalProps> = ({
     }
   };
 
-  // Sharing uploads the book to the Readest backend and mints a public link, so
+  // Sharing uploads the book to the Lumen backend and mints a public link, so
   // it needs a signed-in user and a resolvable on-disk file. `fileSize` is only
   // non-null when getBookFileSize could actually open the local file.
   const shareEnabled = !!user && fileSize !== null;

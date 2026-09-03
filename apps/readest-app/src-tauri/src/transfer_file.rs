@@ -98,7 +98,8 @@ fn has_disallowed_components(file_path: &str) -> bool {
             .any(|c| matches!(c, std::path::Component::ParentDir))
 }
 
-/// The app's own storage always carries either the `Readest` data folder or the
+/// The app's own storage always carries either the `Lumen` data folder, the
+/// legacy `Readest` data folder, or the
 /// app's bundle identifier in its path — the Android sandbox
 /// (`/data/user/0/<identifier>/…`, including the cache dir) and the desktop
 /// identifier dirs (`…/<identifier>/…`). Those paths aren't in the global
@@ -107,7 +108,9 @@ fn has_disallowed_components(file_path: &str) -> bool {
 /// the way `dir_scanner::read_dir` does. `..` is already rejected, so foreign
 /// targets (e.g. `~/.ssh/id_rsa`) stay blocked.
 fn is_within_app_storage(file_path: &str, app_identifier: &str) -> bool {
-    file_path.contains("Readest") || file_path.contains(app_identifier)
+    file_path.contains("Lumen")
+        || file_path.contains("Readest")
+        || file_path.contains(app_identifier)
 }
 
 /// Validate a webview-supplied `file_path` before any `File::create`/`File::open`.

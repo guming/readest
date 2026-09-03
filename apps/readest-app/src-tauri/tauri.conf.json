@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Readest",
-  "mainBinaryName": "readest",
-  "identifier": "com.miaoshou.readest",
+  "productName": "Lumen",
+  "mainBinaryName": "lumen",
+  "identifier": "com.lumen.reader",
   "version": "../package.json",
   "build": {
     "frontendDist": "../out",
@@ -31,6 +31,7 @@
             "$APPDATA/**/*",
             "$APPCACHE/**/*",
             "$TEMP/**/*",
+            "**/Lumen/**/*",
             "**/Readest/**/*",
             "/private/var/mobile/Containers/Data/Application/**/*"
           ],
@@ -134,7 +135,7 @@
       "requireLiteralLeadingDot": false
     },
     "cli": {
-      "description": "Readest CLI",
+      "description": "Lumen CLI",
       "args": [
         {
           "name": "file1",
@@ -166,7 +167,7 @@
           "appLink": true
         },
         {
-          "scheme": ["readest"],
+          "scheme": ["lumen"],
           "appLink": false
         },
         {
@@ -180,7 +181,7 @@
       ],
       "desktop": {
         "schemes": [
-          "readest",
+          "lumen",
           "readest-onedrive",
           "com.googleusercontent.apps.209390247301-ctpmep68ppfa56r1b8tr35e4qi4p60kq"
         ]

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate Chrome Web Store screenshots for the Send to Readest extension.
+ * Generate Chrome Web Store screenshots for the Send to Lumen extension.
  *
  * Composites the popup capture (store/popup.png) onto an on-brand background
  * (matching readest.com) with a headline, renders it with headless Chromium,
@@ -28,7 +28,7 @@ const POPUP = join(HERE, 'popup.png');
 const CONFIG = {
   bg: '#fdf9f3',
   // Left-hand headline, one array entry per rendered line.
-  headline: ['Send any page', 'to your Readest', 'library.'],
+  headline: ['Send any page', 'to your Lumen', 'library.'],
   // Popup success status (keep in sync with src/popup/popup.ts).
   status: { text: 'Saved to your library.', color: '#78db88' },
   // popup.png is a 700x508 capture; these source coords place the status line

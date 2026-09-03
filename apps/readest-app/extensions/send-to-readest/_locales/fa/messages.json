@@ -1,14 +1,14 @@
 {
   "app_name": {
-    "message": "ارسال به Readest",
+    "message": "ارسال به Lumen",
     "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
   },
   "app_description": {
-    "message": "صفحات وب را در کتابخانه Readest خود ذخیره کنید",
+    "message": "صفحات وب را در کتابخانه Lumen خود ذخیره کنید",
     "description": "Short description shown in the Chrome Web Store listing."
   },
   "action_title": {
-    "message": "ارسال به Readest",
+    "message": "ارسال به Lumen",
     "description": "Tooltip on the toolbar action button."
   }
 }

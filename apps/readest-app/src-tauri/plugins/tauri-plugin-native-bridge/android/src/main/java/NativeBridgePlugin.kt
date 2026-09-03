@@ -238,7 +238,7 @@ class NativeBridgePlugin(private val activity: Activity): Plugin(activity) {
             // Google Drive sign-in uses the reverse-DNS "iOS URL scheme"
             // (com.googleusercontent.apps.<id>:/oauthredirect) registered as a
             // BROWSABLE deep link; resolve it through the same pending invoke as
-            // the Supabase readest://auth-callback flow.
+            // the Supabase lumen://auth-callback flow.
             val isGoogleOAuth = scheme.startsWith("com.googleusercontent.apps.")
             if (isReadestAuth || isGoogleOAuth) {
                 val result = JSObject().apply {

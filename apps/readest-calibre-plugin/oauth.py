@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 PROVIDERS = ('google', 'apple', 'github', 'discord')
 
 LANDING_PAGE = b"""<!DOCTYPE html>
-<html><head><title>Readest Login</title></head><body>
+<html><head><title>Lumen Login</title></head><body>
 <p>Completing login&hellip;</p>
 <script>
   var hash = window.location.hash.replace(/^#/, '');
@@ -26,7 +26,7 @@ LANDING_PAGE = b"""<!DOCTYPE html>
 </body></html>"""
 
 DONE_PAGE = b"""<!DOCTYPE html>
-<html><head><title>Readest Login</title></head><body>
+<html><head><title>Lumen Login</title></head><body>
 <p>Login complete. You can close this tab and return to calibre.</p>
 </body></html>"""
 

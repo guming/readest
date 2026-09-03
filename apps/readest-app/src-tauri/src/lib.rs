@@ -475,7 +475,7 @@ pub fn run() {
                 app.emit("single-instance", SingleInstancePayload { args: argv, cwd })
                     .unwrap();
             })
-            .dbus_id("com.bilingify.readest".to_owned())
+            .dbus_id("com.lumen.reader".to_owned())
             .build(),
     );
 
@@ -681,7 +681,7 @@ pub fn run() {
                     .decorations(false)
                     .visible(false)
                     .shadow(true)
-                    .title("Readest");
+                    .title("Lumen");
 
                 #[cfg(target_os = "windows")]
                 {

@@ -186,7 +186,7 @@ const TransferQueuePanel: React.FC = () => {
   const onClose = () => setIsOpen(false);
   const divRef = useKeyDownActions({ onCancel: onClose, onConfirm: onClose });
 
-  // Uploads target Readest Cloud storage; while a third-party provider is
+  // Uploads target Lumen Cloud storage; while a third-party provider is
   // selected the queue refuses book uploads, so hide the affordance
   // (downloads and replica transfers keep flowing regardless).
   const settings = useSettingsStore((s) => s.settings);

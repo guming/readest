@@ -1,6 +1,6 @@
-# Send to Readest — browser extension
+# Send to Lumen — browser extension
 
-One-click capture of the current web page into your Readest library as a
+One-click capture of the current web page into your Lumen library as a
 **self-contained EPUB**. Built for Chromium-based browsers (Chrome, Edge,
 Arc, Brave). Manifest V3.
 
@@ -27,7 +27,7 @@ For every page the user clips, the extension produces a single `.epub`:
 
 The EPUB is POSTed to **`POST /api/send/inbox/file`** with `kind=file`. The
 server writes the bytes to R2 and inserts a `send_inbox` row; the next
-Readest client to open drains the inbox and imports the EPUB as-is — no
+Lumen client to open drains the inbox and imports the EPUB as-is — no
 further server-side conversion.
 
 ## Why client-side conversion
@@ -41,14 +41,14 @@ tried to fetch and render it. That broke on:
 - Lazy-loaded images that never materialize without a real scroll.
 
 Building the EPUB on the capturing client side-steps all three. See
-[D5 in the Send to Readest plan](../../docs/) and Part 4a / Part 8 of the
+[D5 in the Send to Lumen plan](../../docs/) and Part 4a / Part 8 of the
 plan for the original design.
 
 ## Architecture
 
 ```
 popup (popup.ts)
-   │  click "Send to Readest"
+   │  click "Send to Lumen"
    ▼
 service worker (background/service-worker.ts)
    │  chrome.scripting.executeScript({ files: ['content/capture.js'] })
@@ -70,7 +70,7 @@ server (src/pages/api/send/inbox/file.ts)
    ├─ putObject → R2 (inbox bucket, kind='file')
    └─ insert send_inbox row
    ▼
-next Readest open → drainer imports the EPUB → book in library on all devices
+next Lumen open → drainer imports the EPUB → book in library on all devices
 ```
 
 A second always-on content script (`content/auth-bridge.ts`) runs only on
@@ -112,7 +112,7 @@ The build is webpack-based:
    reflects each phase: capturing → fetching images → building EPUB →
    sending.
 
-### Pointing the extension at a local Readest
+### Pointing the extension at a local Lumen
 
 The extension reads `chrome.storage.local.readestApiBase` if set, falling
 back to `https://web.readest.com`. From the DevTools console of the
@@ -158,7 +158,7 @@ lookup key. Import as `_` at every call site to mirror the main repo:
 ```ts
 import { translate as _ } from '../lib/i18n';
 
-_('Send to Readest');
+_('Send to Lumen');
 _('Sent — {count} images could not be fetched.', { count });
 ```
 
@@ -225,9 +225,9 @@ To add a locale the extension ships in lockstep with the main app:
 
 ## Before publishing to the Chrome Web Store
 
-- Replace the icon set (currently a 1:1 downscale of the Readest app icon)
+- Replace the icon set (currently a 1:1 downscale of the Lumen app icon)
   with extension-specific artwork.
 - Add a screenshot bundle and a privacy disclosure: the extension reads the
   page DOM and fetches its image references; nothing is sent off-device
-  except to the Readest inbox.
+  except to the Lumen inbox.
 - Submit through the Chrome Web Store Developer Dashboard (review required).

@@ -29,7 +29,7 @@ let coldStartConsumed = false;
  *     library store hydrates. Stash and replay once libraryLoaded.
  *
  * Supported URL shapes (see src/utils/share.ts):
- *   readest://share/{token}
+ *   lumen://share/{token}
  *   https://web.readest.com/s/{token}
  *
  * Auth-gated paths:

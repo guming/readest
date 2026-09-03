@@ -1,5 +1,5 @@
-<p>b>Readest</b> is a modern, feature-rich ebook reader designed for avid readers offering seamless cross-platform access, powerful tools, and an intuitive interface to elevate your reading experience.</p>
-<p>Whether you're a casual reader, a student, or a researcher, Readest is packed with thoughtful features to enhance your reading experience. From flexible reading modes to powerful annotation tools and cloud sync, it’s designed to make reading smarter, smoother, and more enjoyable.</p>
+<p>b>Lumen</b> is a modern, feature-rich ebook reader designed for avid readers offering seamless cross-platform access, powerful tools, and an intuitive interface to elevate your reading experience.</p>
+<p>Whether you're a casual reader, a student, or a researcher, Lumen is packed with thoughtful features to enhance your reading experience. From flexible reading modes to powerful annotation tools and cloud sync, it’s designed to make reading smarter, smoother, and more enjoyable.</p>
 <ul>
 <li><b>Support for Multiple eBook Formats:</b> Compatible with EPUB, MOBI, AZW3, TXT, PDF, and more.</li>
 <li><b>Paging/Scrolling Reading Modes:</b> Freely switch between modes to suit different reading preferences.</li>

@@ -151,7 +151,7 @@ export const useKOSync = (bookKey: string) => {
         }
       }
       // Other KOSync-compatible servers (e.g. Kavita) report progress in
-      // formats Readest can't resolve positionally — approximate with the
+      // formats Lumen can't resolve positionally — approximate with the
       // reported percentage so "use remote" still moves the reader.
       if (!navigated) {
         const remoteFraction = getRemoteFraction(remote);
@@ -217,7 +217,7 @@ export const useKOSync = (bookKey: string) => {
       }
     } else {
       // KOReader's reported percentage comes from its own pagination, so it's
-      // not directly comparable to Readest's progress. Resolve the remote
+      // not directly comparable to Lumen's progress. Resolve the remote
       // position to a local fraction for an apples-to-apples comparison and
       // fall back to the reported percentage only when it can't be resolved
       // locally (non-XPointer progress or a missing section).

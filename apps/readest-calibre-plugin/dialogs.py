@@ -53,7 +53,7 @@ class LoginDialog(QDialog):
         self.oauth_server = None
         self.oauth_waiter = None
 
-        self.setWindowTitle('Log in to Readest')
+        self.setWindowTitle('Log in to Lumen')
         layout = QVBoxLayout()
         self.setLayout(layout)
 
@@ -163,14 +163,14 @@ class PushDialog(QDialog):
         self.worker.book_status.connect(self.on_book_status)
         self.worker.done.connect(self.on_done)
 
-        self.setWindowTitle('Push to Readest')
+        self.setWindowTitle('Push to Lumen')
         self.setMinimumSize(520, 380)
         layout = QVBoxLayout()
         self.setLayout(layout)
 
         count = len(book_ids)
         layout.addWidget(
-            QLabel('Pushing %d %s to your Readest library…' % (count, _plural(count)))
+            QLabel('Pushing %d %s to your Lumen library…' % (count, _plural(count)))
         )
 
         self.progress_bar = QProgressBar(self)
@@ -211,7 +211,7 @@ class PushDialog(QDialog):
         self.summary_label.setText(message)
         self.buttons.setStandardButtons(QDialogButtonBox.StandardButton.Close)
         if not ok and self.table.rowCount() == 0:
-            error_dialog(self, 'Push to Readest failed', message, show=True)
+            error_dialog(self, 'Push to Lumen failed', message, show=True)
 
     def reject(self):
         if self.worker.isRunning():

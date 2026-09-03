@@ -1,7 +1,7 @@
 pnpm tauri ios build --export-method app-store-connect
 
 BUNDLE_DIR=src-tauri/gen/apple/build/arm64
-IPA_BUNDLE=$BUNDLE_DIR/Readest.ipa
+IPA_BUNDLE=$BUNDLE_DIR/Lumen.ipa
 
 # Guard: the App Store export re-sign must not strip the App Group entitlement
 # from the widget / share extensions, or the reading widget ships dead.

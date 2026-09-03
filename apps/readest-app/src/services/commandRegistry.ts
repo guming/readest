@@ -594,12 +594,12 @@ const actionItems = [
   },
   {
     id: 'action.about',
-    labelKey: _('About Readest'),
-    keywords: ['about', 'readest', 'version', 'info'],
+    labelKey: _('About Lumen'),
+    keywords: ['about', 'lumen', 'version', 'info'],
   },
   {
     id: 'action.telemetry',
-    labelKey: _('Help improve Readest'),
+    labelKey: _('Help improve Lumen'),
     keywords: ['telemetry', 'analytics', 'improve', 'statistics'],
   },
 ];

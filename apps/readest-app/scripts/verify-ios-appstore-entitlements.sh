@@ -13,9 +13,9 @@
 # broken again.
 set -euo pipefail
 
-IPA="${1:-src-tauri/gen/apple/build/arm64/Readest.ipa}"
+IPA="${1:-src-tauri/gen/apple/build/arm64/Lumen.ipa}"
 GROUP="group.com.bilingify.readest"
-EXTS=(ReadestWidget ShareExtension)
+EXTS=(LumenWidget ShareExtension)
 
 if [ ! -f "$IPA" ]; then
   echo "verify-ios-appstore-entitlements: IPA not found at $IPA" >&2
@@ -25,7 +25,7 @@ fi
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 unzip -q "$IPA" -d "$WORK"
-APP="$WORK/Payload/Readest.app"
+APP="$WORK/Payload/Lumen.app"
 
 fail=0
 for ext in "${EXTS[@]}"; do

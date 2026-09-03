@@ -8,7 +8,7 @@ import { KoSyncProgress } from '@/services/sync/KOSyncClient';
  * native position format, e.g. `/body/DocFragment[11]/body/div/p[3]/text().0`.
  *
  * Servers other than KOReader — notably Kavita's KOReader-compatible sync
- * endpoint — report `progress` in formats Readest cannot resolve to a CFI.
+ * endpoint — report `progress` in formats Lumen cannot resolve to a CFI.
  * For those, callers should fall back to the percentage (getRemoteFraction).
  */
 export const isXPointerProgress = (progress?: string): boolean =>
@@ -31,8 +31,8 @@ export const getRemoteFraction = (remote: KoSyncProgress): number | undefined =>
  * Resolves a remote KOReader position to a 0–1 progress fraction expressed in
  * the LOCAL book's pagination terms.
  *
- * KOReader and Readest paginate differently, so the server-reported
- * `percentage` is not directly comparable to Readest's own progress. When the
+ * KOReader and Lumen paginate differently, so the server-reported
+ * `percentage` is not directly comparable to Lumen's own progress. When the
  * remote position is a CREngine XPointer we convert it to a local CFI and ask
  * the view for the equivalent fraction, giving an apples-to-apples value.
  * Returns `undefined` when the position can't be resolved locally (non-XPointer

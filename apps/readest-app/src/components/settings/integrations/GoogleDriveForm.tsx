@@ -182,7 +182,7 @@ const GoogleDriveForm: React.FC = () => {
       </div>
       <Tips>
         <li>{_('Sign-in opens in your browser.')}</li>
-        <li>{_('Readest only accesses the files it creates in your Drive.')}</li>
+        <li>{_('Lumen only accesses the files it creates in your Drive.')}</li>
       </Tips>
     </div>
   );

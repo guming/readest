@@ -39,10 +39,12 @@ import { DEFAULT_ANNOTATION_TOOLBAR_ITEMS } from '@/utils/annotationToolbar';
 import { DEFAULT_SENTENCE_GAP_SEC } from './tts/EdgeTTSClient';
 import { DEFAULT_PARAGRAPH_GAP_SEC } from './tts/TTSController';
 
-export const DATA_SUBDIR = 'Readest';
+export const DATA_SUBDIR = 'Lumen';
+/** Stable remote namespace retained for existing sync-compatible storage. */
+export const CLOUD_DATA_SUBDIR = 'Readest';
 export const LOCAL_BOOKS_SUBDIR = `${DATA_SUBDIR}/Books`;
-export const CLOUD_BOOKS_SUBDIR = `${DATA_SUBDIR}/Books`;
-export const CLOUD_REPLICAS_SUBDIR = `${DATA_SUBDIR}/Replicas`;
+export const CLOUD_BOOKS_SUBDIR = `${CLOUD_DATA_SUBDIR}/Books`;
+export const CLOUD_REPLICAS_SUBDIR = `${CLOUD_DATA_SUBDIR}/Replicas`;
 export const LOCAL_FONTS_SUBDIR = `${DATA_SUBDIR}/Fonts`;
 export const LOCAL_IMAGES_SUBDIR = `${DATA_SUBDIR}/Images`;
 export const LOCAL_DICTIONARIES_SUBDIR = `${DATA_SUBDIR}/Dictionaries`;

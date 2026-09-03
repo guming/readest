@@ -26,7 +26,7 @@ interface PendingShareSave {
 }
 
 /**
- * Handle "Share to Readest" article URLs from the OS share sheet
+ * Handle "Share to Lumen" article URLs from the OS share sheet
  * (Safari, Chrome, etc.). Two paths feed in:
  *
  *   1. Deep-link wake-up (`app-incoming-url` event published by
@@ -47,7 +47,7 @@ interface PendingShareSave {
  * woke the app up before this hook had mounted.
  *
  * Filter rules — only act on URLs that are:
- *   - http(s) (not file://, content://, readest://, blob:, data:)
+ *   - http(s) (not file://, content://, lumen://, blob:, data:)
  *   - NOT an annotation deep link (those go to useOpenAnnotationLink)
  *
  * Failures surface as toasts. Successful clips show "Saving article…"
@@ -127,10 +127,10 @@ export function useClipUrlIngress() {
       //   - Universal Link (primary):
       //       https://web.readest.com/clip?url=<encoded>
       //   - Custom URL scheme (fallback):
-      //       readest://clip?url=<encoded>
+      //       lumen://clip?url=<encoded>
       const isClipUrl =
-        url.startsWith('readest://clip?') ||
-        url.startsWith('readest://clip/') ||
+        url.startsWith('lumen://clip?') ||
+        url.startsWith('lumen://clip/') ||
         /^https:\/\/web\.readest\.com\/clip(?:[/?].*)?$/i.test(url);
       if (isClipUrl) {
         try {

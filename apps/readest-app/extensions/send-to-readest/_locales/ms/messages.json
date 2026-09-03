@@ -1,14 +1,14 @@
 {
   "app_name": {
-    "message": "Hantar ke Readest",
+    "message": "Hantar ke Lumen",
     "description": "Extension name shown in the browser toolbar and the Chrome Web Store listing."
   },
   "app_description": {
-    "message": "Simpan halaman web dalam perpustakaan Readest anda",
+    "message": "Simpan halaman web dalam perpustakaan Lumen anda",
     "description": "Short description shown in the Chrome Web Store listing."
   },
   "action_title": {
-    "message": "Hantar ke Readest",
+    "message": "Hantar ke Lumen",
     "description": "Tooltip on the toolbar action button."
   }
 }
