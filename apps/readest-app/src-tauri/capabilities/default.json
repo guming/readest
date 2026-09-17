@@ -229,6 +229,14 @@
     "allow-clip-url",
     "allow-spawn-fresh-browser",
     "allow-verify-update-signature",
-    "allow-install-nightly-update"
+    "allow-install-nightly-update",
+    "allow-agent-bridge-start",
+    "allow-agent-bridge-respond",
+    "allow-agent-bridge-stop",
+    "allow-agent-bridge-authorize-events",
+    "allow-agent-bridge-emit-event",
+    "allow-agent-cli-status",
+    "allow-agent-cli-install",
+    "allow-agent-cli-connect-codex"
   ]
 }

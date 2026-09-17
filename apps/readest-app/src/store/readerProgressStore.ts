@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { BookProgress } from '@/types/book';
+import { publishAgentEvent } from '@/services/agent-bridge/AgentEventBridge';
 
 /**
  * Per-book reading progress, kept in its own store so that high-frequency
@@ -82,6 +83,13 @@ export const setBookProgress = (key: string, progress: BookProgress | null) => {
       [key]: progress,
     },
   }));
+  if (progress)
+    publishAgentEvent('reading.position_changed', key.split('-')[0]!, {
+      cfi: progress.location,
+      sectionIndex: progress.index,
+      page: progress.page,
+      progress: progress.fraction,
+    });
 };
 
 /**

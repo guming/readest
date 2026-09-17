@@ -64,6 +64,8 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  apps/lumen-agent-cli: {}
+
   apps/readest-app:
     dependencies:
       '@ai-sdk/openai-compatible':

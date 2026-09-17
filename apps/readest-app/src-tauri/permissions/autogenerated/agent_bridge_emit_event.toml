@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-agent-bridge-emit-event"
+description = "Enables the agent_bridge_emit_event command without any pre-configured scope."
+commands.allow = ["agent_bridge_emit_event"]
+
+[[permission]]
+identifier = "deny-agent-bridge-emit-event"
+description = "Denies the agent_bridge_emit_event command without any pre-configured scope."
+commands.deny = ["agent_bridge_emit_event"]

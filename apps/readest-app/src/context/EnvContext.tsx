@@ -9,6 +9,7 @@ import { initReplicaSync } from '@/services/sync/replicaSync';
 import { createSettingsCursorStore } from '@/services/sync/replicaCursorStore';
 import { startReplicaTransferIntegration } from '@/services/sync/replicaTransferIntegration';
 import { enableReplicaAutoPersist } from '@/services/sync/replicaPersist';
+import { startAgentBridge } from '@/services/agent-bridge/AgentBridgeService';
 
 interface EnvContextType {
   envConfig: EnvConfigType;
@@ -26,6 +27,7 @@ export const EnvProvider = ({ children }: { children: ReactNode }) => {
     enableReplicaAutoPersist(envConfig);
     envConfig.getAppService().then(async (service) => {
       setAppService(service);
+      void startAgentBridge(service);
       try {
         const settings = await service.loadSettings();
         if (settings.replicaDeviceId) {

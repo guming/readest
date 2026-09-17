@@ -34,6 +34,7 @@ import MiscPanel from './MiscPanel';
 import AIPanel from './AIPanel';
 import NotebookAssistantPanel from './NotebookAssistantPanel';
 import TTSPanel from './TTSPanel';
+import AgentAccessPanel from './AgentAccessPanel';
 
 export type SettingsPanelType =
   | 'Font'
@@ -45,6 +46,7 @@ export type SettingsPanelType =
   | 'AI'
   | 'NotebookAssistant'
   | 'Integrations'
+  | 'AgentAccess'
   | 'Custom';
 export type SettingsPanelPanelProp = {
   bookKey: string;
@@ -112,6 +114,11 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
       tab: 'Integrations',
       icon: RiShareLine,
       label: _('Integrations'),
+    },
+    {
+      tab: 'AgentAccess',
+      icon: RiShareLine,
+      label: 'Agent Access',
     },
     {
       tab: 'AI',
@@ -187,6 +194,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     AI: null,
     NotebookAssistant: null,
     Integrations: null,
+    AgentAccess: null,
     Custom: null,
   });
 
@@ -222,6 +230,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
         ai: 'AI',
         notebookassistant: 'NotebookAssistant',
         integrations: 'Integrations',
+        agentaccess: 'AgentAccess',
         custom: 'Custom',
       };
       const panelKey = parts[1]?.toLowerCase();
@@ -483,6 +492,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
         {activePanel === 'AI' && <AIPanel />}
         {activePanel === 'NotebookAssistant' && <NotebookAssistantPanel />}
         {activePanel === 'Integrations' && <IntegrationsPanel />}
+        {activePanel === 'AgentAccess' && <AgentAccessPanel />}
         {activePanel === 'Custom' && (
           <MiscPanel
             bookKey={bookKey}

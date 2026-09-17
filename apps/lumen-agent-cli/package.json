@@ -1,0 +1,11 @@
+{
+  "name": "@lumen/agent-cli",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "lumen": "src/index.mjs"
+  },
+  "scripts": {
+    "start": "node src/index.mjs"
+  }
+}

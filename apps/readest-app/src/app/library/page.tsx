@@ -31,6 +31,7 @@ import { isTauriAppPlatform, isWebAppPlatform } from '@/services/environment';
 import { checkForAppUpdates, checkAppReleaseNotes } from '@/helpers/updater';
 import { impactFeedback } from '@tauri-apps/plugin-haptics';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
+import { AgentDb } from '@/services/agent-bridge/AgentDb';
 
 import { useEnv } from '@/context/EnvContext';
 import { useAuth } from '@/context/AuthContext';
@@ -1014,12 +1015,21 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         // the entire Books/<hash>/ folder (config/nav/cover) — issue #4615.
         if (deleteAction === 'local' || deleteAction === 'both' || deleteAction === 'purge') {
           await appService?.deleteBook(book, deleteAction === 'purge' ? 'purge' : 'local');
-          if (deleteAction === 'both' || deleteAction === 'purge') {
+          if (appService && (deleteAction === 'both' || deleteAction === 'purge')) {
             book.deletedAt = Date.now();
             book.downloadedAt = null;
             book.coverDownloadedAt = null;
           }
           await updateBook(envConfig, book);
+          if (deleteAction === 'both' || deleteAction === 'purge') {
+            try {
+              const agentDb = await AgentDb.open(appService!);
+              await agentDb.markArtifactsOrphaned(book.hash);
+              await agentDb.close();
+            } catch (error) {
+              console.warn('Failed to mark Agent artifacts orphaned', error);
+            }
+          }
           if (ttsSessionManager.getSessionByHash(book.hash)) {
             await ttsSessionManager.stopActive('deleted');
           }

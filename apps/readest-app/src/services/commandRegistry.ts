@@ -156,6 +156,7 @@ const panelIcons: Record<SettingsPanelType, IconType> = {
   AI: PiSparkle,
   NotebookAssistant: PiSparkle,
   Integrations: RiShareLine,
+  AgentAccess: RiShareLine,
   Custom: IoAccessibilityOutline,
 };
 

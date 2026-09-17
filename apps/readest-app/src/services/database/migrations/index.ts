@@ -219,6 +219,93 @@ const migrations: Record<SchemaType, MigrationEntry[]> = {
       `,
     },
   ],
+  agent: [
+    {
+      name: '2026090301_agent_bridge_init',
+      sql: `
+        CREATE TABLE IF NOT EXISTS agent_clients (
+          agent_id TEXT PRIMARY KEY,
+          display_name TEXT NOT NULL,
+          client_type TEXT NOT NULL,
+          token_hash TEXT NOT NULL UNIQUE,
+          created_at INTEGER NOT NULL,
+          last_seen_at INTEGER,
+          revoked_at INTEGER,
+          protocol_version INTEGER NOT NULL DEFAULT 1
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_agent_clients_active
+        ON agent_clients (revoked_at, last_seen_at DESC);
+
+        CREATE TABLE IF NOT EXISTS agent_grants (
+          id TEXT PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          resource_type TEXT NOT NULL,
+          resource_key TEXT NOT NULL,
+          permission TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER,
+          revoked_at INTEGER,
+          UNIQUE (agent_id, resource_type, resource_key, permission),
+          FOREIGN KEY (agent_id) REFERENCES agent_clients(agent_id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_agent_grants_agent
+        ON agent_grants (agent_id, revoked_at, expires_at);
+
+        CREATE TABLE IF NOT EXISTS agent_actions (
+          action_id TEXT PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          request_id TEXT NOT NULL,
+          idempotency_key TEXT,
+          method TEXT NOT NULL,
+          book_hash TEXT,
+          status TEXT NOT NULL,
+          request_json TEXT NOT NULL,
+          preview_json TEXT,
+          result_json TEXT,
+          error_json TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          UNIQUE (agent_id, idempotency_key),
+          FOREIGN KEY (agent_id) REFERENCES agent_clients(agent_id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_agent_actions_recent
+        ON agent_actions (agent_id, created_at DESC);
+
+        CREATE TABLE IF NOT EXISTS agent_approvals (
+          approval_id TEXT PRIMARY KEY,
+          action_id TEXT NOT NULL UNIQUE,
+          agent_id TEXT NOT NULL,
+          status TEXT NOT NULL,
+          preview_json TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          resolved_at INTEGER,
+          FOREIGN KEY (action_id) REFERENCES agent_actions(action_id) ON DELETE CASCADE,
+          FOREIGN KEY (agent_id) REFERENCES agent_clients(agent_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS agent_artifacts (
+          artifact_id TEXT PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          book_hash TEXT NOT NULL,
+          artifact_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          content_markdown TEXT NOT NULL,
+          source_snapshot_json TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'active',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY (agent_id) REFERENCES agent_clients(agent_id) ON DELETE RESTRICT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_agent_artifacts_book
+        ON agent_artifacts (book_hash, updated_at DESC);
+      `,
+    },
+  ],
 };
 
 export function getMigrations(schema: SchemaType): MigrationEntry[] {
