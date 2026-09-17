@@ -77,6 +77,22 @@ export class ReedyBackend implements RetrievalBackend {
     return meta?.indexingStatus === 'indexed' || meta?.indexingStatus === 'empty_index';
   }
 
+  async searchBook(args: {
+    bookHash: string;
+    query: string;
+    k?: number;
+    spoilerBoundPosition?: number;
+  }) {
+    const { retriever } = await this.reedyReady;
+    return retriever.search({
+      bookHash: args.bookHash,
+      query: args.query,
+      k: args.k ?? DEFAULT_TOP_K,
+      spoilerBoundPosition: args.spoilerBoundPosition,
+      activeEmbeddingModel: this.model,
+    });
+  }
+
   async indexBook(
     bookDoc: BookDoc,
     bookHash: string,

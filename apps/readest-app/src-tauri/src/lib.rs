@@ -26,6 +26,10 @@ mod backup_zip;
 #[cfg(target_os = "macos")]
 mod browser_cookies_macos;
 mod browser_fetch;
+#[cfg(desktop)]
+mod agent_bridge;
+#[cfg(desktop)]
+mod agent_cli;
 mod clip_url;
 mod comic_parser;
 mod cover_thumbnail;
@@ -51,6 +55,8 @@ mod transfer_file;
 mod web_browser;
 #[cfg(desktop)]
 mod window_state;
+#[cfg(desktop)]
+use agent_bridge::AgentBridgeState;
 #[cfg(target_os = "windows")]
 use tauri::webview::ScrollBarStyle;
 use tauri::{command, Emitter, WebviewUrl, WebviewWindowBuilder, Window};
@@ -62,6 +68,30 @@ use tauri_plugin_oauth::start;
 #[cfg(not(target_os = "android"))]
 use tauri_plugin_opener::OpenerExt;
 use transfer_file::{download_file, upload_file};
+
+#[cfg(desktop)]
+pub fn is_agent_cli_invocation() -> bool {
+    matches!(
+        std::env::args().nth(1).as_deref(),
+        Some(
+            "mcp"
+                | "status"
+                | "capabilities"
+                | "connect"
+                | "disconnect"
+                | "context"
+                | "chapters"
+                | "search"
+                | "source"
+                | "annotations",
+        )
+    )
+}
+
+#[cfg(desktop)]
+pub fn run_agent_cli() {
+    agent_cli::run();
+}
 
 #[cfg(any(desktop, target_os = "ios"))]
 fn allow_file_in_scopes<R: tauri::Runtime>(app: &AppHandle<R>, files: Vec<PathBuf>) {
@@ -582,6 +612,22 @@ pub fn run() {
             nightly_update::verify_update_signature,
             #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
             nightly_update::install_nightly_update,
+            #[cfg(desktop)]
+            agent_bridge::agent_bridge_start,
+            #[cfg(desktop)]
+            agent_bridge::agent_bridge_respond,
+            #[cfg(desktop)]
+            agent_bridge::agent_bridge_stop,
+            #[cfg(desktop)]
+            agent_bridge::agent_bridge_authorize_events,
+            #[cfg(desktop)]
+            agent_bridge::agent_bridge_emit_event,
+            #[cfg(desktop)]
+            agent_cli::agent_cli_status,
+            #[cfg(desktop)]
+            agent_cli::agent_cli_install,
+            #[cfg(desktop)]
+            agent_cli::agent_cli_connect_codex,
         ])
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_persisted_scope::init())
@@ -621,6 +667,9 @@ pub fn run() {
     );
 
     let builder = builder.plugin(tauri_plugin_deep_link::init());
+
+    #[cfg(desktop)]
+    let builder = builder.manage(AgentBridgeState::default());
 
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
@@ -928,9 +977,9 @@ pub fn run() {
             |app_handle, event| {
                 #[cfg(target_os = "macos")]
                 match event {
-                    tauri::RunEvent::Opened { urls } => {
+                    tauri::RunEvent::Opened { ref urls } => {
                         let files = urls
-                            .into_iter()
+                            .iter()
                             .filter_map(|url| url.to_file_path().ok())
                             .collect::<Vec<_>>();
 
@@ -967,6 +1016,13 @@ pub fn run() {
                         }
                     }
                     _ => {}
+                }
+                #[cfg(desktop)]
+                if matches!(
+                    event,
+                    tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
+                ) {
+                    app_handle.state::<AgentBridgeState>().stop_runtime();
                 }
             },
         );

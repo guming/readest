@@ -74,6 +74,11 @@ fn main() {
             "localsend_cancel_receive",
             "localsend_send_files",
             "localsend_cancel_send",
+            "agent_bridge_start",
+            "agent_bridge_respond",
+            "agent_bridge_stop",
+            "agent_bridge_authorize_events",
+            "agent_bridge_emit_event",
         ]),
     ))
     .expect("failed to run tauri-build");

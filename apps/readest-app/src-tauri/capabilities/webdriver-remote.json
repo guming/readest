@@ -51,6 +51,11 @@
     "allow-localsend-respond",
     "allow-localsend-cancel-receive",
     "allow-localsend-send-files",
-    "allow-localsend-cancel-send"
+    "allow-localsend-cancel-send",
+    "allow-agent-bridge-start",
+    "allow-agent-bridge-respond",
+    "allow-agent-bridge-stop",
+    "allow-agent-bridge-authorize-events",
+    "allow-agent-bridge-emit-event"
   ]
 }

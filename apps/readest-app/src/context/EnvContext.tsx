@@ -9,6 +9,7 @@ import { initReplicaSync } from '@/services/sync/replicaSync';
 import { createSettingsCursorStore } from '@/services/sync/replicaCursorStore';
 import { startReplicaTransferIntegration } from '@/services/sync/replicaTransferIntegration';
 import { enableReplicaAutoPersist } from '@/services/sync/replicaPersist';
+import { startAgentBridge } from '@/services/agent-bridge/AgentBridgeService';
 
 interface EnvContextType {
   envConfig: EnvConfigType;
@@ -24,24 +25,23 @@ export const EnvProvider = ({ children }: { children: ReactNode }) => {
   React.useEffect(() => {
     bootstrapReplicaAdapters();
     enableReplicaAutoPersist(envConfig);
-    envConfig
-      .getAppService()
-      .then(async (service) => {
-        setAppService(service);
-        try {
-          const settings = await service.loadSettings();
-          if (settings.replicaDeviceId) {
-            const ctx = initReplicaSync({
-              deviceId: settings.replicaDeviceId,
-              cursorStore: createSettingsCursorStore(service),
-            });
-            ctx.manager.startAutoSync();
-            startReplicaTransferIntegration(service);
-          }
-        } catch (err) {
-          console.warn('replica sync init failed', err);
+    envConfig.getAppService().then(async (service) => {
+      setAppService(service);
+      void startAgentBridge(service);
+      try {
+        const settings = await service.loadSettings();
+        if (settings.replicaDeviceId) {
+          const ctx = initReplicaSync({
+            deviceId: settings.replicaDeviceId,
+            cursorStore: createSettingsCursorStore(service),
+          });
+          ctx.manager.startAutoSync();
+          startReplicaTransferIntegration(service);
         }
-      })
+      } catch (err) {
+        console.warn('replica sync init failed', err);
+      }
+    })
       // Every page gates its render on a non-null `appService`, so an
       // unhandled rejection here is invisible: no error, no UI, just a blank
       // window for the rest of the session. Surface it instead.

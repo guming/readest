@@ -29,6 +29,7 @@ import { useReadwiseSync } from '../../hooks/useReadwiseSync';
 import { useHardcoverSync } from '../../hooks/useHardcoverSync';
 import { useTextSelector } from '../../hooks/useTextSelector';
 import { Point, Position, TextSelection } from '@/utils/sel';
+import { setReaderSelection } from '@/store/readerSelectionStore';
 import {
   getPopupPosition,
   getPosition,
@@ -147,7 +148,17 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
 
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const [selection, setSelection] = useState<TextSelection | null>(null);
+  const [selection, setLocalSelection] = useState<TextSelection | null>(null);
+  const setSelection = useCallback<React.Dispatch<React.SetStateAction<TextSelection | null>>>(
+    (next) => {
+      setLocalSelection((previous) => {
+        const resolved = typeof next === 'function' ? next(previous) : next;
+        setReaderSelection(bookKey, resolved);
+        return resolved;
+      });
+    },
+    [bookKey],
+  );
   const [showAnnotPopup, setShowAnnotPopup] = useState(false);
   const [showDictionaryPopup, setShowDictionaryPopup] = useState(false);
   const [showDeepLPopup, setShowDeepLPopup] = useState(false);

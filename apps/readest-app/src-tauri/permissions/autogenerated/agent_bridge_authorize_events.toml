@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-agent-bridge-authorize-events"
+description = "Enables the agent_bridge_authorize_events command without any pre-configured scope."
+commands.allow = ["agent_bridge_authorize_events"]
+
+[[permission]]
+identifier = "deny-agent-bridge-authorize-events"
+description = "Denies the agent_bridge_authorize_events command without any pre-configured scope."
+commands.deny = ["agent_bridge_authorize_events"]

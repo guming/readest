@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-agent-cli-connect-codex"
+description = "Enables the agent_cli_connect_codex command without any pre-configured scope."
+commands.allow = ["agent_cli_connect_codex"]
+
+[[permission]]
+identifier = "deny-agent-cli-connect-codex"
+description = "Denies the agent_cli_connect_codex command without any pre-configured scope."
+commands.deny = ["agent_cli_connect_codex"]

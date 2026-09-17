@@ -41,6 +41,7 @@ import {
 import { checkForAppUpdates, checkAppReleaseNotes } from '@/helpers/updater';
 import { impactFeedback } from '@tauri-apps/plugin-haptics';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
+import { AgentDb } from '@/services/agent-bridge/AgentDb';
 
 import { useEnv } from '@/context/EnvContext';
 import { useAuth } from '@/context/AuthContext';
@@ -1197,6 +1198,18 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
             book.fileSyncDeletionRequestedAt = null;
           }
           await updateBook(envConfig, book);
+          if (deleteAction === 'both' || deleteAction === 'purge') {
+            try {
+              const agentDb = await AgentDb.open(appService!);
+              await agentDb.markArtifactsOrphaned(book.hash);
+              await agentDb.close();
+            } catch (error) {
+              console.warn('Failed to mark Agent artifacts orphaned', error);
+            }
+          }
+          if (ttsSessionManager.getSessionByHash(book.hash)) {
+            await ttsSessionManager.stopActive('deleted');
+          }
           clearBookData(book.hash);
           if (syncBooks) pushLibrary();
         }

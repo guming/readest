@@ -40,6 +40,7 @@ import FileSyncReport from '@/components/FileSyncReport';
 import AppLockDialog from '@/components/settings/AppLockDialog';
 import PassphrasePrompt from '@/components/PassphrasePrompt';
 import TelemetryConsentDialog from '@/components/TelemetryConsentDialog';
+import AgentPairingDialog from '@/components/AgentPairingDialog';
 import { upgradeToKeychainIfAvailable } from '@/libs/crypto/passphrase';
 import { cryptoSession } from '@/libs/crypto/session';
 import { useAppLockStore } from '@/store/appLockStore';
@@ -254,6 +255,7 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
                   open={showTelemetryConsent}
                   onClose={() => setShowTelemetryConsent(false)}
                 />
+                <AgentPairingDialog />
                 {showAppLockScreen && <AppLockScreen />}
               </CommandPaletteProvider>
             </DropdownProvider>
