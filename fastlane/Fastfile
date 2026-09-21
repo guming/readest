@@ -156,7 +156,7 @@ end
 desc "Submit the uploaded iOS build for App Store review and to TestFlight"
 lane :release_ios do
   submit_apple_build(
-    { platform: "ios", ipa: repo_path("apps/readest-app/src-tauri/gen/apple/build/arm64/Readest.ipa") },
+    { platform: "ios", ipa: repo_path("apps/readest-app/src-tauri/gen/apple/build/arm64/Lumen.ipa") },
     { app_platform: "ios" }
   )
 end
@@ -166,7 +166,7 @@ lane :release_macos do
   submit_apple_build(
     {
       platform: "osx",
-      pkg: repo_path("target/universal-apple-darwin/release/bundle/macos/Readest.pkg"),
+      pkg: repo_path("target/universal-apple-darwin/release/bundle/macos/Lumen.pkg"),
       # deliver's metadata_path has no platform dimension, so iOS and macOS would
       # otherwise receive identical text. The Mac listing leads with what only the
       # Mac has: multiple windows, keyboard shortcuts, the system dictionary.
