@@ -118,7 +118,7 @@ end
 desc "Submit the uploaded iOS build for App Store review and to TestFlight"
 lane :release_ios do
   submit_apple_build(
-    { platform: "ios", ipa: repo_path("apps/readest-app/src-tauri/gen/apple/build/arm64/Readest.ipa") },
+    { platform: "ios", ipa: repo_path("apps/readest-app/src-tauri/gen/apple/build/arm64/Lumen.ipa") },
     { app_platform: "ios" }
   )
 end
@@ -126,7 +126,7 @@ end
 desc "Submit the uploaded macOS build for App Store review and to TestFlight"
 lane :release_macos do
   submit_apple_build(
-    { platform: "osx", pkg: repo_path("target/universal-apple-darwin/release/bundle/macos/Readest.pkg") },
+    { platform: "osx", pkg: repo_path("target/universal-apple-darwin/release/bundle/macos/Lumen.pkg") },
     { app_platform: "osx" }
   )
 end
