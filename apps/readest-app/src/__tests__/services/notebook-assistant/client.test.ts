@@ -69,9 +69,13 @@ describe('selected-text assistant client', () => {
       expect.objectContaining({
         model,
         temperature: 0.1,
-        messages: expect.arrayContaining([
-          expect.objectContaining({ role: 'user', content: 'hello' }),
-        ]),
+        system: [
+          expect.objectContaining({
+            role: 'system',
+            content: expect.stringContaining('Translate'),
+          }),
+        ],
+        messages: [expect.objectContaining({ role: 'user', content: 'hello' })],
       }),
     );
     expect(fetchMock).not.toHaveBeenCalled();

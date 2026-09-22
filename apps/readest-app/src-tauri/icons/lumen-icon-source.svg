@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <!-- Transparent canvas with a restrained rounded app-icon outline. -->
+  <rect x="78" y="78" width="868" height="868" rx="206" fill="#FFFFFF" stroke="#D9D6CF" stroke-width="10"/>
+
+  <!-- Light rising from an open book. -->
+  <circle cx="512" cy="315" r="28" fill="#E0A929"/>
+  <path d="M 512 216 L 512 156 M 425 253 L 382 210 M 599 253 L 642 210" stroke="#171614" stroke-width="27" stroke-linecap="round"/>
+
+  <!-- Page layers. -->
+  <path d="M 254 360 C 345 342 426 372 512 449 C 598 372 679 342 770 360" stroke="#171614" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 232 405 C 333 385 427 416 512 486 C 597 416 691 385 792 405" stroke="#171614" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Open-book silhouette. -->
+  <path d="M 212 451 C 326 428 424 461 512 536 C 600 461 698 428 812 451 L 780 709 C 678 692 588 719 512 764 C 436 719 346 692 244 709 L 212 451 Z" stroke="#171614" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 512 536 L 512 764" stroke="#171614" stroke-width="24" stroke-linecap="round"/>
+
+  <!-- A quiet, friendly reading companion expression. -->
+  <ellipse cx="410" cy="602" rx="15" ry="22" fill="#171614"/>
+  <ellipse cx="614" cy="602" rx="15" ry="22" fill="#171614"/>
+  <path d="M 472 657 C 495 677 529 677 552 657" stroke="#171614" stroke-width="23" stroke-linecap="round"/>
+</svg>

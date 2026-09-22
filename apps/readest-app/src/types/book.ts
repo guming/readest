@@ -1,5 +1,9 @@
 import { BookMetadata } from '@/libs/document';
-import type { BookExpertProfile, QuizCardContent } from '@/services/notebook-assistant/types';
+import type {
+  BookExpertProfile,
+  BookLearningGuide,
+  QuizCardContent,
+} from '@/services/notebook-assistant/types';
 import { TTSHighlightOptions } from '@/services/tts/types';
 import { TTSHighlightGranularity } from '@/services/tts/types';
 import { TTSMediaMetadataMode } from '@/services/tts/types';
@@ -188,7 +192,8 @@ export type NotebookCardType =
   | 'insight'
   | 'takeaway'
   | 'quiz'
-  | 'mistake';
+  | 'mistake'
+  | 'learning_guide';
 
 export interface NotebookCard {
   id: string;
@@ -201,8 +206,8 @@ export interface NotebookCard {
   type: NotebookCardType;
   title: string;
   sourceText?: string;
-  content: string | QuizCardContent;
-  contextType: 'selection' | 'page' | 'chapter';
+  content: string | QuizCardContent | BookLearningGuide;
+  contextType: 'selection' | 'page' | 'chapter' | 'book';
   targetLanguage?: string;
   provider: string;
   model: string;

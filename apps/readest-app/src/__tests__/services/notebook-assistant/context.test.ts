@@ -5,6 +5,7 @@ import {
   buildCurrentPageContext,
   buildSelectionContext,
 } from '@/services/notebook-assistant/context';
+import { buildLearningGuideContext } from '@/services/notebook-assistant/learningGuideContext';
 import type { BookDoc } from '@/libs/document';
 import type { BookProgress } from '@/types/book';
 
@@ -46,6 +47,21 @@ const makeBookDoc = (): BookDoc =>
   }) as unknown as BookDoc;
 
 describe('notebook assistant reading context', () => {
+  test('learning guide treats a PDF without an outline as having an empty table of contents', async () => {
+    const bookDoc = { ...makeBookDoc(), toc: null } as unknown as BookDoc;
+
+    const context = await buildLearningGuideContext({
+      bookKey: 'pdf-without-outline',
+      metadata: { title: 'Outline-free PDF', author: 'Author', language: 'en' },
+      bookDoc,
+      costMode: 'conservative',
+    });
+
+    expect(context.tocTitles).toEqual([]);
+    expect(context.sourceKinds).not.toContain('toc');
+    expect(context.sourceText).toContain('Complete chapter text.');
+  });
+
   test('selection context includes the selected block and two neighboring blocks per side', () => {
     const container = document.createElement('main');
     container.innerHTML = [

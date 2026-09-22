@@ -77,6 +77,7 @@ export function useTextTranslation(
   const observerRef = useRef<IntersectionObserver | null>(null);
   const translatedElements = useRef<HTMLElement[]>([]);
   const allTextNodes = useRef<HTMLElement[]>([]);
+  const pendingProgressRange = useRef<Range | null>(null);
   const translationQueue = useRef<HTMLElement[]>([]);
   const activeTranslations = useRef(0);
   const MAX_CONCURRENT_TRANSLATIONS = 5;
@@ -126,6 +127,15 @@ export function useTextTranslation(
     );
     allTextNodes.current = nodes;
     nodes.forEach((el) => observer.observe(el));
+
+    // Progress can be published before the Foliate document has finished
+    // loading. Keep the latest range and translate it once its text nodes
+    // are available instead of repeatedly trying against an empty list.
+    if (pendingProgressRange.current && nodes.length > 0) {
+      const range = pendingProgressRange.current;
+      pendingProgressRange.current = null;
+      translateInRange(range);
+    }
   };
 
   const updateTranslation = () => {
@@ -347,7 +357,7 @@ export function useTextTranslation(
     debounce((range: Range) => {
       const nodes = allTextNodes.current;
       if (nodes.length === 0) {
-        console.warn('No text nodes available for translation.');
+        pendingProgressRange.current = range;
         return;
       }
       const { startIndex, endIndex } = findNodeIndicesInRange(range, nodes);
@@ -372,6 +382,7 @@ export function useTextTranslation(
   useEffect(() => {
     if (enabled.current && progress) {
       const { range } = progress;
+      pendingProgressRange.current = range;
       translateInRange(range);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -428,6 +439,7 @@ export function useTextTranslation(
         view.removeEventListener('load', hintInitialTranslating);
       }
       observerRef.current?.disconnect();
+      pendingProgressRange.current = null;
       translatedElements.current = [];
       translationQueue.current = [];
       activeTranslations.current = 0;

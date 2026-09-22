@@ -32,6 +32,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import type { NotebookCard } from '@/types/book';
 import { writeTextToClipboard } from '@/utils/clipboard';
 import { uniqueId } from '@/utils/misc';
+import BookLearningGuidePanel from '@/components/learning-guide/BookLearningGuidePanel';
 
 interface Props {
   bookKey: string;
@@ -200,86 +201,106 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey }) => {
 
   if (!configured) {
     return (
-      <div className='border-base-300 border-b p-3'>
-        <NotebookAssistantPanel compact />
-      </div>
+      <>
+        <div className='border-base-300 border-b p-3'>
+          <BookLearningGuidePanel
+            compact
+            bookKey={bookKey}
+            book={getBookData(bookKey)?.book}
+            bookDoc={getBookData(bookKey)?.bookDoc}
+          />
+        </div>
+        <div className='border-base-300 border-b p-3'>
+          <NotebookAssistantPanel compact />
+        </div>
+      </>
     );
   }
 
   return (
-    <section className='border-base-300 border-b p-3'>
-      <div className='mb-2 flex items-center gap-2'>
-        <PiSparkle className='shrink-0' />
-        <h2 className='text-sm font-semibold'>{_('Notebook Assistant')}</h2>
-      </div>
-      <div className='mb-2 grid grid-cols-2 gap-2'>
-        <select
-          className='select select-bordered select-xs bg-base-100'
-          value={contextType}
-          onChange={(event) => {
-            setContextType(event.target.value as 'page' | 'chapter');
-            setContext(null);
-            setResult('');
-          }}
-        >
-          <option value='page'>{_('Current Page')}</option>
-          <option value='chapter'>{_('Current Chapter')}</option>
-        </select>
-        <select
-          className='select select-bordered select-xs bg-base-100'
-          value={action}
-          onChange={(event) => {
-            setAction(event.target.value as NotebookAssistantCardAction);
-            setResult('');
-          }}
-        >
-          <option value='summary'>{_('Summary')}</option>
-          <option value='insight'>{_('Key Insights')}</option>
-          <option value='takeaway'>{_('Takeaways')}</option>
-        </select>
-      </div>
-      <p className='text-base-content/60 mb-2 text-xs'>
-        {context ? (
-          <>
-            {context.contextType === 'chapter' ? _('Current Chapter') : _('Current Page')} ·{' '}
-            {context.sourceText.length} {_('characters')} · ~{estimate.input} {_('input tokens')}{' '}
-            {_('max')} ~{estimate.output} {_('output tokens')}
-          </>
-        ) : (
-          <>
-            {assistantIdentity.provider} · {assistantIdentity.model}
-          </>
-        )}
-      </p>
-      {error && <p className='mb-2 text-xs text-red-500'>{error}</p>}
-      {result && (
-        <div className='bg-base-100 border-base-300 mb-2 max-h-64 overflow-y-auto rounded-md border p-3 text-sm leading-relaxed whitespace-pre-wrap'>
-          {result}
+    <>
+      <section className='border-base-300 border-b p-3'>
+        <BookLearningGuidePanel
+          compact
+          bookKey={bookKey}
+          book={getBookData(bookKey)?.book}
+          bookDoc={getBookData(bookKey)?.bookDoc}
+        />
+      </section>
+      <section className='border-base-300 border-b p-3'>
+        <div className='mb-2 flex items-center gap-2'>
+          <PiSparkle className='shrink-0' />
+          <h2 className='text-sm font-semibold'>{_('Notebook Assistant')}</h2>
         </div>
-      )}
-      <div className='flex justify-end gap-1'>
-        {result && (
-          <button
-            type='button'
-            className='btn btn-ghost btn-xs btn-square'
-            onClick={() => void writeTextToClipboard(result)}
-            title={_('Copy')}
-            aria-label={_('Copy')}
+        <div className='mb-2 grid grid-cols-2 gap-2'>
+          <select
+            className='select select-bordered select-xs bg-base-100'
+            value={contextType}
+            onChange={(event) => {
+              setContextType(event.target.value as 'page' | 'chapter');
+              setContext(null);
+              setResult('');
+            }}
           >
-            <PiCopy />
-          </button>
-        )}
+            <option value='page'>{_('Current Page')}</option>
+            <option value='chapter'>{_('Current Chapter')}</option>
+          </select>
+          <select
+            className='select select-bordered select-xs bg-base-100'
+            value={action}
+            onChange={(event) => {
+              setAction(event.target.value as NotebookAssistantCardAction);
+              setResult('');
+            }}
+          >
+            <option value='summary'>{_('Summary')}</option>
+            <option value='insight'>{_('Key Insights')}</option>
+            <option value='takeaway'>{_('Takeaways')}</option>
+          </select>
+        </div>
+        <p className='text-base-content/60 mb-2 text-xs'>
+          {context ? (
+            <>
+              {context.contextType === 'chapter' ? _('Current Chapter') : _('Current Page')} ·{' '}
+              {context.sourceText.length} {_('characters')} · ~{estimate.input} {_('input tokens')}{' '}
+              {_('max')} ~{estimate.output} {_('output tokens')}
+            </>
+          ) : (
+            <>
+              {assistantIdentity.provider} · {assistantIdentity.model}
+            </>
+          )}
+        </p>
+        {error && <p className='mb-2 text-xs text-red-500'>{error}</p>}
         {result && (
-          <button type='button' className='btn btn-ghost btn-xs' onClick={save} disabled={saved}>
-            {saved ? <PiCheck /> : <PiFloppyDisk />} {saved ? _('Saved') : _('Save')}
-          </button>
+          <div className='bg-base-100 border-base-300 mb-2 max-h-64 overflow-y-auto rounded-md border p-3 text-sm leading-relaxed whitespace-pre-wrap'>
+            {result}
+          </div>
         )}
-        <button type='button' className='btn btn-primary btn-xs' onClick={run} disabled={loading}>
-          {loading ? <PiSpinner className='animate-spin' /> : <PiLightbulb />}
-          {result ? _('Regenerate') : _('Run')}
-        </button>
-      </div>
-    </section>
+        <div className='flex justify-end gap-1'>
+          {result && (
+            <button
+              type='button'
+              className='btn btn-ghost btn-xs btn-square'
+              onClick={() => void writeTextToClipboard(result)}
+              title={_('Copy')}
+              aria-label={_('Copy')}
+            >
+              <PiCopy />
+            </button>
+          )}
+          {result && (
+            <button type='button' className='btn btn-ghost btn-xs' onClick={save} disabled={saved}>
+              {saved ? <PiCheck /> : <PiFloppyDisk />} {saved ? _('Saved') : _('Save')}
+            </button>
+          )}
+          <button type='button' className='btn btn-primary btn-xs' onClick={run} disabled={loading}>
+            {loading ? <PiSpinner className='animate-spin' /> : <PiLightbulb />}
+            {result ? _('Regenerate') : _('Run')}
+          </button>
+        </div>
+      </section>
+    </>
   );
 };
 

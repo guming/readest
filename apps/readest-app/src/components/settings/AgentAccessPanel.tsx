@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import {
+  PiArrowSquareOut,
+  PiCheckCircleFill,
+  PiDownloadSimple,
+  PiKey,
+  PiPulse,
+  PiRobot,
+  PiTerminalWindow,
+  PiTrash,
+  PiUsersThree,
+  PiWarningCircle,
+} from 'react-icons/pi';
 import { useEnv } from '@/context/EnvContext';
 import { AgentDb, AgentClient, AgentActionRecord } from '@/services/agent-bridge/AgentDb';
 import type { AgentApproval, ReadingArtifact } from '@/services/agent-bridge/protocol';
@@ -13,6 +25,13 @@ import {
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useReaderStore } from '@/store/readerStore';
 import { isTauriAppPlatform } from '@/services/environment';
+import BoxedList from './primitives/BoxedList';
+
+const IconChip: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span className='bg-base-200 text-base-content/65 flex h-8 w-8 shrink-0 items-center justify-center rounded-full'>
+    {children}
+  </span>
+);
 
 interface AgentCliStatus {
   installed: boolean;
@@ -178,69 +197,109 @@ const AgentAccessPanel: React.FC = () => {
   };
 
   return (
-    <div className='flex flex-col gap-5 p-4' data-setting-id='settings.agentAccess.main'>
+    <div className='flex flex-col gap-6 p-4 sm:p-5' data-setting-id='settings.agentAccess.main'>
       <div>
-        <h2 className='text-lg font-semibold'>Agent Access</h2>
-        <p className='text-base-content/70 text-sm'>
-          Connect local agents to read Lumen’s current book. This panel does not provide chat.
+        <h2 className='mb-1.5 text-lg font-semibold tracking-tight'>Agent Access</h2>
+        <p className='text-base-content/70 text-sm leading-relaxed'>
+          Let local agents work with your current book. Chat stays in your agent app.
         </p>
       </div>
-      <div className='rounded-box border border-base-300 p-3 text-sm'>
-        <div className='font-medium'>Bridge status</div>
-        <div className='text-base-content/70 mt-1'>
-          {bridgeInfo ? `Running on 127.0.0.1:${bridgeInfo.port}` : 'Not running'}
-        </div>
-      </div>
-      {isTauriAppPlatform() && (
-        <div className='rounded-box border border-base-300 p-3 text-sm'>
-          <div className='font-medium'>Lumen Agent CLI</div>
-          <div className='text-base-content/70 mt-1'>
-            {cliStatus?.installed ? `Installed at ${cliStatus.path}` : 'Not installed'}
-          </div>
-          <div className='mt-3 flex flex-wrap gap-2'>
-            {!cliStatus?.installed && (
-              <button
-                type='button'
-                className='btn btn-primary btn-sm'
-                onClick={() => void installCli()}
-              >
-                Install CLI
-              </button>
+
+      <BoxedList title='Connection'>
+        <div className='flex min-h-16 items-center gap-3 pe-4'>
+          <IconChip>
+            {bridgeInfo ? (
+              <PiCheckCircleFill className='text-success h-4 w-4' aria-hidden='true' />
+            ) : (
+              <PiWarningCircle className='h-4 w-4' aria-hidden='true' />
             )}
-            {cliStatus?.installed && (
-              <button
-                type='button'
-                className='btn btn-primary btn-sm'
-                onClick={() => void connectCodex()}
-              >
-                Connect Codex
-              </button>
-            )}
+          </IconChip>
+          <div className='min-w-0 flex-1'>
+            <div className='font-medium'>Local bridge</div>
+            <div className='text-base-content/65 truncate text-[0.8em] leading-snug'>
+              {bridgeInfo ? `Running on 127.0.0.1:${bridgeInfo.port}` : 'Not running'}
+            </div>
           </div>
-          <p className='text-base-content/55 mt-2 text-xs'>
-            Install the local command used by Codex to access Lumen’s Reader tools.
-          </p>
+          <span className='bg-base-200 text-base-content/65 rounded-full px-2.5 py-1 text-[0.75em] font-medium'>
+            {bridgeInfo ? 'Active' : 'Offline'}
+          </span>
         </div>
-      )}
-      <button type='button' className='btn btn-primary' onClick={() => void pair()}>
-        Generate pairing code
-      </button>
+
+        {isTauriAppPlatform() && (
+          <div className='flex min-h-16 items-center gap-3 pe-3'>
+            <IconChip>
+              <PiTerminalWindow className='h-4 w-4' aria-hidden='true' />
+            </IconChip>
+            <div className='min-w-0 flex-1'>
+              <div className='font-medium'>Lumen Agent CLI</div>
+              <div className='text-base-content/65 truncate text-[0.8em] leading-snug'>
+                {cliStatus?.installed ? cliStatus.path : 'Not installed on this device'}
+              </div>
+            </div>
+            <button
+              type='button'
+              className='btn btn-ghost btn-sm shrink-0 gap-1.5'
+              onClick={() => void (cliStatus?.installed ? connectCodex() : installCli())}
+            >
+              {cliStatus?.installed ? (
+                <PiArrowSquareOut className='h-4 w-4' aria-hidden='true' />
+              ) : (
+                <PiDownloadSimple className='h-4 w-4' aria-hidden='true' />
+              )}
+              {cliStatus?.installed ? 'Connect' : 'Install'}
+            </button>
+          </div>
+        )}
+
+        <div className='flex min-h-16 items-center gap-3 pe-3'>
+          <IconChip>
+            <PiKey className='h-4 w-4' aria-hidden='true' />
+          </IconChip>
+          <div className='min-w-0 flex-1'>
+            <div className='font-medium'>Pair another agent</div>
+            <div className='text-base-content/65 text-[0.8em] leading-snug'>
+              Create a short-lived code for this device
+            </div>
+          </div>
+          <button
+            type='button'
+            className='btn btn-primary btn-sm shrink-0'
+            onClick={() => void pair()}
+          >
+            Generate code
+          </button>
+        </div>
+      </BoxedList>
+
       {pairing && (
-        <div className='rounded-box border border-base-300 p-4 text-center'>
-          <div className='text-base-content/70 text-sm'>Show this once to your local Agent</div>
-          <div className='my-2 text-3xl font-mono tracking-[0.35em]'>{pairing.code}</div>
-          <div className='text-base-content/60 text-xs'>
+        <div className='eink-bordered border-base-200 bg-base-100 rounded-lg border p-5 text-center'>
+          <div className='text-base-content/65 text-[0.8em]'>
+            Share this once with your local agent
+          </div>
+          <div className='my-2 font-mono text-3xl font-semibold tracking-[0.28em]'>
+            {pairing.code}
+          </div>
+          <div className='text-base-content/55 text-[0.75em]'>
             Expires at {new Date(pairing.expiresAt).toLocaleTimeString()}
           </div>
         </div>
       )}
-      {error && <p className='text-error text-sm'>{error}</p>}
-      {connectionMessage && <p className='text-success text-sm'>{connectionMessage}</p>}
+      {error && (
+        <p className='text-error flex items-center gap-2 text-sm'>
+          <PiWarningCircle className='h-4 w-4 shrink-0' aria-hidden='true' />
+          {error}
+        </p>
+      )}
+      {connectionMessage && (
+        <p className='text-success flex items-center gap-2 text-sm'>
+          <PiCheckCircleFill className='h-4 w-4 shrink-0' aria-hidden='true' />
+          {connectionMessage}
+        </p>
+      )}
       {approvals.length > 0 && (
-        <div>
-          <h3 className='font-medium'>Pending approvals</h3>
+        <BoxedList title='Pending approvals'>
           {approvals.map((approval) => (
-            <div key={approval.approvalId} className='border-b border-base-300 py-3'>
+            <div key={approval.approvalId} className='py-3 pe-4'>
               <pre className='max-h-24 overflow-auto whitespace-pre-wrap text-xs'>
                 {JSON.stringify(approval.preview, null, 2)}
               </pre>
@@ -270,37 +329,40 @@ const AgentAccessPanel: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
+        </BoxedList>
       )}
-      <div>
-        <h3 className='font-medium'>Activity Center</h3>
+      <BoxedList title='Activity'>
         {actions.length === 0 ? (
-          <p className='text-base-content/60 mt-2 text-sm'>No Agent activity yet.</p>
+          <div className='text-base-content/60 flex min-h-16 items-center gap-3 pe-4'>
+            <IconChip>
+              <PiPulse className='h-4 w-4' aria-hidden='true' />
+            </IconChip>
+            <span>No agent activity yet</span>
+          </div>
         ) : (
           actions.map((action) => (
             <div
               key={action.actionId}
-              className='flex justify-between border-b border-base-300 py-2 text-sm'
+              className='flex min-h-14 items-center justify-between gap-3 pe-4'
             >
-              <span>
+              <span className='min-w-0 truncate'>
                 {action.agentName} · {action.method}
               </span>
-              <span className='text-base-content/60'>{action.status}</span>
+              <span className='text-base-content/60 shrink-0 text-[0.8em]'>{action.status}</span>
             </div>
           ))
         )}
-      </div>
+      </BoxedList>
       {artifacts.length > 0 && (
-        <div>
-          <h3 className='font-medium'>Artifacts</h3>
+        <BoxedList title='Artifacts'>
           {artifacts.map((artifact) => (
             <div
               key={artifact.artifactId}
-              className='flex items-center justify-between border-b border-base-300 py-2 text-sm'
+              className='flex min-h-16 items-center justify-between gap-3 pe-2'
             >
-              <div>
+              <div className='min-w-0 flex-1'>
                 <div className='font-medium'>{artifact.title}</div>
-                <div className='text-base-content/60'>
+                <div className='text-base-content/60 truncate text-[0.8em]'>
                   {artifact.type} · {new Date(artifact.updatedAt).toLocaleString()}
                 </div>
               </div>
@@ -323,47 +385,53 @@ const AgentAccessPanel: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
+        </BoxedList>
       )}
-      <div>
-        <h3 className='font-medium'>Paired agents</h3>
+      <BoxedList title='Paired agents'>
         {agents.length === 0 ? (
-          <p className='text-base-content/60 mt-2 text-sm'>No agents paired.</p>
+          <div className='text-base-content/60 flex min-h-16 items-center gap-3 pe-4'>
+            <IconChip>
+              <PiUsersThree className='h-4 w-4' aria-hidden='true' />
+            </IconChip>
+            <span>No agents paired</span>
+          </div>
         ) : (
           agents.map((agent) => (
-            <div
-              key={agent.agentId}
-              className='flex items-center justify-between border-b border-base-300 py-3'
-            >
-              <div>
+            <div key={agent.agentId} className='flex min-h-16 flex-wrap items-center gap-3 pe-2'>
+              <IconChip>
+                <PiRobot className='h-4 w-4' aria-hidden='true' />
+              </IconChip>
+              <div className='min-w-[9rem] flex-1'>
                 <div className='font-medium'>{agent.displayName}</div>
-                <div className='text-base-content/60 text-xs'>
+                <div className='text-base-content/60 text-[0.8em]'>
                   {agent.clientType} · read-only by default
                 </div>
               </div>
               {currentBookHash && (
-                <label className='flex items-center gap-1 text-xs'>
+                <label className='flex cursor-pointer items-center gap-2 text-[0.8em]'>
                   <input
                     type='checkbox'
-                    className='checkbox checkbox-sm'
+                    className='toggle toggle-sm'
                     onChange={(event) =>
                       void updateCurrentBookGrant(agent.agentId, 'write', event.target.checked)
                     }
                   />
-                  write current book
+                  Write current book
                 </label>
               )}
               <button
                 type='button'
-                className='btn btn-ghost btn-sm'
+                className='btn btn-ghost btn-circle btn-sm text-error shrink-0'
+                aria-label={`Revoke ${agent.displayName}`}
+                title={`Revoke ${agent.displayName}`}
                 onClick={() => void revoke(agent.agentId)}
               >
-                Revoke
+                <PiTrash className='h-4 w-4' aria-hidden='true' />
               </button>
             </div>
           ))
         )}
-      </div>
+      </BoxedList>
     </div>
   );
 };

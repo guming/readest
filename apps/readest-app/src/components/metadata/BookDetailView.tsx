@@ -28,6 +28,7 @@ import {
 } from '@/utils/book';
 import { saveSysSettings } from '@/helpers/settings';
 import BookCover from '@/components/BookCover';
+import BookLearningGuidePanel from '@/components/learning-guide/BookLearningGuidePanel';
 import Dropdown from '../Dropdown';
 import MenuItem from '../MenuItem';
 
@@ -204,6 +205,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({
       </div>
 
       <div className='text-base-content my-4'>
+        <div className='mb-4'>
+          <BookLearningGuidePanel bookKey={book.hash} book={book} metadata={metadata} />
+        </div>
         <div className='metadata-others'>
           <button
             className={clsx(
