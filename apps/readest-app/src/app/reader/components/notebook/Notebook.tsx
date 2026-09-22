@@ -298,6 +298,7 @@ const Notebook: React.FC = ({}) => {
   const notebookCards = (config?.notebookCards ?? [])
     .filter((card) => !card.deletedAt)
     .sort((a, b) => b.createdAt - a.createdAt);
+  const visibleNotebookCards = notebookCards.filter((card) => card.type !== 'learning_guide');
   const assistantCards = notebookCards.filter((card) =>
     ['summary', 'insight', 'takeaway'].includes(card.type),
   );
@@ -383,9 +384,11 @@ const Notebook: React.FC = ({}) => {
     const contentText =
       typeof card.content === 'string'
         ? card.content
-        : card.content.questions
-            .map((question, index) => `${index + 1}. ${question.question}`)
-            .join('\n');
+        : 'questions' in card.content
+          ? card.content.questions
+              .map((question, index) => `${index + 1}. ${question.question}`)
+              .join('\n')
+          : card.content.learningGoal;
     return (
       <li key={card.id} className='my-2'>
         <article className='border-base-300 bg-base-100 rounded-md border p-3 text-sm'>
@@ -451,7 +454,7 @@ const Notebook: React.FC = ({}) => {
               )}
               {typeof card.content === 'string' ? (
                 <p className='whitespace-pre-wrap leading-relaxed'>{card.content}</p>
-              ) : (
+              ) : 'questions' in card.content ? (
                 <div className='space-y-2'>
                   <p className='text-base-content/70 text-sm'>
                     {card.type === 'mistake' ? (
@@ -478,6 +481,8 @@ const Notebook: React.FC = ({}) => {
                     ))}
                   </ol>
                 </div>
+              ) : (
+                <p className='whitespace-pre-wrap leading-relaxed'>{card.content.learningGoal}</p>
               )}
               <p className='text-base-content/50 mt-2 text-xs'>
                 {card.provider} · {card.model} · ~
@@ -508,7 +513,7 @@ const Notebook: React.FC = ({}) => {
     annotationNotes.length > 0 ||
     excerptNotes.length > 0 ||
     referenceNotes.length > 0 ||
-    notebookCards.length > 0;
+    visibleNotebookCards.length > 0;
   const isNotesTabEmpty =
     !notebookNewAnnotation && !notebookEditAnnotation && !isSearchBarVisible && !hasAnyNotes;
 
@@ -658,11 +663,11 @@ const Notebook: React.FC = ({}) => {
               </div>
             )}
             <div dir='ltr'>
-              {notebookCards.length > 0 && (
+              {visibleNotebookCards.length > 0 && (
                 <p className='content font-size-base'>{_('Assistant Cards')}</p>
               )}
             </div>
-            <ul>{notebookCards.map(renderNotebookCard)}</ul>
+            <ul>{visibleNotebookCards.map(renderNotebookCard)}</ul>
             <div dir='ltr'>
               {filteredExcerptNotes.length > 0 && (
                 <p className='content font-size-base'>

@@ -22,6 +22,17 @@ interface TrafficLightState {
   unlistenExitFullScreen?: () => void;
 }
 
+const makeIdempotentUnlisten = (unlisten: () => void) => {
+  let called = false;
+  return () => {
+    if (called) return;
+    called = true;
+    // Native listener teardown can race WebView teardown. Do not let a
+    // stale or repeated cleanup become an unhandled rejection.
+    Promise.resolve(unlisten()).catch(() => undefined);
+  };
+};
+
 export const useTrafficLightStore = create<TrafficLightState>((set, get) => {
   return {
     appService: undefined,
@@ -76,7 +87,10 @@ export const useTrafficLightStore = create<TrafficLightState>((set, get) => {
         set({ isTrafficLightVisible: shouldShowTrafficLight, trafficLightInFullscreen: false });
       });
 
-      set({ unlistenEnterFullScreen, unlistenExitFullScreen });
+      set({
+        unlistenEnterFullScreen: makeIdempotentUnlisten(unlistenEnterFullScreen),
+        unlistenExitFullScreen: makeIdempotentUnlisten(unlistenExitFullScreen),
+      });
     },
 
     cleanupTrafficLightListeners: () => {

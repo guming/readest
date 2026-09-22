@@ -18,7 +18,7 @@ export interface NotebookAssistantUsageEntry {
   at: number;
   day: string;
   action: AssistantUsageAction;
-  contextType: NotebookAssistantContextType;
+  contextType: NotebookAssistantContextType | 'book';
   provider: string;
   model: string;
   tokenEstimate: AssistantTokenEstimate;

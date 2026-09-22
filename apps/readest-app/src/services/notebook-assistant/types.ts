@@ -60,7 +60,91 @@ export type AssistantUsageAction =
   | SelectedTextAction
   | NotebookAssistantCardAction
   | 'quiz'
-  | 'one_question';
+  | 'one_question'
+  | 'learning_guide';
+
+export type NonFictionCategory =
+  | 'social_science'
+  | 'business'
+  | 'history'
+  | 'philosophy'
+  | 'science'
+  | 'technology'
+  | 'textbook'
+  | 'biography'
+  | 'essay'
+  | 'other_nonfiction';
+
+export type LearningGuideSourceKind = 'metadata' | 'toc' | 'preface' | 'chapter';
+
+export type BookLearningEligibility =
+  | {
+      status: 'supported';
+      category: NonFictionCategory;
+      confidence: number;
+      evidence: string[];
+    }
+  | {
+      status: 'unsupported_fiction';
+      confidence: number;
+      evidence: string[];
+    }
+  | {
+      status: 'uncertain';
+      confidence: number;
+      evidence: string[];
+    };
+
+export interface BookLearningGuide {
+  schemaVersion: 1;
+  bookKey: string;
+  status: 'preliminary' | 'grounded';
+  category: NonFictionCategory;
+  learningGoal: string;
+  understandingPath: Array<{ id: string; label: string }>;
+  attentionPoints: Array<{
+    id: string;
+    title: string;
+    explanation: string;
+    checkQuestion?: string;
+  }>;
+  prerequisites?: Array<{ concept: string; whyNeeded: string }>;
+  evidenceAndCaveats?: Array<{ claim: string; caveat: string }>;
+  masteryQuestions: string[];
+  provenance: {
+    sourceKinds: LearningGuideSourceKind[];
+    sourceFingerprint: string;
+    provider: string;
+    model: string;
+    promptVersion: number;
+    generatedAt: number;
+  };
+}
+
+export interface BookLearningGuideRequest {
+  bookKey: string;
+  title: string;
+  author?: string;
+  category: NonFictionCategory;
+  sourceText: string;
+  targetLanguage: string;
+  knowledgeOnly?: boolean;
+}
+
+export type BookLearningGuideResult =
+  | { guide: BookLearningGuide }
+  | { guide: null; reason: 'insufficient_content' };
+
+export type LearningGuideErrorCode =
+  | 'not_configured'
+  | 'unauthorized'
+  | 'rate_limited'
+  | 'network'
+  | 'timeout'
+  | 'invalid_response'
+  | 'unsupported_fiction'
+  | 'insufficient_content'
+  | 'invalid_guide';
 export type QuizQuestionType = 'multiple_choice' | 'true_false' | 'short_answer';
 
 export type OneQuestionType = 'multiple_choice' | 'open';
