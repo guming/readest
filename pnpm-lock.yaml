@@ -361,6 +361,9 @@ importers:
       music-metadata:
         specifier: ^11.14.0
         version: 11.14.0
+      mermaid:
+        specifier: '>=11.16.1 <12'
+        version: 11.16.1
       nanoid:
         specifier: '>=5.1.16 <6'
         version: 5.1.16

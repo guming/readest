@@ -20,6 +20,7 @@ vi.mock('@/context/EnvContext', () => ({
 
 afterEach(() => {
   useEnvMock.mockReset();
+  vi.unstubAllGlobals();
 });
 
 describe('useAppRouter', () => {
@@ -27,6 +28,14 @@ describe('useAppRouter', () => {
     useEnvMock.mockReturnValue({ appService: { supportsViewTransitionsAPI: true } });
     const { result } = renderHook(() => useAppRouter());
     expect(result.current).toBe(transitionRouter);
+  });
+
+  it('uses the plain router while the document is hidden', () => {
+    useEnvMock.mockReturnValue({ appService: { supportsViewTransitionsAPI: true } });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    const { result } = renderHook(() => useAppRouter());
+    expect(result.current).toBe(plainRouter);
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
   });
 
   it('falls back to the plain router when the engine lacks the View Transitions API', () => {
