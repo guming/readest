@@ -57,6 +57,7 @@ export interface ExpertExplanationResult {
 export type NotebookAssistantContextType = 'selection' | 'page' | 'chapter';
 export type NotebookAssistantCardAction = 'summary' | 'insight' | 'takeaway';
 export type AssistantUsageAction =
+  | 'understanding_map'
   | SelectedTextAction
   | NotebookAssistantCardAction
   | 'quiz'

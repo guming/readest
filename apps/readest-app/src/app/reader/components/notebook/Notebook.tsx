@@ -32,6 +32,8 @@ import {
 } from '../../utils/annotatorUtil';
 import BooknoteItem from '../sidebar/BooknoteItem';
 import NotebookAssistantActions from './NotebookAssistantActions';
+import UnderstandingMapActions from './UnderstandingMapActions';
+import UnderstandingMapView from './UnderstandingMapView';
 import NotebookReview from './NotebookReview';
 import NotebookHeader from './Header';
 import NoteEditor from './NoteEditor';
@@ -393,11 +395,13 @@ const Notebook: React.FC = ({}) => {
     const contentText =
       typeof card.content === 'string'
         ? card.content
-        : 'questions' in card.content
-          ? card.content.questions
-              .map((question, index) => `${index + 1}. ${question.question}`)
-              .join('\n')
-          : card.content.learningGoal;
+        : 'schemaVersion' in card.content && 'nodes' in card.content
+          ? card.content.nodes.map((node) => node.label).join('\n')
+          : 'questions' in card.content
+            ? card.content.questions
+                .map((question, index) => `${index + 1}. ${question.question}`)
+                .join('\n')
+            : card.content.learningGoal;
     return (
       <li key={card.id} className='my-2'>
         <article className='border-base-300 bg-base-100 rounded-md border p-3 text-sm'>
@@ -463,6 +467,8 @@ const Notebook: React.FC = ({}) => {
               )}
               {typeof card.content === 'string' ? (
                 <p className='whitespace-pre-wrap leading-relaxed'>{card.content}</p>
+              ) : 'nodes' in card.content ? (
+                <UnderstandingMapView map={card.content} bookKey={sideBarBookKey!} />
               ) : 'questions' in card.content ? (
                 <div className='space-y-2'>
                   <p className='text-base-content/70 text-sm'>
@@ -667,6 +673,7 @@ const Notebook: React.FC = ({}) => {
               {readingAssistantSection === 'assistant' && (
                 <>
                   <NotebookAssistantActions bookKey={sideBarBookKey} />
+                  <UnderstandingMapActions bookKey={sideBarBookKey} />
                   {readingAssistantCards.length > 0 && (
                     <section className='px-3 py-2'>
                       <p className='content font-size-base'>{_('Assistant Cards')}</p>

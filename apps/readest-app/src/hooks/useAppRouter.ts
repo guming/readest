@@ -13,5 +13,11 @@ export const useAppRouter = () => {
   // API is usable (appService folds in the Linux WebKitGTK carve-out); engines
   // without it navigate plainly, sidestepping the DOM-update-budget TimeoutError
   // seen on unsupported webviews (Sentry READEST-9).
-  return appService?.supportsViewTransitionsAPI ? transitionRouter : plainRouter;
+  // Browsers skip view transitions for hidden documents. Background startup
+  // navigation should use the plain router instead of starting an animation.
+  return appService?.supportsViewTransitionsAPI &&
+    typeof document !== 'undefined' &&
+    document.visibilityState === 'visible'
+    ? transitionRouter
+    : plainRouter;
 };
