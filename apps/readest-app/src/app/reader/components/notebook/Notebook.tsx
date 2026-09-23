@@ -631,7 +631,7 @@ const Notebook: React.FC = ({}) => {
               {(
                 [
                   { id: 'guide', label: _('Learning Guide'), Icon: LearningGuideIcon },
-                  { id: 'assistant', label: _('Notebook Assistant'), Icon: NotebookAssistantIcon },
+                  { id: 'assistant', label: _('Summarize for Me'), Icon: NotebookAssistantIcon },
                   { id: 'question', label: _('Ask Me One'), Icon: AskMeOneIcon },
                 ] as const
               ).map(({ id, label, Icon }) => (
