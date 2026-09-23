@@ -606,7 +606,6 @@ const Notebook: React.FC = ({}) => {
             handleToggleSearchBar={handleToggleSearchBar}
             showSearchButton={notebookActiveTab === 'notes'}
           />
-          <NotebookTabNavigation activeTab={notebookActiveTab} onTabChange={handleTabChange} />
           {notebookActiveTab === 'notes' && (
             <div
               className={clsx('search-bar', {
@@ -802,7 +801,9 @@ const Notebook: React.FC = ({}) => {
         <div
           className='flex-shrink-0'
           style={{ paddingBottom: `${(safeAreaInsets?.bottom || 0) / 2}px` }}
-        />
+        >
+          <NotebookTabNavigation activeTab={notebookActiveTab} onTabChange={handleTabChange} />
+        </div>
       </div>
     </>
   ) : null;

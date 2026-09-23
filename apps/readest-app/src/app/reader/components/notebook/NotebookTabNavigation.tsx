@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import React from 'react';
 import { PiNotePencil } from 'react-icons/pi';
 
+import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { NotebookTab } from '@/store/notebookStore';
 import ReadingAssistantIcon from './ReadingAssistantIcon';
@@ -16,6 +17,7 @@ const NotebookTabNavigation: React.FC<NotebookTabNavigationProps> = ({
   onTabChange,
 }) => {
   const _ = useTranslation();
+  const { appService } = useEnv();
   const tabs: NotebookTab[] = ['notes', 'ai'];
 
   const getTabLabel = (tab: NotebookTab) => {
@@ -42,7 +44,10 @@ const NotebookTabNavigation: React.FC<NotebookTabNavigationProps> = ({
 
   return (
     <div
-      className={clsx('border-base-300/60 flex h-11 w-full gap-1 border-b px-3 pb-2')}
+      className={clsx(
+        'bottom-tab border-base-300/50 bg-base-200/20 flex min-h-[62px] w-full border-t',
+        appService?.hasRoundedWindow && 'rounded-window-bottom-right',
+      )}
       dir='ltr'
       role='tablist'
       aria-label={_('Notebook')}
@@ -52,10 +57,8 @@ const NotebookTabNavigation: React.FC<NotebookTabNavigationProps> = ({
           key={tab}
           type='button'
           className={clsx(
-            'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors duration-150 active:scale-[0.98]',
-            activeTab === tab || (tab === 'ai' && activeTab === 'review')
-              ? 'bg-base-300 text-base-content'
-              : 'text-base-content/60 hover:bg-base-300/45 hover:text-base-content',
+            'm-1.5 flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 transition-colors duration-200 active:scale-95',
+            (activeTab === tab || (tab === 'ai' && activeTab === 'review')) && 'bg-base-300/85',
           )}
           onClick={() => onTabChange(tab)}
           title={getTabLabel(tab)}
@@ -63,8 +66,8 @@ const NotebookTabNavigation: React.FC<NotebookTabNavigationProps> = ({
           role='tab'
           aria-selected={activeTab === tab || (tab === 'ai' && activeTab === 'review')}
         >
-          {getTabIcon(tab)}
-          <span>{getTabLabel(tab)}</span>
+          <span className='flex h-6 items-center'>{getTabIcon(tab)}</span>
+          <span className='text-[10px] leading-none'>{getTabLabel(tab)}</span>
         </button>
       ))}
     </div>

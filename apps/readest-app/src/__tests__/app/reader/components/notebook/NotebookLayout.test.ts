@@ -6,15 +6,13 @@ const readSource = (file: string) =>
   readFileSync(resolve(process.cwd(), 'src/app/reader/components/notebook', file), 'utf8');
 
 describe('notebook navigation layout', () => {
-  test('keeps the notebook and reading assistant tabs at the top of the panel', () => {
+  test('keeps the notebook and reading assistant tabs at the bottom of the panel', () => {
     const source = readSource('Notebook.tsx');
-    const headerIndex = source.indexOf('<NotebookHeader');
     const tabsIndex = source.indexOf('<NotebookTabNavigation');
-    const contentIndex = source.indexOf("{notebookActiveTab === 'notes' && (");
+    const contentIndex = source.indexOf('{isReadingAssistantTab ? (');
 
-    expect(headerIndex).toBeGreaterThan(-1);
-    expect(tabsIndex).toBeGreaterThan(headerIndex);
-    expect(tabsIndex).toBeLessThan(contentIndex);
+    expect(contentIndex).toBeGreaterThan(-1);
+    expect(tabsIndex).toBeGreaterThan(contentIndex);
     expect(source.match(/<NotebookTabNavigation/g)).toHaveLength(1);
   });
 
