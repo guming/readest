@@ -15,6 +15,7 @@ import {
 } from '@/services/notebook-assistant/client';
 import {
   buildLearningGuideContext,
+  resolveLearningGuideTargetLanguage,
   type LearningGuideContext,
 } from '@/services/notebook-assistant/learningGuideContext';
 import { evaluateLearningGuideEligibility } from '@/services/notebook-assistant/learningGuideEligibility';
@@ -250,7 +251,11 @@ export function useBookLearningGuide({ bookKey, book, metadata, bookDoc }: Optio
             author: resolvedBook?.author,
             category,
             sourceText: context.sourceText,
-            targetLanguage: assistant.targetLanguage || navigator.language || 'English',
+            targetLanguage: resolveLearningGuideTargetLanguage(
+              assistant.targetLanguage,
+              resolvedMetadata.language,
+              navigator.language || 'en',
+            ),
             knowledgeOnly,
           },
           context,

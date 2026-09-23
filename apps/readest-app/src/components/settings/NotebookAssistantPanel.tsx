@@ -15,7 +15,15 @@ import {
 } from '@/services/notebook-assistant/usage';
 import { writeTextToClipboard } from '@/utils/clipboard';
 import { getAIConnections, resolveAIConnection } from '@/services/ai/connections';
-import { BoxedList, SectionTitle, SettingsRow, Tips } from './primitives';
+import { TRANSLATOR_LANGS } from '@/services/constants';
+import {
+  BoxedList,
+  SettingsInput,
+  SettingsRow,
+  SettingsSelect,
+  SettingsSwitchRow,
+  Tips,
+} from './primitives';
 
 interface Props {
   compact?: boolean;
@@ -26,12 +34,38 @@ const clampInteger = (value: number, fallback: number, min: number, max: number)
   return Math.max(min, Math.min(max, next));
 };
 
+const normalizeTargetLanguage = (value: string): string => {
+  const normalized = value.trim();
+  if (!normalized) return '';
+  if (Object.keys(TRANSLATOR_LANGS).includes(normalized)) return normalized;
+
+  const match = Object.entries(TRANSLATOR_LANGS).find(
+    ([, label]) => label.toLocaleLowerCase() === normalized.toLocaleLowerCase(),
+  );
+  return match?.[0] ?? normalized;
+};
+
+const getTargetLanguageOptions = (translate: (key: string) => string, currentValue: string) => {
+  const options = Object.entries(TRANSLATOR_LANGS)
+    .sort(([, first], [, second]) => first.localeCompare(second))
+    .map(([value, label]) => ({ value, label }));
+
+  if (currentValue && !options.some((option) => option.value === currentValue)) {
+    options.unshift({ value: currentValue, label: currentValue });
+  }
+
+  return [{ value: '', label: translate('System Language') }, ...options];
+};
+
 const NotebookAssistantPanel: React.FC<Props> = ({ compact = false }) => {
   const _ = useTranslation();
   const { envConfig } = useEnv();
   const { settings, setSettings, saveSettings, setActiveSettingsItemId } = useSettingsStore();
   const initial = resolveNotebookAssistantSettings(settings.notebookAssistant);
-  const [draft, setDraft] = useState<NotebookAssistantSettings>(initial);
+  const [draft, setDraft] = useState<NotebookAssistantSettings>(() => ({
+    ...initial,
+    targetLanguage: normalizeTargetLanguage(initial.targetLanguage),
+  }));
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [usageVersion, setUsageVersion] = useState(0);
@@ -114,46 +148,49 @@ const NotebookAssistantPanel: React.FC<Props> = ({ compact = false }) => {
     ),
   });
 
-  const inputClass = 'input input-sm input-bordered w-full max-w-xs bg-base-100';
   const todayTokens = useMemo(() => getTodayNotebookAssistantTokens(), [usageVersion]);
+  const targetLanguageOptions = getTargetLanguageOptions(_, draft.targetLanguage);
   return (
     <div className={compact ? 'space-y-3' : 'my-4 space-y-5'}>
-      {!compact && <SectionTitle>{_('AI Provider')}</SectionTitle>}
-      <BoxedList>
+      <BoxedList title={_('AI Provider')} data-setting-id='settings.notebookassistant.provider'>
         <SettingsRow label={_('Active Provider')}>
           {connections.length > 0 ? (
-            <select
-              className='select select-bordered select-sm eink-bordered bg-base-100'
+            <SettingsSelect
               value={resolveAIConnection(settings.aiSettings, 'notebook')?.id || ''}
               onChange={(event) => void selectNotebookConnection(event.target.value)}
-            >
-              {connections.map((connection) => (
-                <option key={connection.id} value={connection.id}>
-                  {connection.name} · {connection.model}
-                </option>
-              ))}
-            </select>
+              ariaLabel={_('Active Provider')}
+              options={connections.map((connection) => ({
+                value: connection.id,
+                label: `${connection.name} · ${connection.model}`,
+              }))}
+            />
           ) : (
             <button
               type='button'
-              className='btn btn-outline btn-sm eink-bordered'
+              className='btn btn-ghost btn-sm'
               onClick={() => setActiveSettingsItemId('settings.ai.provider')}
             >
               {_('Configure AI Provider')}
             </button>
           )}
         </SettingsRow>
-        <SettingsRow label={_('Target Language')}>
-          <input
-            className={inputClass}
+        <SettingsRow
+          label={_('Target Language')}
+          description={_('Use the interface language unless you choose another language.')}
+          data-setting-id='settings.notebookassistant.targetLanguage'
+        >
+          <SettingsSelect
             value={draft.targetLanguage}
-            onChange={(e) => patch('targetLanguage', e.target.value)}
-            placeholder={_('System Language')}
+            onChange={(event) => patch('targetLanguage', event.target.value)}
+            ariaLabel={_('Target Language')}
+            options={targetLanguageOptions}
           />
         </SettingsRow>
+      </BoxedList>
+
+      <BoxedList title={_('Output')} data-setting-id='settings.notebookassistant.output'>
         <SettingsRow label={_('Summary Style')}>
-          <select
-            className='select select-sm select-bordered max-w-xs bg-base-100'
+          <SettingsSelect
             value={draft.defaultSummaryStyle}
             onChange={(e) =>
               patch(
@@ -161,79 +198,90 @@ const NotebookAssistantPanel: React.FC<Props> = ({ compact = false }) => {
                 e.target.value as NotebookAssistantSettings['defaultSummaryStyle'],
               )
             }
-          >
-            <option value='structured'>{_('Structured')}</option>
-            <option value='brief'>{_('Brief')}</option>
-            <option value='detailed'>{_('Detailed')}</option>
-          </select>
+            ariaLabel={_('Summary Style')}
+            options={[
+              { value: 'structured', label: _('Structured') },
+              { value: 'brief', label: _('Brief') },
+              { value: 'detailed', label: _('Detailed') },
+            ]}
+          />
         </SettingsRow>
         <SettingsRow label={_('Quiz Questions')}>
-          <input
-            className={inputClass}
+          <SettingsInput
             type='number'
             min={1}
             max={20}
             value={draft.defaultQuizQuestionCount}
             onChange={(e) => patch('defaultQuizQuestionCount', Number(e.target.value))}
+            aria-label={_('Quiz Questions')}
           />
         </SettingsRow>
         <SettingsRow label={_('Cost Mode')}>
-          <select
-            className='select select-sm select-bordered max-w-xs bg-base-100'
+          <SettingsSelect
             value={draft.costMode}
             onChange={(e) =>
               patch('costMode', e.target.value as NotebookAssistantSettings['costMode'])
             }
-          >
-            <option value='conservative'>{_('Conservative')}</option>
-            <option value='balanced'>{_('Balanced')}</option>
-            <option value='full_context'>{_('Full Context')}</option>
-          </select>
+            ariaLabel={_('Cost Mode')}
+            options={[
+              { value: 'conservative', label: _('Conservative') },
+              { value: 'balanced', label: _('Balanced') },
+              { value: 'full_context', label: _('Full Context') },
+            ]}
+          />
         </SettingsRow>
+      </BoxedList>
+
+      <BoxedList title={_('Usage')} data-setting-id='settings.notebookassistant.usage'>
         <SettingsRow label={_('Daily Token Limit')}>
-          <input
-            className={inputClass}
+          <SettingsInput
             type='number'
             min={0}
             max={5000000}
             step={1000}
             value={draft.dailyTokenLimit}
             onChange={(e) => patch('dailyTokenLimit', Number(e.target.value))}
+            aria-label={_('Daily Token Limit')}
           />
         </SettingsRow>
-        <SettingsRow label={_('Track Local Usage')}>
-          <input
-            type='checkbox'
-            className='toggle'
-            checked={draft.usageTrackingEnabled}
-            onChange={(e) => patch('usageTrackingEnabled', e.target.checked)}
-          />
-        </SettingsRow>
+        <SettingsSwitchRow
+          label={_('Track Local Usage')}
+          checked={draft.usageTrackingEnabled}
+          onChange={() => patch('usageTrackingEnabled', !draft.usageTrackingEnabled)}
+        />
         <SettingsRow label={_('Warn Above Tokens')}>
-          <input
-            className={inputClass}
+          <SettingsInput
             type='number'
             min={1000}
             max={200000}
             step={1000}
             value={draft.warnAboveTokens}
             onChange={(e) => patch('warnAboveTokens', Number(e.target.value))}
+            aria-label={_('Warn Above Tokens')}
           />
         </SettingsRow>
       </BoxedList>
+
       <Tips>
-        {_('Today estimated usage')}: ~{todayTokens} {_('tokens')}.{' '}
-        {_(
-          'Usage history is stored only on this device and never includes source text or AI responses.',
-        )}
+        <li>
+          {_('Today estimated usage')}: ~{todayTokens} {_('tokens')}.
+        </li>
+        <li>
+          {_(
+            'Usage history is stored only on this device and never includes source text or AI responses.',
+          )}
+        </li>
+        <li>{_('Notebook Assistant uses the active provider from the global AI settings.')}</li>
       </Tips>
-      <Tips>{_('Notebook Assistant uses the active provider from the global AI settings.')}</Tips>
       {message && (
-        <p className={status === 'error' ? 'text-sm text-red-500' : 'text-sm text-green-600'}>
+        <p
+          role='status'
+          className={status === 'error' ? 'text-sm text-red-500' : 'text-sm text-green-600'}
+        >
           {message}
         </p>
       )}
-      <div className='flex justify-end gap-2'>
+      <div className='flex flex-wrap justify-end gap-2'>
         <button
           type='button'
           className='btn btn-ghost btn-sm'

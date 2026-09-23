@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { PiBookOpenText, PiQuestion, PiSpinner } from 'react-icons/pi';
+import { PiQuestion, PiSpinner } from 'react-icons/pi';
 import type { Book } from '@/types/book';
 import type { BookDoc, BookMetadata } from '@/libs/document';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -11,6 +11,7 @@ import { eventDispatcher } from '@/utils/event';
 import LearningGuideDialog from './LearningGuideDialog';
 import { recordLearningGuideEvent } from '@/services/notebook-assistant/learningGuideEvents';
 import { TooltipIconButton } from '@/components/assistant/TooltipIconButton';
+import { LearningGuideIcon } from '@/app/reader/components/notebook/AssistantFeatureIcons';
 
 interface Props {
   bookKey: string;
@@ -18,6 +19,7 @@ interface Props {
   metadata?: BookMetadata | null;
   bookDoc?: BookDoc | null;
   compact?: boolean;
+  showSetup?: boolean;
 }
 
 const stageLabels = {
@@ -32,6 +34,7 @@ const BookLearningGuidePanel: React.FC<Props> = ({
   metadata,
   bookDoc,
   compact = false,
+  showSetup = true,
 }) => {
   const _ = useTranslation();
   const [showGuide, setShowGuide] = useState(false);
@@ -50,7 +53,7 @@ const BookLearningGuidePanel: React.FC<Props> = ({
         className={compact ? '' : 'eink-bordered border-base-200 bg-base-100 rounded-lg border p-4'}
       >
         <div className='mb-2 flex items-center gap-2'>
-          <PiBookOpenText className='shrink-0' aria-hidden='true' />
+          <LearningGuideIcon className='shrink-0' aria-hidden='true' />
           <h2 className='text-base font-semibold'>{_('Learning Guide')}</h2>
           <TooltipIconButton
             type='button'
@@ -70,7 +73,7 @@ const BookLearningGuidePanel: React.FC<Props> = ({
           )}
         </p>
 
-        {state.type === 'needs_ai_setup' && <NotebookAssistantPanel compact />}
+        {state.type === 'needs_ai_setup' && showSetup && <NotebookAssistantPanel compact />}
         {state.type === 'unsupported_fiction' && (
           <div className='bg-base-200/40 eink-bordered rounded-lg p-3 text-sm'>
             <p className='font-semibold'>
