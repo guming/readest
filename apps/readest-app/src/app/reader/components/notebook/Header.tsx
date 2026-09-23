@@ -2,7 +2,6 @@ import clsx from 'clsx';
 import React from 'react';
 
 import { FiSearch } from 'react-icons/fi';
-import { RiQuillPenLine } from 'react-icons/ri';
 import { MdArrowBackIosNew, MdOutlinePushPin, MdPushPin } from 'react-icons/md';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
@@ -27,10 +26,6 @@ const NotebookHeader: React.FC<{
   const iconSize18 = useResponsiveSize(18);
   return (
     <div className='notebook-header relative flex h-11 items-center px-3' dir='ltr'>
-      <div className='absolute inset-0 z-[-1] flex items-center justify-center space-x-2'>
-        <RiQuillPenLine size={iconSize18} />
-        <div className='notebook-title hidden text-sm font-medium sm:flex'>{_('Notebook')}</div>
-      </div>
       <div className='flex w-full items-center gap-x-4'>
         <button
           title={isPinned ? _('Unpin Notebook') : _('Pin Notebook')}

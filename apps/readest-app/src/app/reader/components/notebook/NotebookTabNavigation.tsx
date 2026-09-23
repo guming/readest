@@ -1,10 +1,10 @@
 import clsx from 'clsx';
 import React from 'react';
-import { PiCards, PiNotePencil, PiSparkle } from 'react-icons/pi';
+import { PiNotePencil } from 'react-icons/pi';
 
-import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { NotebookTab } from '@/store/notebookStore';
+import ReadingAssistantIcon from './ReadingAssistantIcon';
 
 interface NotebookTabNavigationProps {
   activeTab: NotebookTab;
@@ -16,18 +16,14 @@ const NotebookTabNavigation: React.FC<NotebookTabNavigationProps> = ({
   onTabChange,
 }) => {
   const _ = useTranslation();
-  const { appService } = useEnv();
-
-  const tabs: NotebookTab[] = ['notes', 'ai', 'review'];
+  const tabs: NotebookTab[] = ['notes', 'ai'];
 
   const getTabLabel = (tab: NotebookTab) => {
     switch (tab) {
       case 'notes':
-        return _('Notes');
+        return _('Notebook');
       case 'ai':
-        return _('Assistant');
-      case 'review':
-        return _('Review');
+        return _('Reading Assistant');
       default:
         return '';
     }
@@ -38,9 +34,7 @@ const NotebookTabNavigation: React.FC<NotebookTabNavigationProps> = ({
       case 'notes':
         return <PiNotePencil className='mx-auto' size={20} />;
       case 'ai':
-        return <PiSparkle className='mx-auto' size={20} />;
-      case 'review':
-        return <PiCards className='mx-auto' size={20} />;
+        return <ReadingAssistantIcon className='mx-auto' size={22} />;
       default:
         return null;
     }
@@ -48,33 +42,30 @@ const NotebookTabNavigation: React.FC<NotebookTabNavigationProps> = ({
 
   return (
     <div
-      className={clsx(
-        'bottom-tab border-base-300/50 bg-base-200/20 flex min-h-[52px] w-full border-t',
-        appService?.hasRoundedWindow && 'rounded-window-bottom-right',
-      )}
+      className={clsx('border-base-300/60 flex h-11 w-full gap-1 border-b px-3 pb-2')}
       dir='ltr'
+      role='tablist'
+      aria-label={_('Notebook')}
     >
       {tabs.map((tab) => (
-        <div
+        <button
           key={tab}
-          tabIndex={0}
-          role='button'
+          type='button'
           className={clsx(
-            'm-1.5 flex-1 cursor-pointer rounded-lg p-2 transition-colors duration-200',
-            activeTab === tab && 'bg-base-300/85',
+            'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors duration-150 active:scale-[0.98]',
+            activeTab === tab || (tab === 'ai' && activeTab === 'review')
+              ? 'bg-base-300 text-base-content'
+              : 'text-base-content/60 hover:bg-base-300/45 hover:text-base-content',
           )}
           onClick={() => onTabChange(tab)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onTabChange(tab);
-            }
-          }}
           title={getTabLabel(tab)}
           aria-label={getTabLabel(tab)}
+          role='tab'
+          aria-selected={activeTab === tab || (tab === 'ai' && activeTab === 'review')}
         >
-          <div className='m-0 flex h-6 items-center p-0'>{getTabIcon(tab)}</div>
-        </div>
+          {getTabIcon(tab)}
+          <span>{getTabLabel(tab)}</span>
+        </button>
       ))}
     </div>
   );

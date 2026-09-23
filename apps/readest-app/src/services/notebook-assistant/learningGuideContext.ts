@@ -1,8 +1,9 @@
 import type { BookDoc, BookMetadata, SectionItem, TOCItem } from '@/libs/document';
+import { getAITranslationTargetLanguage } from './provider';
 import type { NotebookAssistantCostMode } from './types';
 import type { LearningGuideSourceKind } from './types';
 
-export const LEARNING_GUIDE_PROMPT_VERSION = 2;
+export const LEARNING_GUIDE_PROMPT_VERSION = 3;
 
 export interface LearningGuideContext {
   sourceText: string;
@@ -16,6 +17,18 @@ const tokenLimits: Record<NotebookAssistantCostMode, number> = {
   conservative: 8_000,
   balanced: 16_000,
   full_context: 32_000,
+};
+
+export const resolveLearningGuideTargetLanguage = (
+  configuredLanguage: string,
+  bookLanguage: string | string[] | undefined,
+  fallbackLanguage: string,
+): string => {
+  const primaryBookLanguage = Array.isArray(bookLanguage) ? bookLanguage[0] : bookLanguage;
+  return getAITranslationTargetLanguage(
+    configuredLanguage.trim() || primaryBookLanguage?.trim() || fallbackLanguage,
+    fallbackLanguage,
+  );
 };
 
 const plainText = (value: string): string =>

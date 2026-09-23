@@ -5,7 +5,10 @@ import {
   buildCurrentPageContext,
   buildSelectionContext,
 } from '@/services/notebook-assistant/context';
-import { buildLearningGuideContext } from '@/services/notebook-assistant/learningGuideContext';
+import {
+  buildLearningGuideContext,
+  resolveLearningGuideTargetLanguage,
+} from '@/services/notebook-assistant/learningGuideContext';
 import type { BookDoc } from '@/libs/document';
 import type { BookProgress } from '@/types/book';
 
@@ -47,6 +50,23 @@ const makeBookDoc = (): BookDoc =>
   }) as unknown as BookDoc;
 
 describe('notebook assistant reading context', () => {
+  test('learning guide follows the book language when no target language is configured', () => {
+    expect(resolveLearningGuideTargetLanguage('', 'zh-CN', 'en-US')).toBe(
+      'Simplified Chinese (zh-CN)',
+    );
+    expect(resolveLearningGuideTargetLanguage('', ['zh-TW', 'en'], 'en-US')).toBe(
+      'Traditional Chinese (zh-TW)',
+    );
+  });
+
+  test('configured learning guide language overrides the book language', () => {
+    expect(resolveLearningGuideTargetLanguage('ja', 'zh-CN', 'en-US')).toBe('Japanese (ja)');
+  });
+
+  test('learning guide falls back to the system language when book language is missing', () => {
+    expect(resolveLearningGuideTargetLanguage('', '', 'fr-FR')).toBe('French (France) (fr-FR)');
+  });
+
   test('learning guide treats a PDF without an outline as having an empty table of contents', async () => {
     const bookDoc = { ...makeBookDoc(), toc: null } as unknown as BookDoc;
 

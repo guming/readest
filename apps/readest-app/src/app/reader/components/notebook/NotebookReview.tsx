@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { PiCheck, PiFloppyDisk, PiSpinner, PiStudent, PiX } from 'react-icons/pi';
+import { PiCheck, PiFloppyDisk, PiSpinner, PiX } from 'react-icons/pi';
 
 import NotebookAssistantPanel from '@/components/settings/NotebookAssistantPanel';
 import { useEnv } from '@/context/EnvContext';
@@ -41,9 +41,11 @@ import { useSettingsStore } from '@/store/settingsStore';
 import type { NotebookCard } from '@/types/book';
 import { uniqueId } from '@/utils/misc';
 import { eventDispatcher } from '@/utils/event';
+import { AskMeOneIcon } from './AssistantFeatureIcons';
 
 interface Props {
   bookKey: string;
+  showSetup?: boolean;
 }
 
 type ReviewMode = 'one_question' | 'chapter_quiz';
@@ -55,7 +57,7 @@ const gradeAnswer = (question: QuizQuestion, answer: string): boolean => {
   return normalizeAnswer(answer) === normalizeAnswer(question.answer);
 };
 
-const NotebookReview: React.FC<Props> = ({ bookKey }) => {
+const NotebookReview: React.FC<Props> = ({ bookKey, showSetup = true }) => {
   const _ = useTranslation();
   const { envConfig } = useEnv();
   const settings = useSettingsStore((state) => state.settings);
@@ -481,18 +483,18 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
   };
 
   if (!configured) {
-    return (
+    return showSetup ? (
       <div className='border-base-300 border-b p-3'>
         <NotebookAssistantPanel compact />
       </div>
-    );
+    ) : null;
   }
 
   return (
     <section className='flex min-h-0 flex-1 flex-col'>
       <div className='border-base-300 border-b p-3'>
         <div className='mb-2 flex items-center gap-2'>
-          <PiStudent className='shrink-0' />
+          <AskMeOneIcon className='shrink-0' />
           <h2 className='text-sm font-semibold'>
             {mode === 'one_question' ? _('Ask Me One') : _('Chapter Quiz')}
           </h2>
@@ -538,7 +540,7 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
                     className='btn btn-primary btn-xs'
                     onClick={() => void generateOneQuestion()}
                   >
-                    <PiStudent /> {_('Ask Me One')}
+                    <AskMeOneIcon /> {_('Ask Me One')}
                   </button>
                 )
               )}
@@ -582,7 +584,7 @@ const NotebookReview: React.FC<Props> = ({ bookKey }) => {
               onClick={generateQuiz}
               disabled={loading}
             >
-              {loading ? <PiSpinner className='animate-spin' /> : <PiStudent />}
+              {loading ? <PiSpinner className='animate-spin' /> : <AskMeOneIcon />}
               {quiz ? _('Regenerate') : _('Generate Quiz')}
             </button>
           )}

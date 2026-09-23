@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RiQuillPenLine } from 'react-icons/ri';
-import { PiCaretDown, PiCaretRight, PiCopy, PiLightbulb, PiSparkle, PiTrash } from 'react-icons/pi';
+import { PiCaretDown, PiCaretRight, PiCopy, PiLightbulb, PiTextAa, PiTrash } from 'react-icons/pi';
 
 import { useSettingsStore } from '@/store/settingsStore';
 import { useBookDataStore } from '@/store/bookDataStore';
@@ -38,6 +38,8 @@ import NoteEditor from './NoteEditor';
 import SearchBar from './SearchBar';
 import NotebookTabNavigation from './NotebookTabNavigation';
 import EmptyState from '../EmptyState';
+import BookLearningGuidePanel from '@/components/learning-guide/BookLearningGuidePanel';
+import { NotebookAssistantIcon } from './AssistantFeatureIcons';
 
 const MIN_NOTEBOOK_WIDTH = 0.15;
 const MAX_NOTEBOOK_WIDTH = 0.45;
@@ -298,9 +300,8 @@ const Notebook: React.FC = ({}) => {
   const notebookCards = (config?.notebookCards ?? [])
     .filter((card) => !card.deletedAt)
     .sort((a, b) => b.createdAt - a.createdAt);
-  const visibleNotebookCards = notebookCards.filter((card) => card.type !== 'learning_guide');
-  const assistantCards = notebookCards.filter((card) =>
-    ['summary', 'insight', 'takeaway'].includes(card.type),
+  const readingAssistantCards = notebookCards.filter(
+    (card) => !['learning_guide', 'quiz', 'mistake'].includes(card.type),
   );
   const quizCards = notebookCards.filter((card) => ['quiz', 'mistake'].includes(card.type));
   const annotationNotes = allNotes
@@ -379,7 +380,12 @@ const Notebook: React.FC = ({}) => {
 
   const renderNotebookCard = (card: NotebookCard) => {
     const isExpanded = expandedCardIds.has(card.id);
-    const Icon = card.type === 'translation' || card.type === 'summary' ? PiSparkle : PiLightbulb;
+    const Icon =
+      card.type === 'summary'
+        ? NotebookAssistantIcon
+        : card.type === 'translation'
+          ? PiTextAa
+          : PiLightbulb;
     const sourceText = card.sourceText || card.contextType;
     const contentText =
       typeof card.content === 'string'
@@ -510,12 +516,10 @@ const Notebook: React.FC = ({}) => {
     filteredExcerptNotes.length > 0 ||
     filteredReferenceNotes.length > 0;
   const hasAnyNotes =
-    annotationNotes.length > 0 ||
-    excerptNotes.length > 0 ||
-    referenceNotes.length > 0 ||
-    visibleNotebookCards.length > 0;
+    annotationNotes.length > 0 || excerptNotes.length > 0 || referenceNotes.length > 0;
   const isNotesTabEmpty =
     !notebookNewAnnotation && !notebookEditAnnotation && !isSearchBarVisible && !hasAnyNotes;
+  const isReadingAssistantTab = notebookActiveTab === 'ai' || notebookActiveTab === 'review';
 
   return isNotebookVisible ? (
     <>
@@ -599,6 +603,7 @@ const Notebook: React.FC = ({}) => {
             handleToggleSearchBar={handleToggleSearchBar}
             showSearchButton={notebookActiveTab === 'notes'}
           />
+          <NotebookTabNavigation activeTab={notebookActiveTab} onTabChange={handleTabChange} />
           {notebookActiveTab === 'notes' && (
             <div
               className={clsx('search-bar', {
@@ -614,37 +619,34 @@ const Notebook: React.FC = ({}) => {
             </div>
           )}
         </div>
-        {notebookActiveTab === 'ai' ? (
-          <div className='flex min-h-0 flex-1 flex-col'>
+        {isReadingAssistantTab ? (
+          <div className='min-h-0 flex-1 overflow-y-auto'>
+            <section className='border-base-300 border-b p-3'>
+              <BookLearningGuidePanel
+                compact
+                bookKey={sideBarBookKey}
+                book={bookData.book}
+                bookDoc={bookData.bookDoc}
+                showSetup={false}
+              />
+            </section>
             <NotebookAssistantActions bookKey={sideBarBookKey} />
-            {assistantCards.length > 0 && (
-              <div className='min-h-0 overflow-y-auto px-3 py-2'>
+            {readingAssistantCards.length > 0 && (
+              <section className='border-base-300 border-b px-3 py-2'>
                 <div dir='ltr'>
                   <p className='content font-size-base'>{_('Assistant Cards')}</p>
                 </div>
-                <ul>{assistantCards.map(renderNotebookCard)}</ul>
-              </div>
+                <ul>{readingAssistantCards.map(renderNotebookCard)}</ul>
+              </section>
             )}
-            {assistantCards.length === 0 ? (
-              <div className='flex flex-1 items-center justify-center overflow-y-auto px-3'>
-                <EmptyState
-                  Icon={PiSparkle}
-                  label={_('No Assistant Cards')}
-                  hint={_('Generate a summary, insight, or takeaway')}
-                />
-              </div>
-            ) : null}
-          </div>
-        ) : notebookActiveTab === 'review' ? (
-          <div className='flex min-h-0 flex-1 flex-col'>
-            <NotebookReview bookKey={sideBarBookKey} />
+            <NotebookReview bookKey={sideBarBookKey} showSetup={false} />
             {quizCards.length > 0 && (
-              <div className='min-h-0 overflow-y-auto px-3 py-2'>
+              <section className='border-base-300 border-b px-3 py-2'>
                 <div dir='ltr'>
                   <p className='content font-size-base'>{_('Saved Quizzes')}</p>
                 </div>
                 <ul>{quizCards.map(renderNotebookCard)}</ul>
-              </div>
+              </section>
             )}
           </div>
         ) : isNotesTabEmpty ? (
@@ -662,12 +664,6 @@ const Notebook: React.FC = ({}) => {
                 <p className='font-size-sm text-center'>{_('No notes match your search')}</p>
               </div>
             )}
-            <div dir='ltr'>
-              {visibleNotebookCards.length > 0 && (
-                <p className='content font-size-base'>{_('Assistant Cards')}</p>
-              )}
-            </div>
-            <ul>{visibleNotebookCards.map(renderNotebookCard)}</ul>
             <div dir='ltr'>
               {filteredExcerptNotes.length > 0 && (
                 <p className='content font-size-base'>
@@ -765,12 +761,8 @@ const Notebook: React.FC = ({}) => {
         )}
         <div
           className='flex-shrink-0'
-          style={{
-            paddingBottom: `${(safeAreaInsets?.bottom || 0) / 2}px`,
-          }}
-        >
-          <NotebookTabNavigation activeTab={notebookActiveTab} onTabChange={handleTabChange} />
-        </div>
+          style={{ paddingBottom: `${(safeAreaInsets?.bottom || 0) / 2}px` }}
+        />
       </div>
     </>
   ) : null;
