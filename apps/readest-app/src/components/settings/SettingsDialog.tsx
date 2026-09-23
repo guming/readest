@@ -134,7 +134,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     {
       tab: 'NotebookAssistant',
       icon: PiNotebook,
-      label: _('Notebook Assistant'),
+      label: _('Notebook Assistant Settings'),
     },
     {
       tab: 'TTS',
