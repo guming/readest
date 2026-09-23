@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import * as React from 'react';
 import { MdChevronRight, MdClose } from 'react-icons/md';
 import { useState, useRef, useEffect, Suspense, useCallback } from 'react';
-import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
+import { ReadonlyURLSearchParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { Book, BooksGroup, type LibrarySearchConfig } from '@/types/book';
 import { AppService, DeleteAction } from '@/types/system';
@@ -209,6 +209,7 @@ const LibraryPageWithSearchParams = () => {
 
 const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchParams | null }) => {
   const router = useAppRouter();
+  const plainRouter = useRouter();
   const { envConfig, appService } = useEnv();
   const { token, user } = useAuth();
   const {
@@ -700,7 +701,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
           (hash) => libraryBooks.find((book) => book.hash === hash),
         );
         if (audiobookHash) {
-          router.push(`/player?id=${audiobookHash}`);
+          plainRouter.push(`/player?id=${audiobookHash}`);
           return;
         }
         if (droppedAudiobooks) {
@@ -710,11 +711,11 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
           });
         }
         if (readerIds.length > 0) {
-          navigateToReader(router, readerIds);
+          navigateToReader(plainRouter, readerIds);
         }
       }
     }
-  }, [pendingNavigationBookIds, appService, router, libraryBooks]);
+  }, [pendingNavigationBookIds, plainRouter, libraryBooks, _]);
 
   useEffect(() => {
     if (isInitiating.current) return;
@@ -730,7 +731,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
           saveSettings(envConfig, settings);
         }
       } else if (settings.keepLogin) {
-        router.push('/auth');
+        plainRouter.push('/auth');
       }
     };
 
