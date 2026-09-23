@@ -212,7 +212,7 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey, showSetup = true }
     <section className='border-base-300 border-b p-3'>
       <div className='mb-2 flex items-center gap-2'>
         <NotebookAssistantIcon className='shrink-0' aria-hidden='true' />
-        <h2 className='text-sm font-semibold'>{_('Summarize for Me')}</h2>
+        <h2 className='text-sm font-semibold'>{_('Notebook Assistant')}</h2>
       </div>
       <div className='mb-2 grid grid-cols-2 gap-2'>
         <select
