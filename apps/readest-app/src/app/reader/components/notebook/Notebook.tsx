@@ -39,10 +39,11 @@ import SearchBar from './SearchBar';
 import NotebookTabNavigation from './NotebookTabNavigation';
 import EmptyState from '../EmptyState';
 import BookLearningGuidePanel from '@/components/learning-guide/BookLearningGuidePanel';
-import { NotebookAssistantIcon } from './AssistantFeatureIcons';
+import { AskMeOneIcon, LearningGuideIcon, NotebookAssistantIcon } from './AssistantFeatureIcons';
 
 const MIN_NOTEBOOK_WIDTH = 0.15;
 const MAX_NOTEBOOK_WIDTH = 0.45;
+type ReadingAssistantSection = 'guide' | 'assistant' | 'question';
 
 const Notebook: React.FC = ({}) => {
   const _ = useTranslation();
@@ -64,6 +65,8 @@ const Notebook: React.FC = ({}) => {
   const [searchResults, setSearchResults] = useState<BookNote[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(() => new Set());
+  const [readingAssistantSection, setReadingAssistantSection] =
+    useState<ReadingAssistantSection>('guide');
   const isMobile = window.innerWidth < 640;
   const [isFullHeightInMobile, setIsFullHeightInMobile] = useState(isMobile);
 
@@ -620,34 +623,71 @@ const Notebook: React.FC = ({}) => {
           )}
         </div>
         {isReadingAssistantTab ? (
-          <div className='min-h-0 flex-1 overflow-y-auto'>
-            <section className='border-base-300 border-b p-3'>
-              <BookLearningGuidePanel
-                compact
-                bookKey={sideBarBookKey}
-                book={bookData.book}
-                bookDoc={bookData.bookDoc}
-                showSetup={false}
-              />
-            </section>
-            <NotebookAssistantActions bookKey={sideBarBookKey} />
-            {readingAssistantCards.length > 0 && (
-              <section className='border-base-300 border-b px-3 py-2'>
-                <div dir='ltr'>
-                  <p className='content font-size-base'>{_('Assistant Cards')}</p>
-                </div>
-                <ul>{readingAssistantCards.map(renderNotebookCard)}</ul>
-              </section>
-            )}
-            <NotebookReview bookKey={sideBarBookKey} showSetup={false} />
-            {quizCards.length > 0 && (
-              <section className='border-base-300 border-b px-3 py-2'>
-                <div dir='ltr'>
-                  <p className='content font-size-base'>{_('Saved Quizzes')}</p>
-                </div>
-                <ul>{quizCards.map(renderNotebookCard)}</ul>
-              </section>
-            )}
+          <div className='flex min-h-0 flex-1 flex-col'>
+            <div
+              className='border-base-300/60 flex gap-1 overflow-x-auto border-b px-3 py-2'
+              role='tablist'
+              aria-label={_('Reading Assistant')}
+            >
+              {(
+                [
+                  { id: 'guide', label: _('Learning Guide'), Icon: LearningGuideIcon },
+                  { id: 'assistant', label: _('Notebook Assistant'), Icon: NotebookAssistantIcon },
+                  { id: 'question', label: _('Ask Me One'), Icon: AskMeOneIcon },
+                ] as const
+              ).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type='button'
+                  role='tab'
+                  aria-selected={readingAssistantSection === id}
+                  onClick={() => setReadingAssistantSection(id)}
+                  className={clsx(
+                    'flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-medium whitespace-nowrap transition-colors',
+                    readingAssistantSection === id
+                      ? 'bg-base-300 text-base-content'
+                      : 'text-base-content/60 hover:bg-base-300/45 hover:text-base-content',
+                  )}
+                >
+                  <Icon className='shrink-0' aria-hidden='true' />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+            <div className='min-h-0 flex-1 overflow-y-auto' role='tabpanel'>
+              {readingAssistantSection === 'guide' && (
+                <section className='p-3'>
+                  <BookLearningGuidePanel
+                    compact
+                    bookKey={sideBarBookKey}
+                    book={bookData.book}
+                    bookDoc={bookData.bookDoc}
+                  />
+                </section>
+              )}
+              {readingAssistantSection === 'assistant' && (
+                <>
+                  <NotebookAssistantActions bookKey={sideBarBookKey} />
+                  {readingAssistantCards.length > 0 && (
+                    <section className='px-3 py-2'>
+                      <p className='content font-size-base'>{_('Assistant Cards')}</p>
+                      <ul>{readingAssistantCards.map(renderNotebookCard)}</ul>
+                    </section>
+                  )}
+                </>
+              )}
+              {readingAssistantSection === 'question' && (
+                <>
+                  <NotebookReview bookKey={sideBarBookKey} />
+                  {quizCards.length > 0 && (
+                    <section className='px-3 py-2'>
+                      <p className='content font-size-base'>{_('Saved Quizzes')}</p>
+                      <ul>{quizCards.map(renderNotebookCard)}</ul>
+                    </section>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         ) : isNotesTabEmpty ? (
           <div className='flex flex-grow items-center justify-center overflow-y-auto px-3'>
