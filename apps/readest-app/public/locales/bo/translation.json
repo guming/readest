@@ -2488,5 +2488,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen ཀྱིས་ཁྱེད་ཀྱི་ OneDrive ནང་རང་ཉིད་ཀྱིས་བཟོས་པའི་ཡིག་ཆ་ཁོ་ནར་ལྟ་སྤྱོད་བྱེད།",
   ". Make OneDrive the active cloud provider.": "། OneDrive དེ་སྤྱོད་བཞིན་པའི་སྤྲིན་ཞབས་ཞུ་མཁོ་སྤྲོད་པར་སྒྲིག་པ།",
   "Sentence Pause": "ཚིག་གྲུབ་བར་གསེང་",
-  "Paragraph Gap": "དོན་ཚན་བར་གསེང་"
+  "Paragraph Gap": "དོན་ཚན་བར་གསེང་",
+  "Dialogue Highlighting": "གཏམ་གླེང་གསལ་བཀྲོལ།",
+  "Background": "གནས་སྟངས།",
+  "Follows the theme color": "བརྗོད་བྱའི་ཚོན་མདོག་ལ་རྗེས་སུ་འབྲང་།",
+  "Background Style": "གནས་སྟངས་ཀྱི་རྣམ་པ།"
 }

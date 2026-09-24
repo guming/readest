@@ -2608,5 +2608,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen ניגש רק לקבצים שהוא יוצר ב-OneDrive שלך.",
   ". Make OneDrive the active cloud provider.": ". הפוך את OneDrive לספק הענן הפעיל.",
   "Sentence Pause": "השהיה בין משפטים",
-  "Paragraph Gap": "הפסקה בין פסקאות"
+  "Paragraph Gap": "הפסקה בין פסקאות",
+  "Dialogue Highlighting": "הדגשת דיאלוג",
+  "Background": "רקע",
+  "Follows the theme color": "עוקב אחר צבע ערכת הנושא",
+  "Background Style": "סגנון רקע"
 }

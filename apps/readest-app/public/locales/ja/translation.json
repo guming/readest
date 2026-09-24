@@ -2488,5 +2488,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen がアクセスするのは、OneDrive 内に自身が作成したファイルのみです。",
   ". Make OneDrive the active cloud provider.": "。OneDrive を使用するクラウドプロバイダーに設定します。",
   "Sentence Pause": "文間のポーズ",
-  "Paragraph Gap": "段落間のポーズ"
+  "Paragraph Gap": "段落間のポーズ",
+  "Dialogue Highlighting": "対話ハイライト",
+  "Background": "背景",
+  "Follows the theme color": "テーマカラーに従う",
+  "Background Style": "背景スタイル"
 }

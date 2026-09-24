@@ -2548,5 +2548,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen yalnızca OneDrive'ınızda kendi oluşturduğu dosyalara erişir.",
   ". Make OneDrive the active cloud provider.": ". OneDrive'ı etkin bulut sağlayıcısı yapın.",
   "Sentence Pause": "Cümle Arası Duraklama",
-  "Paragraph Gap": "Paragraf arası duraklama"
+  "Paragraph Gap": "Paragraf arası duraklama",
+  "Dialogue Highlighting": "Diyalog Vurgulama",
+  "Background": "Arka Plan",
+  "Follows the theme color": "Tema rengini kullanır",
+  "Background Style": "Arka Plan Stili"
 }

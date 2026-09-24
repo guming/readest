@@ -2668,5 +2668,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen має доступ лише до файлів, які сам створює у вашому OneDrive.",
   ". Make OneDrive the active cloud provider.": ". Зробити OneDrive активним хмарним провайдером.",
   "Sentence Pause": "Пауза між реченнями",
-  "Paragraph Gap": "Пауза між абзацами"
+  "Paragraph Gap": "Пауза між абзацами",
+  "Dialogue Highlighting": "Підсвічування діалогів",
+  "Background": "Фон",
+  "Follows the theme color": "Використовує колір теми",
+  "Background Style": "Стиль фону"
 }

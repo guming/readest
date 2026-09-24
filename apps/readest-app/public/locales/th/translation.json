@@ -2488,5 +2488,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen จะเข้าถึงเฉพาะไฟล์ที่สร้างขึ้นเองใน OneDrive ของคุณเท่านั้น",
   ". Make OneDrive the active cloud provider.": ". ตั้งให้ OneDrive เป็นผู้ให้บริการคลาวด์ที่ใช้งานอยู่",
   "Sentence Pause": "หยุดระหว่างประโยค",
-  "Paragraph Gap": "หยุดชั่วคราวระหว่างย่อหน้า"
+  "Paragraph Gap": "หยุดชั่วคราวระหว่างย่อหน้า",
+  "Dialogue Highlighting": "ไฮไลต์บทสนทนา",
+  "Background": "พื้นหลัง",
+  "Follows the theme color": "ตามสีธีม",
+  "Background Style": "รูปแบบพื้นหลัง"
 }

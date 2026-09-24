@@ -2608,5 +2608,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen accesează doar fișierele pe care le creează în OneDrive-ul tău.",
   ". Make OneDrive the active cloud provider.": ". Setează OneDrive ca furnizor de cloud activ.",
   "Sentence Pause": "Pauză între propoziții",
-  "Paragraph Gap": "Pauză între paragrafe"
+  "Paragraph Gap": "Pauză între paragrafe",
+  "Dialogue Highlighting": "Evidențierea dialogurilor",
+  "Background": "Fundal",
+  "Follows the theme color": "Urmează culoarea temei",
+  "Background Style": "Stil fundal"
 }

@@ -2488,5 +2488,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen는 OneDrive에서 직접 만든 파일에만 접근합니다.",
   ". Make OneDrive the active cloud provider.": ". OneDrive를 사용할 클라우드 제공업체로 설정합니다.",
   "Sentence Pause": "문장 사이 일시정지",
-  "Paragraph Gap": "문단 간 정지"
+  "Paragraph Gap": "문단 간 정지",
+  "Dialogue Highlighting": "대화 하이라이팅",
+  "Background": "배경",
+  "Follows the theme color": "테마 색상을 따름",
+  "Background Style": "배경 스타일"
 }

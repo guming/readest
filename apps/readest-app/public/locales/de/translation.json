@@ -2548,5 +2548,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen greift nur auf die Dateien zu, die es in Ihrem OneDrive erstellt.",
   ". Make OneDrive the active cloud provider.": ". OneDrive als aktiven Cloud-Anbieter festlegen.",
   "Sentence Pause": "Satzpause",
-  "Paragraph Gap": "Absatzpause"
+  "Paragraph Gap": "Absatzpause",
+  "Dialogue Highlighting": "Dialog-Hervorhebung",
+  "Background": "Hintergrund",
+  "Follows the theme color": "Folgt der Themenfarbe",
+  "Background Style": "Hintergrundstil"
 }

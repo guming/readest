@@ -298,7 +298,7 @@
   "{{engine}}: {{count}} voices_other": "{{engine}}: {{count}} 种语音",
   "Something went wrong. Don't worry, our team has been notified and we're working on a fix.": "出了点问题。请不要担心，我们的团队已经收到通知并正在修复中。",
   "Error Details:": "错误详情：",
-  "Try Again": "重试",
+  "Try Again": "再试一次",
   "Need help?": "需要帮助吗？",
   "Contact Support": "联系客服",
   "Code Highlighting": "代码高亮",
@@ -991,7 +991,6 @@
   "I Missed It": "我没答对",
   "Partly": "部分答对",
   "Not quite": "不太准确",
-  "Try Again": "再试一次",
   "Reference Idea": "参考思路",
   "Missed Question": "错题",
   "Was this helpful?": "这有帮助吗？",
@@ -2301,7 +2300,6 @@
   "Saving…": "正在保存…",
   "Couldn't save": "无法保存",
   "Waiting for a valid book position": "正在等待有效的阅读位置",
-  "Saved": "已保存",
   "Unsaved Notebook changes conflict with the latest saved version.": "未保存的笔记本更改与最新保存的版本存在冲突。",
   "Use latest saved": "使用最新保存的版本",
   "Recover draft": "恢复草稿",
@@ -2635,5 +2633,9 @@
   "Sync your library, reading progress, and highlights with Lumen Cloud.": "将您的书库、阅读进度和高亮与 Lumen 云端同步。",
   "Use Lumen Cloud": "使用 Lumen 云端",
   "Another device is still syncing this library via Lumen Cloud": "另一台设备仍在通过 Lumen 云端同步此书库",
-  "Lumen only accesses the files it creates in your OneDrive.": "Lumen 只会访问它在您的 OneDrive 中创建的文件。"
+  "Lumen only accesses the files it creates in your OneDrive.": "Lumen 只会访问它在您的 OneDrive 中创建的文件。",
+  "Dialogue Highlighting": "对话高亮",
+  "Background": "背景",
+  "Follows the theme color": "跟随主题颜色",
+  "Background Style": "背景样式"
 }

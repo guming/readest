@@ -2788,5 +2788,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "لا يصل Lumen إلا إلى الملفات التي ينشئها في OneDrive الخاص بك.",
   ". Make OneDrive the active cloud provider.": ". اجعل OneDrive مزود السحابة النشط.",
   "Sentence Pause": "وقفة بين الجمل",
-  "Paragraph Gap": "وقفة بين الفقرات"
+  "Paragraph Gap": "وقفة بين الفقرات",
+  "Dialogue Highlighting": "تمييز الحوار",
+  "Background": "الخلفية",
+  "Follows the theme color": "يتبع لون السمة",
+  "Background Style": "نمط الخلفية"
 }

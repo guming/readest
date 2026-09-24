@@ -2548,5 +2548,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen ප්‍රවේශ වන්නේ ඔබේ OneDrive හි එය සාදන ගොනුවලට පමණි.",
   ". Make OneDrive the active cloud provider.": ". OneDrive සක්‍රිය cloud සපයන්නා ලෙස සකසන්න.",
   "Sentence Pause": "වාක්‍ය අතර විරාමය",
-  "Paragraph Gap": "ඡේද අතර විරාමය"
+  "Paragraph Gap": "ඡේද අතර විරාමය",
+  "Dialogue Highlighting": "දෙබස් ඉස්මතු කිරීම",
+  "Background": "පසුබිම",
+  "Follows the theme color": "තේමා වර්ණය අනුගමනය කරයි",
+  "Background Style": "පසුබිම් විලාසය"
 }

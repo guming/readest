@@ -2490,5 +2490,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen 只會存取它在您的 OneDrive 中建立的檔案。",
   ". Make OneDrive the active cloud provider.": "。將 OneDrive 設為目前使用的雲端服務供應商。",
   "Sentence Pause": "句間停頓",
-  "Paragraph Gap": "段落間隔"
+  "Paragraph Gap": "段落間隔",
+  "Dialogue Highlighting": "對話高亮",
+  "Background": "背景",
+  "Follows the theme color": "跟隨主題顏色",
+  "Background Style": "背景樣式"
 }

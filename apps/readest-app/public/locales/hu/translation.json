@@ -2548,5 +2548,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "A Lumen csak azokhoz a fájlokhoz fér hozzá, amelyeket ő hozott létre a OneDrive-jában.",
   ". Make OneDrive the active cloud provider.": ". Tegye a OneDrive-ot az aktív felhőszolgáltatóvá.",
   "Sentence Pause": "Mondatszünet",
-  "Paragraph Gap": "Bekezdésszünet"
+  "Paragraph Gap": "Bekezdésszünet",
+  "Dialogue Highlighting": "Párbeszédkiemelés",
+  "Background": "Háttér",
+  "Follows the theme color": "Követi a téma színét",
+  "Background Style": "Háttérstílus"
 }

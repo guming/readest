@@ -2488,5 +2488,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen chỉ truy cập các tệp do chính nó tạo trong OneDrive của bạn.",
   ". Make OneDrive the active cloud provider.": ". Đặt OneDrive làm nhà cung cấp đám mây đang hoạt động.",
   "Sentence Pause": "Khoảng dừng giữa các câu",
-  "Paragraph Gap": "Khoảng dừng giữa đoạn văn"
+  "Paragraph Gap": "Khoảng dừng giữa đoạn văn",
+  "Dialogue Highlighting": "Đánh dấu hội thoại",
+  "Background": "Nền",
+  "Follows the theme color": "Theo màu chủ đề",
+  "Background Style": "Kiểu nền"
 }

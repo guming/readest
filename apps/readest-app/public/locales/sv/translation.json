@@ -2548,5 +2548,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen kommer bara åt de filer som appen skapar i din OneDrive.",
   ". Make OneDrive the active cloud provider.": ". Gör OneDrive till aktiv molnleverantör.",
   "Sentence Pause": "Meningspaus",
-  "Paragraph Gap": "Styckepaus"
+  "Paragraph Gap": "Styckepaus",
+  "Dialogue Highlighting": "Dialogmarkering",
+  "Background": "Bakgrund",
+  "Follows the theme color": "Följer temafärgen",
+  "Background Style": "Bakgrundsstil"
 }

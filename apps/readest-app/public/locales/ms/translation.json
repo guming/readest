@@ -2488,5 +2488,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen hanya mengakses fail yang diciptanya dalam OneDrive anda.",
   ". Make OneDrive the active cloud provider.": ". Jadikan OneDrive sebagai penyedia awan yang aktif.",
   "Sentence Pause": "Jeda Antara Ayat",
-  "Paragraph Gap": "Jeda antara perenggan"
+  "Paragraph Gap": "Jeda antara perenggan",
+  "Dialogue Highlighting": "Penonjolan Dialog",
+  "Background": "Latar Belakang",
+  "Follows the theme color": "Mengikut warna tema",
+  "Background Style": "Gaya Latar Belakang"
 }

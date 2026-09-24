@@ -2548,5 +2548,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen فقط به فایل‌هایی دسترسی دارد که خودش در OneDrive شما ایجاد می‌کند.",
   ". Make OneDrive the active cloud provider.": ". OneDrive را ارائه‌دهنده فعال ابری قرار دهید.",
   "Sentence Pause": "مکث بین جملات",
-  "Paragraph Gap": "وقفه بین پاراگراف‌ها"
+  "Paragraph Gap": "وقفه بین پاراگراف‌ها",
+  "Dialogue Highlighting": "هایلایت دیالوگ",
+  "Background": "پس‌زمینه",
+  "Follows the theme color": "از رنگ تم پیروی می‌کند",
+  "Background Style": "سبک پس‌زمینه"
 }

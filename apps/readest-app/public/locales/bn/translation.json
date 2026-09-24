@@ -2548,5 +2548,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen শুধুমাত্র আপনার OneDrive-এ নিজে তৈরি করা ফাইলগুলিতেই প্রবেশ করে।",
   ". Make OneDrive the active cloud provider.": "। OneDrive-কে সক্রিয় ক্লাউড প্রদানকারী করুন।",
   "Sentence Pause": "বাক্যের মধ্যে বিরতি",
-  "Paragraph Gap": "অনুচ্ছেদের মধ্যে বিরতি"
+  "Paragraph Gap": "অনুচ্ছেদের মধ্যে বিরতি",
+  "Dialogue Highlighting": "সংলাপ হাইলাইটিং",
+  "Background": "ব্যাকগ্রাউন্ড",
+  "Follows the theme color": "থিম রঙ অনুসরণ করে",
+  "Background Style": "ব্যাকগ্রাউন্ড শৈলী"
 }

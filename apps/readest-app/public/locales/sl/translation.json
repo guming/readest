@@ -2668,5 +2668,9 @@
   "Lumen only accesses the files it creates in your OneDrive.": "Lumen dostopa le do datotek, ki jih sam ustvari v vašem OneDrive.",
   ". Make OneDrive the active cloud provider.": ". Nastavite OneDrive kot aktivnega ponudnika oblaka.",
   "Sentence Pause": "Premor med stavki",
-  "Paragraph Gap": "Premor med odstavki"
+  "Paragraph Gap": "Premor med odstavki",
+  "Dialogue Highlighting": "Označevanje dialogov",
+  "Background": "Ozadje",
+  "Follows the theme color": "Sledi barvi teme",
+  "Background Style": "Slog ozadja"
 }
