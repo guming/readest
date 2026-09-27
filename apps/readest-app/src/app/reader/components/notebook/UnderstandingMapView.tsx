@@ -7,6 +7,7 @@ import {
   type UnderstandingMap,
 } from '@/services/notebook-assistant/understandingMap';
 import { useReaderStore } from '@/store/readerStore';
+import { useThemeStore } from '@/store/themeStore';
 import { writeTextToClipboard } from '@/utils/clipboard';
 import { eventDispatcher } from '@/utils/event';
 
@@ -22,6 +23,8 @@ export default function UnderstandingMapView({
   const [svg, setSvg] = useState('');
   const [selectedId, setSelectedId] = useState(map.nodes[0]?.id);
   const { getView } = useReaderStore();
+  const isEink = !!useReaderStore((state) => state.getViewSettings(bookKey)?.isEink);
+  const { palette } = useThemeStore((state) => state.themeCode);
   const diagram = toMermaidFlowchart(map, {
     supports: _('supports'),
     challenges: _('challenges'),
@@ -35,7 +38,22 @@ export default function UnderstandingMapView({
     let active = true;
     import('mermaid')
       .then(async ({ default: mermaid }) => {
-        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' });
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: 'strict',
+          theme: 'base',
+          themeVariables: {
+            background: palette['base-100'],
+            primaryColor: isEink ? palette['base-100'] : palette['base-200'],
+            primaryTextColor: palette['base-content'],
+            primaryBorderColor: isEink ? palette['base-content'] : palette.primary,
+            lineColor: isEink ? palette['base-content'] : palette.primary,
+            secondaryColor: palette['base-200'],
+            tertiaryColor: palette['base-100'],
+            edgeLabelBackground: palette['base-100'],
+            fontFamily: 'inherit',
+          },
+        });
         try {
           const rendered = await mermaid.render(`understandingmap${id}`, diagram);
           if (active) setSvg(rendered.svg);
@@ -49,7 +67,7 @@ export default function UnderstandingMapView({
     return () => {
       active = false;
     };
-  }, [diagram, id]);
+  }, [diagram, id, isEink, palette]);
 
   const navigate = (cfi?: string) => {
     if (!cfi) return;
