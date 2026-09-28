@@ -2492,5 +2492,7 @@
   "Dialogue Highlighting": "གཏམ་གླེང་གསལ་བཀྲོལ།",
   "Background": "གནས་སྟངས།",
   "Follows the theme color": "བརྗོད་བྱའི་ཚོན་མདོག་ལ་རྗེས་སུ་འབྲང་།",
-  "Background Style": "གནས་སྟངས་ཀྱི་རྣམ་པ།"
+  "Background Style": "གནས་སྟངས་ཀྱི་རྣམ་པ།",
+  "Rows": "ཐིག་ཕྲེང་",
+  "Open Readest to show this bookshelf": "དཔེ་ཁྲི་འདི་སྟོན་པར་ Readest ཁ་ཕྱེ།"
 }
