@@ -3,7 +3,6 @@ import { SettingsPanelType } from '@/components/settings/SettingsDialog';
 import { RiFontSize, RiDashboardLine, RiTranslate, RiShareLine } from 'react-icons/ri';
 import { VscSymbolColor } from 'react-icons/vsc';
 import { LiaHandPointerSolid } from 'react-icons/lia';
-import { IoAccessibilityOutline } from 'react-icons/io5';
 import { PiSparkle, PiSpeakerHigh, PiSun, PiMoon } from 'react-icons/pi';
 import { TbSunMoon } from 'react-icons/tb';
 import { MdRefresh } from 'react-icons/md';
@@ -157,7 +156,6 @@ const panelIcons: Record<SettingsPanelType, IconType> = {
   NotebookAssistant: PiSparkle,
   Integrations: RiShareLine,
   AgentAccess: RiShareLine,
-  Custom: IoAccessibilityOutline,
 };
 
 // font panel items
@@ -546,22 +544,6 @@ const languagePanelItems = [
   },
 ];
 
-// custom panel items
-const customPanelItems = [
-  {
-    id: 'settings.custom.contentCss',
-    labelKey: _('Custom Content CSS'),
-    keywords: ['custom', 'css', 'content', 'style', 'book'],
-    section: 'Custom CSS',
-  },
-  {
-    id: 'settings.custom.readerUiCss',
-    labelKey: _('Custom Reader UI CSS'),
-    keywords: ['custom', 'css', 'reader', 'ui', 'interface'],
-    section: 'Custom CSS',
-  },
-];
-
 const actionItems = [
   {
     id: 'action.toggleTheme',
@@ -665,11 +647,6 @@ export const buildCommandRegistry = (options: CommandRegistryOptions): CommandIt
   // add language panel items
   for (const def of languagePanelItems) {
     items.push(createSettingsItem(def, 'Language'));
-  }
-
-  // add custom panel items
-  for (const def of customPanelItems) {
-    items.push(createSettingsItem(def, 'Custom'));
   }
 
   // add action items

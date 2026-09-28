@@ -16,7 +16,6 @@ import {
   PiSpeakerHigh,
 } from 'react-icons/pi';
 import { LiaHandPointerSolid } from 'react-icons/lia';
-import { IoAccessibilityOutline } from 'react-icons/io5';
 import {
   MdArrowBackIosNew,
   MdArrowForwardIos,
@@ -36,7 +35,6 @@ import Dialog from '@/components/Dialog';
 import DialogMenu from './DialogMenu';
 import ControlPanel from './ControlPanel';
 import LangPanel from './LangPanel';
-import MiscPanel from './MiscPanel';
 import AIPanel from './AIPanel';
 import NotebookAssistantPanel from './NotebookAssistantPanel';
 import TTSPanel from './TTSPanel';
@@ -52,8 +50,7 @@ export type SettingsPanelType =
   | 'AI'
   | 'NotebookAssistant'
   | 'Integrations'
-  | 'AgentAccess'
-  | 'Custom';
+  | 'AgentAccess';
 export type SettingsPanelPanelProp = {
   bookKey: string;
   onRegisterReset: (resetFn: () => void) => void;
@@ -141,11 +138,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
       icon: PiSpeakerHigh,
       label: _('TTS'),
     },
-    {
-      tab: 'Custom',
-      icon: IoAccessibilityOutline,
-      label: _('Custom'),
-    },
   ] as TabConfig[];
 
   const [activePanel, setActivePanel] = useState<SettingsPanelType>(() => {
@@ -201,7 +193,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     NotebookAssistant: null,
     Integrations: null,
     AgentAccess: null,
-    Custom: null,
   });
 
   const registerResetFunction = (panel: SettingsPanelType, resetFn: () => void) => {
@@ -237,7 +228,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
         notebookassistant: 'NotebookAssistant',
         integrations: 'Integrations',
         agentaccess: 'AgentAccess',
-        custom: 'Custom',
       };
       const panelKey = parts[1]?.toLowerCase();
       const targetPanel = panelMap[panelKey || ''];
@@ -499,12 +489,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
         {activePanel === 'NotebookAssistant' && <NotebookAssistantPanel />}
         {activePanel === 'Integrations' && <IntegrationsPanel />}
         {activePanel === 'AgentAccess' && <AgentAccessPanel />}
-        {activePanel === 'Custom' && (
-          <MiscPanel
-            bookKey={bookKey}
-            onRegisterReset={(fn) => registerResetFunction('Custom', fn)}
-          />
-        )}
       </div>
     </Dialog>
   );
