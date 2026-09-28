@@ -14,9 +14,6 @@ vi.mock('react-icons/vsc', () => ({
 vi.mock('react-icons/lia', () => ({
   LiaHandPointerSolid: () => null,
 }));
-vi.mock('react-icons/io5', () => ({
-  IoAccessibilityOutline: () => null,
-}));
 vi.mock('react-icons/pi', () => ({
   PiSparkle: () => null,
   PiSpeakerHigh: () => null,
@@ -86,7 +83,14 @@ describe('buildCommandRegistry', () => {
     expect(panels.has('Theme')).toBe(true);
     expect(panels.has('Control')).toBe(true);
     expect(panels.has('Language')).toBe(true);
-    expect(panels.has('Custom')).toBe(true);
+  });
+
+  it('should not expose custom CSS settings', () => {
+    const items = buildCommandRegistry(createMockOptions());
+    const itemIds = items.map((item) => item.id);
+
+    expect(itemIds).not.toContain('settings.custom.contentCss');
+    expect(itemIds).not.toContain('settings.custom.readerUiCss');
   });
 
   it('should include action items', () => {
