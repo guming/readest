@@ -2462,5 +2462,10 @@
   "Follows the theme color": "მიჰყვება თემის ფერს",
   "Background Style": "ფონის სტილი",
   "Rows": "რიგები",
-  "Open Readest to show this bookshelf": "ამ თაროს საჩვენებლად გახსენით Readest"
+  "Open Readest to show this bookshelf": "ამ თაროს საჩვენებლად გახსენით Readest",
+  "Font Category": "შრიფტის კატეგორია",
+  "Preferred Font": "სასურველი შრიფტი",
+  "Custom fonts can be selected from the font lists in the Font panel": "მორგებული შრიფტების არჩევა შესაძლებელია შრიფტის პანელის შრიფტების სიებიდან",
+  "Turn on Books in Manage Sync to upload this book": "ამ წიგნის ასატვირთად ჩართეთ „წიგნები“ „სინქრონიზაციის მართვაში“",
+  "Shelf name": "თაროს სახელი"
 }

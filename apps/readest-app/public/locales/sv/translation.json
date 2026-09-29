@@ -2554,5 +2554,10 @@
   "Follows the theme color": "Följer temafärgen",
   "Background Style": "Bakgrundsstil",
   "Rows": "Rader",
-  "Open Readest to show this bookshelf": "Öppna Readest för att visa den här bokhyllan"
+  "Open Readest to show this bookshelf": "Öppna Readest för att visa den här bokhyllan",
+  "Font Category": "Typsnittskategori",
+  "Preferred Font": "Önskat typsnitt",
+  "Custom fonts can be selected from the font lists in the Font panel": "Anpassade typsnitt kan väljas från typsnittslistorna i panelen Typsnitt",
+  "Turn on Books in Manage Sync to upload this book": "Aktivera ”Böcker” i ”Hantera synkronisering” för att ladda upp den här boken",
+  "Shelf name": "Hyllans namn"
 }

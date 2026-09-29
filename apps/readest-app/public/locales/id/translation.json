@@ -2494,5 +2494,10 @@
   "Follows the theme color": "Mengikuti warna tema",
   "Background Style": "Gaya Latar Belakang",
   "Rows": "Baris",
-  "Open Readest to show this bookshelf": "Buka Readest untuk menampilkan rak buku ini"
+  "Open Readest to show this bookshelf": "Buka Readest untuk menampilkan rak buku ini",
+  "Font Category": "Kategori Font",
+  "Preferred Font": "Font Pilihan",
+  "Custom fonts can be selected from the font lists in the Font panel": "Font kustom dapat dipilih dari daftar font di panel Font",
+  "Turn on Books in Manage Sync to upload this book": "Aktifkan \"Buku\" di \"Kelola sinkronisasi\" untuk mengunggah buku ini",
+  "Shelf name": "Nama rak"
 }

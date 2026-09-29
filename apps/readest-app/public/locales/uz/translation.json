@@ -2554,5 +2554,10 @@
   "Follows the theme color": "Mavzu rangidan foydalanadi",
   "Background Style": "Fon uslubi",
   "Rows": "Qatorlar",
-  "Open Readest to show this bookshelf": "Ushbu javonni ko‘rsatish uchun Readest’ni oching"
+  "Open Readest to show this bookshelf": "Ushbu javonni ko‘rsatish uchun Readest’ni oching",
+  "Font Category": "Shrift toifasi",
+  "Preferred Font": "Afzal koʻrilgan shrift",
+  "Custom fonts can be selected from the font lists in the Font panel": "Maxsus shriftlarni Shrift panelidagi shrift roʻyxatlaridan tanlash mumkin",
+  "Turn on Books in Manage Sync to upload this book": "Ushbu kitobni yuklash uchun \"Sinxronlashni boshqarish\" bo‘limida \"Kitoblar\"ni yoqing",
+  "Shelf name": "Javon nomi"
 }

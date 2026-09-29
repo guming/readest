@@ -2554,5 +2554,10 @@
   "Follows the theme color": "Tema rengini kullanır",
   "Background Style": "Arka Plan Stili",
   "Rows": "Satırlar",
-  "Open Readest to show this bookshelf": "Bu rafı göstermek için Readest'i açın"
+  "Open Readest to show this bookshelf": "Bu rafı göstermek için Readest'i açın",
+  "Font Category": "Yazı Tipi Kategorisi",
+  "Preferred Font": "Tercih Edilen Yazı Tipi",
+  "Custom fonts can be selected from the font lists in the Font panel": "Özel yazı tipleri Yazı Tipi panelindeki yazı tipi listelerinden seçilebilir",
+  "Turn on Books in Manage Sync to upload this book": "Bu kitabı yüklemek için \"Eşitlemeyi yönet\" bölümünde \"Kitaplar\"ı açın",
+  "Shelf name": "Kitaplık adı"
 }

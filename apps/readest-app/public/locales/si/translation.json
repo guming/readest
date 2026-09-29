@@ -2554,5 +2554,10 @@
   "Follows the theme color": "තේමා වර්ණය අනුගමනය කරයි",
   "Background Style": "පසුබිම් විලාසය",
   "Rows": "පේළි",
-  "Open Readest to show this bookshelf": "මෙම පොත් රාක්කය පෙන්වීමට Readest විවෘත කරන්න"
+  "Open Readest to show this bookshelf": "මෙම පොත් රාක්කය පෙන්වීමට Readest විවෘත කරන්න",
+  "Custom fonts can be selected from the font lists in the Font panel": "අභිරුචි අකුරු, අකුරු පැනලයේ අකුරු ලැයිස්තුවෙන් තෝරා ගත හැක",
+  "Font Category": "අකුරු කාණ්ඩය",
+  "Preferred Font": "කැමති අකුරු",
+  "Turn on Books in Manage Sync to upload this book": "මෙම පොත උඩුගත කිරීමට \"සමමුහූර්තය කළමනාකරණය\" තුළ \"පොත්\" සක්‍රිය කරන්න",
+  "Shelf name": "රාක්කයේ නම"
 }

@@ -2794,5 +2794,10 @@
   "Follows the theme color": "يتبع لون السمة",
   "Background Style": "نمط الخلفية",
   "Rows": "الصفوف",
-  "Open Readest to show this bookshelf": "افتح Readest لعرض هذا الرف"
+  "Open Readest to show this bookshelf": "افتح Readest لعرض هذا الرف",
+  "Font Category": "فئة الخط",
+  "Preferred Font": "الخط المفضّل",
+  "Custom fonts can be selected from the font lists in the Font panel": "يمكن اختيار الخطوط المخصصة من قوائم الخطوط في لوحة الخط",
+  "Turn on Books in Manage Sync to upload this book": "فعّل «الكتب» في «إدارة المزامنة» لرفع هذا الكتاب",
+  "Shelf name": "اسم الرف"
 }

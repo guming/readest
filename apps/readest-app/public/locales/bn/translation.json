@@ -2554,5 +2554,10 @@
   "Follows the theme color": "থিম রঙ অনুসরণ করে",
   "Background Style": "ব্যাকগ্রাউন্ড শৈলী",
   "Rows": "সারি",
-  "Open Readest to show this bookshelf": "এই বুকশেলফ দেখাতে Readest খুলুন"
+  "Open Readest to show this bookshelf": "এই বুকশেলফ দেখাতে Readest খুলুন",
+  "Custom fonts can be selected from the font lists in the Font panel": "ফন্ট প্যানেলের ফন্ট তালিকা থেকে কাস্টম ফন্ট নির্বাচন করা যায়",
+  "Font Category": "ফন্ট বিভাগ",
+  "Preferred Font": "পছন্দের ফন্ট",
+  "Turn on Books in Manage Sync to upload this book": "এই বইটি আপলোড করতে \"সিঙ্ক ব্যবস্থাপনা\"-তে \"বই\" চালু করুন",
+  "Shelf name": "তাকের নাম"
 }

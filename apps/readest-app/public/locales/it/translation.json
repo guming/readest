@@ -2614,5 +2614,10 @@
   "Follows the theme color": "Segue il colore del tema",
   "Background Style": "Stile sfondo",
   "Rows": "Righe",
-  "Open Readest to show this bookshelf": "Apri Readest per mostrare questo scaffale"
+  "Open Readest to show this bookshelf": "Apri Readest per mostrare questo scaffale",
+  "Font Category": "Categoria font",
+  "Preferred Font": "Font preferito",
+  "Custom fonts can be selected from the font lists in the Font panel": "I font personalizzati possono essere selezionati dagli elenchi di font nel pannello Carattere",
+  "Turn on Books in Manage Sync to upload this book": "Attiva «Libri» in «Gestisci sincronizzazione» per caricare questo libro",
+  "Shelf name": "Nome dello scaffale"
 }

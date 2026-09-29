@@ -2554,5 +2554,10 @@
   "Follows the theme color": "Ακολουθεί το χρώμα του θέματος",
   "Background Style": "Στυλ φόντου",
   "Rows": "Γραμμές",
-  "Open Readest to show this bookshelf": "Ανοίξτε το Readest για να εμφανιστεί αυτό το ράφι"
+  "Open Readest to show this bookshelf": "Ανοίξτε το Readest για να εμφανιστεί αυτό το ράφι",
+  "Font Category": "Κατηγορία γραμματοσειράς",
+  "Preferred Font": "Προτιμώμενη γραμματοσειρά",
+  "Custom fonts can be selected from the font lists in the Font panel": "Οι προσαρμοσμένες γραμματοσειρές μπορούν να επιλεγούν από τις λίστες γραμματοσειρών στον πίνακα Γραμματοσειρά",
+  "Turn on Books in Manage Sync to upload this book": "Ενεργοποιήστε τα «Βιβλία» στη «Διαχείριση συγχρονισμού» για να ανεβάσετε αυτό το βιβλίο",
+  "Shelf name": "Όνομα ραφιού"
 }

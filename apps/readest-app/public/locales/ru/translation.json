@@ -2674,5 +2674,10 @@
   "Follows the theme color": "Следует цвету темы",
   "Background Style": "Стиль фона",
   "Rows": "Строки",
-  "Open Readest to show this bookshelf": "Откройте Readest, чтобы показать эту полку"
+  "Open Readest to show this bookshelf": "Откройте Readest, чтобы показать эту полку",
+  "Font Category": "Категория шрифта",
+  "Preferred Font": "Предпочитаемый шрифт",
+  "Custom fonts can be selected from the font lists in the Font panel": "Пользовательские шрифты можно выбрать в списках шрифтов на панели шрифтов",
+  "Turn on Books in Manage Sync to upload this book": "Включите «Книги» в разделе «Управление синхронизацией», чтобы загрузить эту книгу",
+  "Shelf name": "Название полки"
 }

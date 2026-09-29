@@ -2554,5 +2554,10 @@
   "Follows the theme color": "Volgt de themakleur",
   "Background Style": "Achtergrondstijl",
   "Rows": "Rijen",
-  "Open Readest to show this bookshelf": "Open Readest om deze boekenplank te tonen"
+  "Open Readest to show this bookshelf": "Open Readest om deze boekenplank te tonen",
+  "Font Category": "Lettertypecategorie",
+  "Preferred Font": "Voorkeurslettertype",
+  "Custom fonts can be selected from the font lists in the Font panel": "Aangepaste lettertypen kunnen worden geselecteerd uit de lettertypelijsten in het paneel Lettertype",
+  "Turn on Books in Manage Sync to upload this book": "Zet \"Boeken\" aan in \"Synchronisatie beheren\" om dit boek te uploaden",
+  "Shelf name": "Naam van boekenkast"
 }

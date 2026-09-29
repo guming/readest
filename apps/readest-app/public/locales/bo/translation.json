@@ -2494,5 +2494,10 @@
   "Follows the theme color": "བརྗོད་བྱའི་ཚོན་མདོག་ལ་རྗེས་སུ་འབྲང་།",
   "Background Style": "གནས་སྟངས་ཀྱི་རྣམ་པ།",
   "Rows": "ཐིག་ཕྲེང་",
-  "Open Readest to show this bookshelf": "དཔེ་ཁྲི་འདི་སྟོན་པར་ Readest ཁ་ཕྱེ།"
+  "Open Readest to show this bookshelf": "དཔེ་ཁྲི་འདི་སྟོན་པར་ Readest ཁ་ཕྱེ།",
+  "Font Category": "ཡིག་གཟུགས་ཀྱི་དབྱེ་བ།",
+  "Preferred Font": "འདེམས་ཐོག་ཀྱི་ཡིག་གཟུགས།",
+  "Custom fonts can be selected from the font lists in the Font panel": "ཡིག་གཟུགས་ཤོག་ལེབ་ནང་གི་ཡིག་གཟུགས་ཐོ་ཡིག་ནས་རང་བཞིན་ཡིག་གཟུགས་འདེམས་ཆོག",
+  "Turn on Books in Manage Sync to upload this book": "དཔེ་དེབ་འདི་ཡར་སྤྲོད་བྱེད་པར་\"མཉམ་འགྲོ་སྟངས་འཛིན།\"ནང་\"དཔེ་ཆ།\"ཁ་ཕྱེ་རོགས།",
+  "Shelf name": "དེབ་སྡེབས་ཀྱི་མིང་།"
 }

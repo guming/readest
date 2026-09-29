@@ -2614,5 +2614,10 @@
   "Follows the theme color": "עוקב אחר צבע ערכת הנושא",
   "Background Style": "סגנון רקע",
   "Rows": "שורות",
-  "Open Readest to show this bookshelf": "פתחו את Readest כדי להציג את המדף הזה"
+  "Open Readest to show this bookshelf": "פתחו את Readest כדי להציג את המדף הזה",
+  "Font Category": "קטגוריית גופן",
+  "Preferred Font": "גופן מועדף",
+  "Custom fonts can be selected from the font lists in the Font panel": "ניתן לבחור גופנים מותאמים אישית מתוך רשימות הגופנים בפאנל הגופן",
+  "Turn on Books in Manage Sync to upload this book": "הפעל את \"ספרים\" ב\"ניהול סנכרון\" כדי להעלות את הספר הזה",
+  "Shelf name": "שם המדף"
 }

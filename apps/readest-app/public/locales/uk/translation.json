@@ -2674,5 +2674,10 @@
   "Follows the theme color": "Використовує колір теми",
   "Background Style": "Стиль фону",
   "Rows": "Рядки",
-  "Open Readest to show this bookshelf": "Відкрийте Readest, щоб показати цю полицю"
+  "Open Readest to show this bookshelf": "Відкрийте Readest, щоб показати цю полицю",
+  "Font Category": "Категорія шрифту",
+  "Preferred Font": "Бажаний шрифт",
+  "Custom fonts can be selected from the font lists in the Font panel": "Користувацькі шрифти можна вибрати зі списків шрифтів на панелі шрифтів",
+  "Turn on Books in Manage Sync to upload this book": "Увімкніть «Книги» в розділі «Керування синхронізацією», щоб вивантажити цю книгу",
+  "Shelf name": "Назва полиці"
 }

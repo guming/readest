@@ -2674,5 +2674,10 @@
   "Follows the theme color": "Używa koloru motywu",
   "Background Style": "Styl tła",
   "Rows": "Wiersze",
-  "Open Readest to show this bookshelf": "Otwórz Readest, aby wyświetlić tę półkę"
+  "Open Readest to show this bookshelf": "Otwórz Readest, aby wyświetlić tę półkę",
+  "Font Category": "Kategoria czcionki",
+  "Preferred Font": "Preferowana czcionka",
+  "Custom fonts can be selected from the font lists in the Font panel": "Niestandardowe czcionki można wybrać z list czcionek w panelu Czcionka",
+  "Turn on Books in Manage Sync to upload this book": "Włącz „Książki” w „Zarządzaj synchronizacją”, aby przesłać tę książkę",
+  "Shelf name": "Nazwa półki"
 }

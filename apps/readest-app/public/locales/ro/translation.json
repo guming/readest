@@ -2614,5 +2614,10 @@
   "Follows the theme color": "Urmează culoarea temei",
   "Background Style": "Stil fundal",
   "Rows": "Rânduri",
-  "Open Readest to show this bookshelf": "Deschide Readest pentru a afișa acest raft"
+  "Open Readest to show this bookshelf": "Deschide Readest pentru a afișa acest raft",
+  "Font Category": "Categorie de font",
+  "Preferred Font": "Font preferat",
+  "Custom fonts can be selected from the font lists in the Font panel": "Fonturile personalizate pot fi selectate din listele de fonturi din panoul Font",
+  "Turn on Books in Manage Sync to upload this book": "Activează „Cărți” în „Gestionează sincronizarea” pentru a încărca această carte",
+  "Shelf name": "Numele raftului"
 }

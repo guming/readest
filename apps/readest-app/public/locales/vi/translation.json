@@ -2494,5 +2494,10 @@
   "Follows the theme color": "Theo màu chủ đề",
   "Background Style": "Kiểu nền",
   "Rows": "Hàng",
-  "Open Readest to show this bookshelf": "Mở Readest để hiển thị kệ sách này"
+  "Open Readest to show this bookshelf": "Mở Readest để hiển thị kệ sách này",
+  "Font Category": "Loại phông chữ",
+  "Preferred Font": "Phông chữ ưu tiên",
+  "Custom fonts can be selected from the font lists in the Font panel": "Phông chữ tùy chỉnh có thể được chọn từ danh sách phông chữ trong bảng Phông chữ",
+  "Turn on Books in Manage Sync to upload this book": "Bật \"Sách\" trong \"Quản lý đồng bộ\" để tải sách này lên",
+  "Shelf name": "Tên kệ sách"
 }
