@@ -2559,5 +2559,11 @@
   "Preferred Font": "Afzal koʻrilgan shrift",
   "Custom fonts can be selected from the font lists in the Font panel": "Maxsus shriftlarni Shrift panelidagi shrift roʻyxatlaridan tanlash mumkin",
   "Turn on Books in Manage Sync to upload this book": "Ushbu kitobni yuklash uchun \"Sinxronlashni boshqarish\" bo‘limida \"Kitoblar\"ni yoqing",
-  "Shelf name": "Javon nomi"
+  "Shelf name": "Javon nomi",
+  "Hide Bookshelf Buttons": "Kitob javoni tugmalarini yashirish",
+  "Previous and Next in the library": "Kutubxonada Oldingi va Keyingi",
+  "Reverse Mouse Wheel": "Sichqoncha g‘ildiragini teskari qilish",
+  "Scroll up for the next page": "Keyingi sahifa uchun yuqoriga aylantiring",
+  "Keep Text Selected After Lookup": "Qidiruvdan keyin matn belgilangan qolsin",
+  "Sentence around the highlight": "Ajratilgan matn atrofidagi gap"
 }

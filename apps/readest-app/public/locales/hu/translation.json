@@ -2559,5 +2559,11 @@
   "Preferred Font": "Előnyben részesített betűtípus",
   "Custom fonts can be selected from the font lists in the Font panel": "Az egyéni betűtípusok a Betűtípus panel betűtípuslistáiból választhatók ki",
   "Turn on Books in Manage Sync to upload this book": "A könyv feltöltéséhez kapcsold be a „Könyvek” lehetőséget a „Szinkronizálás kezelése” menüben",
-  "Shelf name": "Polc neve"
+  "Shelf name": "Polc neve",
+  "Hide Bookshelf Buttons": "Könyvespolc gombjainak elrejtése",
+  "Previous and Next in the library": "Előző és Következő a könyvtárban",
+  "Reverse Mouse Wheel": "Egérgörgő megfordítása",
+  "Scroll up for the next page": "Görgessen felfelé a következő oldalhoz",
+  "Keep Text Selected After Lookup": "Szöveg kijelölve marad keresés után",
+  "Sentence around the highlight": "A kiemelést tartalmazó mondat"
 }

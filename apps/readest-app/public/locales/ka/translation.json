@@ -2467,5 +2467,11 @@
   "Preferred Font": "სასურველი შრიფტი",
   "Custom fonts can be selected from the font lists in the Font panel": "მორგებული შრიფტების არჩევა შესაძლებელია შრიფტის პანელის შრიფტების სიებიდან",
   "Turn on Books in Manage Sync to upload this book": "ამ წიგნის ასატვირთად ჩართეთ „წიგნები“ „სინქრონიზაციის მართვაში“",
-  "Shelf name": "თაროს სახელი"
+  "Shelf name": "თაროს სახელი",
+  "Hide Bookshelf Buttons": "წიგნის თაროს ღილაკების დამალვა",
+  "Previous and Next in the library": "წინა და შემდეგი ბიბლიოთეკაში",
+  "Reverse Mouse Wheel": "მაუსის ბორბლის შებრუნება",
+  "Scroll up for the next page": "შემდეგი გვერდისთვის გადაახვიეთ ზემოთ",
+  "Keep Text Selected After Lookup": "ძიების შემდეგ ტექსტის მონიშვნის შენარჩუნება",
+  "Sentence around the highlight": "მონიშვნის გარშემო არსებული წინადადება"
 }

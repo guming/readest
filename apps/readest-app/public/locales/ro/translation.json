@@ -2619,5 +2619,11 @@
   "Preferred Font": "Font preferat",
   "Custom fonts can be selected from the font lists in the Font panel": "Fonturile personalizate pot fi selectate din listele de fonturi din panoul Font",
   "Turn on Books in Manage Sync to upload this book": "Activează „Cărți” în „Gestionează sincronizarea” pentru a încărca această carte",
-  "Shelf name": "Numele raftului"
+  "Shelf name": "Numele raftului",
+  "Hide Bookshelf Buttons": "Ascunde butoanele raftului",
+  "Previous and Next in the library": "Anterior și Următorul în bibliotecă",
+  "Reverse Mouse Wheel": "Inversează rotița mouse-ului",
+  "Scroll up for the next page": "Derulează în sus pentru pagina următoare",
+  "Keep Text Selected After Lookup": "Păstrează textul selectat după căutare",
+  "Sentence around the highlight": "Propoziția din jurul evidențierii"
 }

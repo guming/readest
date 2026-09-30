@@ -2559,5 +2559,11 @@
   "Font Category": "எழுத்துரு வகை",
   "Preferred Font": "விருப்பமான எழுத்துரு",
   "Turn on Books in Manage Sync to upload this book": "இந்தப் புத்தகத்தைப் பதிவேற்ற \"ஒத்திசைவை நிர்வகிக்க\" என்பதில் \"புத்தகங்கள்\" என்பதை இயக்கவும்",
-  "Shelf name": "அலமாரியின் பெயர்"
+  "Shelf name": "அலமாரியின் பெயர்",
+  "Hide Bookshelf Buttons": "புத்தக அலமாரி பொத்தான்களை மறை",
+  "Previous and Next in the library": "நூலகத்தில் முந்தையது மற்றும் அடுத்தது",
+  "Reverse Mouse Wheel": "மவுஸ் சக்கரத்தைத் தலைகீழாக்கு",
+  "Scroll up for the next page": "அடுத்த பக்கத்திற்கு மேலே உருட்டவும்",
+  "Keep Text Selected After Lookup": "தேடலுக்குப் பிறகு உரையைத் தேர்ந்தெடுத்தபடி வைத்திரு",
+  "Sentence around the highlight": "சிறப்பம்சத்தைச் சுற்றியுள்ள வாக்கியம்"
 }

@@ -2644,5 +2644,11 @@
   "Preferred Font": "首选字体",
   "Custom fonts can be selected from the font lists in the Font panel": "可以在字体面板的字体列表中选择自定义字体",
   "Turn on Books in Manage Sync to upload this book": "请在“管理同步”中开启“书籍”以上传此书",
-  "Shelf name": "书架名称"
+  "Shelf name": "书架名称",
+  "Hide Bookshelf Buttons": "隐藏书架按钮",
+  "Previous and Next in the library": "书库中的上一页和下一页",
+  "Reverse Mouse Wheel": "反转鼠标滚轮",
+  "Scroll up for the next page": "向上滚动翻到下一页",
+  "Keep Text Selected After Lookup": "查词后保持文本选中",
+  "Sentence around the highlight": "高亮所在的句子"
 }

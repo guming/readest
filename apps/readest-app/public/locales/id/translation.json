@@ -2499,5 +2499,11 @@
   "Preferred Font": "Font Pilihan",
   "Custom fonts can be selected from the font lists in the Font panel": "Font kustom dapat dipilih dari daftar font di panel Font",
   "Turn on Books in Manage Sync to upload this book": "Aktifkan \"Buku\" di \"Kelola sinkronisasi\" untuk mengunggah buku ini",
-  "Shelf name": "Nama rak"
+  "Shelf name": "Nama rak",
+  "Hide Bookshelf Buttons": "Sembunyikan Tombol Rak Buku",
+  "Previous and Next in the library": "Sebelumnya dan Berikutnya di perpustakaan",
+  "Reverse Mouse Wheel": "Balik Roda Mouse",
+  "Scroll up for the next page": "Gulir ke atas untuk halaman berikutnya",
+  "Keep Text Selected After Lookup": "Tetap pilih teks setelah pencarian",
+  "Sentence around the highlight": "Kalimat di sekitar sorotan"
 }

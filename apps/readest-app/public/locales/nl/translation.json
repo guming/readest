@@ -2559,5 +2559,11 @@
   "Preferred Font": "Voorkeurslettertype",
   "Custom fonts can be selected from the font lists in the Font panel": "Aangepaste lettertypen kunnen worden geselecteerd uit de lettertypelijsten in het paneel Lettertype",
   "Turn on Books in Manage Sync to upload this book": "Zet \"Boeken\" aan in \"Synchronisatie beheren\" om dit boek te uploaden",
-  "Shelf name": "Naam van boekenkast"
+  "Shelf name": "Naam van boekenkast",
+  "Hide Bookshelf Buttons": "Boekenkastknoppen verbergen",
+  "Previous and Next in the library": "Vorige en Volgende in de bibliotheek",
+  "Reverse Mouse Wheel": "Muiswiel omkeren",
+  "Scroll up for the next page": "Scroll omhoog voor de volgende pagina",
+  "Keep Text Selected After Lookup": "Tekst geselecteerd houden na opzoeken",
+  "Sentence around the highlight": "Zin rond de markering"
 }

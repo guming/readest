@@ -2619,5 +2619,11 @@
   "Preferred Font": "Fonte preferida",
   "Custom fonts can be selected from the font lists in the Font panel": "Fontes personalizadas podem ser selecionadas nas listas de fontes do painel Fonte",
   "Turn on Books in Manage Sync to upload this book": "Ative \"Livros\" em \"Gerenciar Sincronização\" para enviar este livro",
-  "Shelf name": "Nome da estante"
+  "Shelf name": "Nome da estante",
+  "Hide Bookshelf Buttons": "Ocultar botões da estante",
+  "Previous and Next in the library": "Anterior e Próxima na biblioteca",
+  "Reverse Mouse Wheel": "Inverter roda do mouse",
+  "Scroll up for the next page": "Role para cima para a próxima página",
+  "Keep Text Selected After Lookup": "Manter o texto selecionado após a consulta",
+  "Sentence around the highlight": "Frase ao redor do destaque"
 }

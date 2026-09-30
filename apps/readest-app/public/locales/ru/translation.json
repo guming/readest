@@ -2679,5 +2679,11 @@
   "Preferred Font": "Предпочитаемый шрифт",
   "Custom fonts can be selected from the font lists in the Font panel": "Пользовательские шрифты можно выбрать в списках шрифтов на панели шрифтов",
   "Turn on Books in Manage Sync to upload this book": "Включите «Книги» в разделе «Управление синхронизацией», чтобы загрузить эту книгу",
-  "Shelf name": "Название полки"
+  "Shelf name": "Название полки",
+  "Hide Bookshelf Buttons": "Скрыть кнопки книжной полки",
+  "Previous and Next in the library": "«Предыдущая» и «Следующая» в библиотеке",
+  "Reverse Mouse Wheel": "Обратное направление колёсика мыши",
+  "Scroll up for the next page": "Прокрутка вверх — следующая страница",
+  "Keep Text Selected After Lookup": "Сохранять выделение текста после поиска",
+  "Sentence around the highlight": "Предложение вокруг выделения"
 }
