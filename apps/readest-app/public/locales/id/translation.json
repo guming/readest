@@ -2505,5 +2505,10 @@
   "Reverse Mouse Wheel": "Balik Roda Mouse",
   "Scroll up for the next page": "Gulir ke atas untuk halaman berikutnya",
   "Keep Text Selected After Lookup": "Tetap pilih teks setelah pencarian",
-  "Sentence around the highlight": "Kalimat di sekitar sorotan"
+  "Sentence around the highlight": "Kalimat di sekitar sorotan",
+  "Do not speak readings or Hanja glosses in parentheses after a word": "Jangan ucapkan bacaan atau glosa Hanja dalam tanda kurung setelah kata",
+  "Visible as {{name}}": "Terlihat sebagai {{name}}",
+  "Local Network": "Jaringan Lokal",
+  "Italic Text": "Teks Miring",
+  "Mark italic text like dialogue": "Tandai teks miring seperti dialog"
 }

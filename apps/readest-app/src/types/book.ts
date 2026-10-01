@@ -345,6 +345,7 @@ export interface BookStyle {
   dialogueHighlightColor: string;
   dialogueHighlightCustomTextColor: boolean;
   dialogueHighlightTextColor: string;
+  dialogueHighlightItalic: boolean;
   userStylesheet: string;
   userUIStylesheet: string;
 

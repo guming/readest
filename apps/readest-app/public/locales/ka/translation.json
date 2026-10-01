@@ -2473,5 +2473,10 @@
   "Reverse Mouse Wheel": "მაუსის ბორბლის შებრუნება",
   "Scroll up for the next page": "შემდეგი გვერდისთვის გადაახვიეთ ზემოთ",
   "Keep Text Selected After Lookup": "ძიების შემდეგ ტექსტის მონიშვნის შენარჩუნება",
-  "Sentence around the highlight": "მონიშვნის გარშემო არსებული წინადადება"
+  "Sentence around the highlight": "მონიშვნის გარშემო არსებული წინადადება",
+  "Do not speak readings or Hanja glosses in parentheses after a word": "არ წაიკითხო სიტყვის შემდეგ ფრჩხილებში მოცემული წაკითხვები ან ჰანჯა განმარტებები",
+  "Visible as {{name}}": "ხილულია როგორც {{name}}",
+  "Local Network": "ლოკალური ქსელი",
+  "Italic Text": "დახრილი ტექსტი",
+  "Mark italic text like dialogue": "დახრილი ტექსტის მარკირება დიალოგის მსგავსად"
 }

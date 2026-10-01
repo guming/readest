@@ -2505,5 +2505,10 @@
   "Reverse Mouse Wheel": "བྱི་བའི་འཁོར་ལོ་ལྡོག་པ།",
   "Scroll up for the next page": "ཤོག་ལྷེ་རྗེས་མར་ཡར་འདྲེད།",
   "Keep Text Selected After Lookup": "འཚོལ་ཞིབ་རྗེས་སུ་ཡི་གེ་འདེམས་ཟིན་པ་ཉར་བ།",
-  "Sentence around the highlight": "མདངས་འཕྲུལ་གྱི་མཐའ་འཁོར་གྱི་ཚིག་གྲུབ།"
+  "Sentence around the highlight": "མདངས་འཕྲུལ་གྱི་མཐའ་འཁོར་གྱི་ཚིག་གྲུབ།",
+  "Do not speak readings or Hanja glosses in parentheses after a word": "ཚིག་གི་རྗེས་སུ་ཡོད་པའི་སྒྲིལ་ཐིག་ནང་གི་ཀློག་སྟངས་སམ་ཧན་ཅ་འགྲེལ་བཤད་མི་ཀློག",
+  "Visible as {{name}}": "{{name}} ཞེས་པའི་མིང་ཐོག་མཐོང་ཐུབ།",
+  "Local Network": "ས་གནས་དྲ་བ།",
+  "Italic Text": "གསེག་ཡིག",
+  "Mark italic text like dialogue": "གསེག་ཡིག་གཏམ་གླེང་ལྟར་རྟགས་འགོད།"
 }

@@ -2625,5 +2625,10 @@
   "Reverse Mouse Wheel": "Inverser la molette de la souris",
   "Scroll up for the next page": "Défiler vers le haut pour la page suivante",
   "Keep Text Selected After Lookup": "Garder le texte sélectionné après la recherche",
-  "Sentence around the highlight": "Phrase autour du surlignage"
+  "Sentence around the highlight": "Phrase autour du surlignage",
+  "Do not speak readings or Hanja glosses in parentheses after a word": "Ne pas lire les lectures ni les gloses en hanja entre parenthèses après un mot",
+  "Visible as {{name}}": "Visible en tant que {{name}}",
+  "Local Network": "Réseau local",
+  "Italic Text": "Texte en italique",
+  "Mark italic text like dialogue": "Surligner le texte en italique comme les dialogues"
 }

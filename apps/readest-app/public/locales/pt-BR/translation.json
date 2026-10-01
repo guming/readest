@@ -2625,5 +2625,10 @@
   "Reverse Mouse Wheel": "Inverter roda do mouse",
   "Scroll up for the next page": "Role para cima para a próxima página",
   "Keep Text Selected After Lookup": "Manter o texto selecionado após a consulta",
-  "Sentence around the highlight": "Frase ao redor do destaque"
+  "Sentence around the highlight": "Frase ao redor do destaque",
+  "Do not speak readings or Hanja glosses in parentheses after a word": "Não ler em voz alta leituras ou glosas em hanja entre parênteses após uma palavra",
+  "Visible as {{name}}": "Visível como {{name}}",
+  "Local Network": "Rede local",
+  "Italic Text": "Texto em itálico",
+  "Mark italic text like dialogue": "Realçar texto em itálico como diálogos"
 }
