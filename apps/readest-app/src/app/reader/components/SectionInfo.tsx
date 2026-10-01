@@ -6,7 +6,7 @@ import { useThemeStore } from '@/store/themeStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { eventDispatcher } from '@/utils/event';
-import { getHeaderBandGeometry } from '@/utils/insets';
+import { getHeaderBandGeometry, getMarginalInlinePadding } from '@/utils/insets';
 import { getBookDataAttributes } from '@/utils/book';
 import {
   getChromeChip,
@@ -26,6 +26,8 @@ interface SectionInfoProps {
   horizontalGap: number;
   contentInsets: Insets;
   gridInsets: Insets;
+  // The spread's Column Gap (px) in effect, 0 when none (getSpreadColumnGap).
+  columnGap?: number;
 }
 
 const SectionInfo: React.FC<SectionInfoProps> = ({
@@ -38,6 +40,7 @@ const SectionInfo: React.FC<SectionInfoProps> = ({
   horizontalGap,
   contentInsets,
   gridInsets,
+  columnGap = 0,
 }) => {
   const _ = useTranslation();
   const { appService } = useEnv();
@@ -141,7 +144,7 @@ const SectionInfo: React.FC<SectionInfoProps> = ({
               }
             : {
                 top: `${band.top}px`,
-                paddingInline: `calc(${horizontalGap / 2}% + ${contentInsets.left / 2}px)`,
+                paddingInline: getMarginalInlinePadding(horizontalGap, contentInsets.left, columnGap),
                 width: '100%',
                 height: `${band.height}px`,
               }),

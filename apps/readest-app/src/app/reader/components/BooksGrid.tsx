@@ -10,6 +10,7 @@ import { useSidebarStore } from '@/store/sidebarStore';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getGridTemplate, getInsetEdges } from '@/utils/grid';
+import { getSpreadColumnGap } from '@/utils/insets';
 import { tauriSetWindowTitle } from '@/utils/window';
 import { useContentInsets } from '../hooks/useContentInsets';
 import SearchResultsNav from './sidebar/SearchResultsNav';
@@ -110,6 +111,7 @@ const BookCellInner: React.FC<BookCellProps> = ({
   // progress-store split removed.
   const progress = useBookProgress(bookKey);
   const viewState = useReaderStore((s) => s.viewStates[bookKey]);
+  const getView = useReaderStore((s) => s.getView);
   const viewSettings = viewState?.viewSettings ?? null;
 
   // config / bookData are read imperatively: their relevant fields are
@@ -140,6 +142,8 @@ const BookCellInner: React.FC<BookCellProps> = ({
   const { section, pageinfo, sectionLabel } = progress || {};
   const viewerKey = viewState.viewerKey;
   const horizontalGapPercent = viewSettings.gapPercent;
+  // Read on each relocate, which also follows a 1 <-> 2 column re-layout.
+  const columnGap = getSpreadColumnGap(viewSettings, getView(bookKey)?.renderer?.columnCount ?? 1);
   const showHeader = viewSettings.showHeader;
   const showFooter = viewSettings.showFooter;
 
@@ -225,6 +229,7 @@ const BookCellInner: React.FC<BookCellProps> = ({
             horizontalGap={horizontalGapPercent}
             contentInsets={contentInsets}
             gridInsets={gridInsets}
+            columnGap={columnGap}
           />
         )}
         <HintInfo
@@ -236,6 +241,7 @@ const BookCellInner: React.FC<BookCellProps> = ({
           horizontalGap={horizontalGapPercent}
           contentInsets={contentInsets}
           gridInsets={gridInsets}
+          columnGap={columnGap}
         />
         {viewSettings.readingRulerEnabled && viewState?.inited && (
           <ReadingRuler
@@ -257,6 +263,7 @@ const BookCellInner: React.FC<BookCellProps> = ({
             horizontalGap={horizontalGapPercent}
             contentInsets={contentInsets}
             gridInsets={gridInsets}
+            columnGap={columnGap}
           />
         )}
       </div>

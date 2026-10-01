@@ -24,6 +24,7 @@ import {
 import StatusInfo from './StatusInfo.tsx';
 import StickyProgressBar from './StickyProgressBar.tsx';
 import { convertPagesToTimeRemainingMinutes } from '@/app/library/utils/libraryUtils.ts';
+import { getMarginalInlinePadding } from '@/utils/insets';
 import { SIZE_PER_LOC, SIZE_PER_TIME_UNIT } from '@/services/constants';
 import { useMedianPageDurationSecs } from '@/hooks/useMedianPageDurationSecs';
 
@@ -32,6 +33,8 @@ interface ProgressBarProps {
   horizontalGap: number;
   contentInsets: Insets;
   gridInsets: Insets;
+  // The spread's Column Gap (px) in effect, 0 when none.
+  columnGap?: number;
 }
 
 const ProgressBar: React.FC<ProgressBarProps> = ({
@@ -39,6 +42,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   horizontalGap,
   contentInsets,
   gridInsets,
+  columnGap = 0,
 }) => {
   const _ = useTranslation();
   const { appService } = useEnv();
@@ -207,6 +211,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   const fontSize = getChromeFontSize(viewSettings, isEink);
   const showStatusInfo = hasTimeInfo || hasBatteryInfo;
 
+
   return (
     <div
       role='presentation'
@@ -252,8 +257,8 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
               width: showDoubleBorder ? '32px' : `${contentInsets.left}px`,
             }
           : {
-              paddingInlineStart: `calc(${horizontalGap / 2}% + ${contentInsets.left / 2}px)`,
-              paddingInlineEnd: `calc(${horizontalGap / 2}% + ${contentInsets.right / 2}px)`,
+              paddingInlineStart: getMarginalInlinePadding(horizontalGap, contentInsets.left, columnGap),
+              paddingInlineEnd: getMarginalInlinePadding(horizontalGap, contentInsets.right, columnGap),
               paddingBottom: appService?.hasSafeAreaInset ? `${gridInsets.bottom * 0.33}px` : 0,
             }),
       }}
