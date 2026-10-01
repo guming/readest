@@ -6,6 +6,8 @@ import {
   RiRssLine,
   RiBookReadLine,
   RiBook3Line,
+  RiBookmark3Line,
+  RiFileList3Line,
   RiDiscordLine,
   RiCloudLine,
   RiDatabase2Line,
@@ -26,6 +28,10 @@ import { getMicrosoftClientId } from '@/services/sync/providers/onedrive/buildOn
 import KOSyncForm from './integrations/KOSyncForm';
 import ReadwiseForm from './integrations/ReadwiseForm';
 import HardcoverForm from './integrations/HardcoverForm';
+import PageboundForm from './integrations/PageboundForm';
+import NotionForm from './integrations/NotionForm';
+import SendToReadestForm from './integrations/SendToReadestForm';
+import LocalSendForm from './integrations/LocalSendForm';
 import WebDAVForm from './integrations/WebDAVForm';
 import GoogleDriveForm from './integrations/GoogleDriveForm';
 import OneDriveForm from './integrations/OneDriveForm';
@@ -45,6 +51,8 @@ type SubPage =
   | 'onedrive'
   | 'readwise'
   | 'hardcover'
+  | 'pagebound'
+  | 'notion'
   | 'opds'
   | null;
 
@@ -114,6 +122,12 @@ const IntegrationsPanel: React.FC = () => {
       requestedSubPage === 'readwise' ||
       requestedSubPage === 'hardcover' ||
       requestedSubPage === 'opds'
+      requestedSubPage === 'pagebound' ||
+      requestedSubPage === 'notion' ||
+      requestedSubPage === 'opds' ||
+      requestedSubPage === 'audiobookshelf' ||
+      requestedSubPage === 'send' ||
+      requestedSubPage === 'localsend'
     ) {
       setSubPage(requestedSubPage);
     } else if (requestedSubPage === 'cloudsync') {
@@ -297,6 +311,18 @@ const IntegrationsPanel: React.FC = () => {
         <HardcoverForm onBack={() => setSubPage(null)} />
       </div>
     );
+  if (subPage === 'pagebound')
+    return (
+      <div className='my-4 w-full'>
+        <PageboundForm onBack={() => setSubPage(null)} />
+      </div>
+    );
+  if (subPage === 'notion')
+    return (
+      <div className='my-4 w-full'>
+        <NotionForm onBack={() => setSubPage(null)} />
+      </div>
+    );
   if (subPage === 'opds')
     return (
       <div className='my-4 w-full'>
@@ -317,6 +343,31 @@ const IntegrationsPanel: React.FC = () => {
 
   const readwiseStatus = settings.readwise?.enabled ? _('Connected') : _('Not connected');
   const hardcoverStatus = settings.hardcover?.enabled ? _('Connected') : _('Not connected');
+  const pageboundStatus =
+    settings.pagebound?.enabled && settings.pagebound.refreshToken
+      ? _('Connected')
+      : _('Not connected');
+  const notionStatus =
+    settings.notion?.enabled && settings.notion.accessToken && settings.notion.databaseId
+      ? _('Connected')
+      : _('Not connected');
+
+  // Cloud sync providers are independently selectable (#5062): any subset of
+  // {Readest Cloud, WebDAV, Google Drive, S3, OneDrive, iCloud} can sync the
+  // library at once. A "configured" third-party provider (WebDAV creds / a Drive
+  // token) can be switched on inline; an unconfigured one must be opened to
+  // connect.
+  const providers = getCloudSyncProviders(settings);
+  const readestEnabled = isReadestCloudEnabled(settings);
+  const cloudGate = resolveCloudSyncGate(settings, userProfilePlan ?? 'free');
+  const enabledBackends = cloudGate.backends;
+
+  /** Book files have a home when Readest Cloud is on or some backend uploads them. */
+  const booksBackedUpBy = (kind: FileSyncBackendKind): boolean =>
+    readestEnabled ||
+    enabledBackends.some(
+      (k) => k !== kind && (settings[settingsKeyForBackend(k)]?.syncBooks ?? false),
+    );
 
   // External sync providers are mutually exclusive. A "configured"
   // third-party provider (WebDAV creds / a Drive token) can be switched on
@@ -403,6 +454,21 @@ const IntegrationsPanel: React.FC = () => {
               title={_('Hardcover')}
               status={hardcoverStatus}
               onClick={() => setSubPage('hardcover')}
+            />
+            {/* Pagebound's API sends no CORS headers, so only native HTTP reaches it. */}
+            {isTauriAppPlatform() && (
+              <IntegrationRow
+                icon={RiBookmark3Line}
+                title={_('Pagebound')}
+                status={pageboundStatus}
+                onClick={() => setSubPage('pagebound')}
+              />
+            )}
+            <IntegrationRow
+              icon={RiFileList3Line}
+              title={_('Notion')}
+              status={notionStatus}
+              onClick={() => setSubPage('notion')}
             />
           </div>
         </div>
