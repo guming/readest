@@ -126,6 +126,8 @@ export interface BookDoc {
   transformTarget?: EventTarget;
   splitTOCHref(href: string): Array<string | number>;
   getCover(): Promise<Blob | null>;
+  // Present on PDF: renders a page to a JPEG whose longer edge is `maxSize` px.
+  getPageThumbnail?(index: number, maxSize: number): Promise<Blob | null>;
   // Present on formats that carry a real spine (EPUB); absent for the ones
   // foliate-js gives synthetic per-index CFIs. Mirrors `view.resolveCFI`.
   resolveCFI?(cfi: string): { index: number; anchor?: (doc: Document) => Range | number } | null;
