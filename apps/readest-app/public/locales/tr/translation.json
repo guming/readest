@@ -2603,5 +2603,17 @@
   "Connected to Pagebound. Last synced {{time}}.": "Pagebound'a bağlı. Son senkronizasyon {{time}}.",
   "Sign in with your Pagebound email and password to sync reading progress.": "Okuma ilerlemesini eşitlemek için Pagebound e-posta adresiniz ve parolanızla oturum açın.",
   "If you use Apple or Google sign-in, set a password in Pagebound first.": "Apple veya Google ile oturum açıyorsanız önce Pagebound'da bir parola belirleyin.",
-  "Pagebound": "Pagebound"
+  "Pagebound": "Pagebound",
+  "Book not found in BookOrbit. Link it under Unmatched KOReader Books in BookOrbit to sync it.": "Kitap BookOrbit'te bulunamadı. Eşitlemek için BookOrbit'te \"Unmatched KOReader Books\" altında bağlayın.",
+  "Download status": "İndirme durumu",
+  "Local only": "Yalnızca yerel",
+  "Cloud only": "Yalnızca bulutta",
+  "Link a CrossPoint Reader": "CrossPoint okuyucusunu bağla",
+  "The reader gets your Readest library, reading statistics and reading progress. Only enter a code shown on your own reader.": "Okuyucu, Readest kitaplığınıza, okuma istatistiklerinize ve okuma ilerlemenize erişir. Yalnızca kendi okuyucunuzda gösterilen bir kodu girin.",
+  "Sign in to continue": "Devam etmek için oturum açın",
+  "Your reader is linked. It finishes signing in on its own.": "Okuyucunuz bağlandı. Oturum açmayı kendisi tamamlayacak.",
+  "Code": "Kod",
+  "Linking to {{account}}": "{{account}} hesabına bağlanıyor",
+  "Could not link the reader. Check the code, or sign in again on the reader.": "Okuyucu bağlanamadı. Kodu kontrol edin veya okuyucuda yeniden oturum açın.",
+  "Link Reader": "Okuyucuyu bağla"
 }
