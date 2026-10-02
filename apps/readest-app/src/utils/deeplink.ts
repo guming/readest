@@ -121,7 +121,29 @@ export const parseBookDeepLink = (url: string): { bookHash: string; autoplay?: b
 };
 
 /**
- * Parse an incoming `lumen://widget-group/{groupBy}/{groupId}` deep link (a
+=======
+ * Parse a CrossPoint reader sign-in link: `https://web.readest.com/link?code=…`
+ * (from the Readest card on the reader's web Settings page) or
+ * `readest://link?code=…` (from the web /link page). The code may be empty.
+ */
+export const parseDeviceLinkDeepLink = (url: string): { code: string } | null => {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const path = parsed.pathname.replace(/\/+$/, '');
+  const isAppLink = parsed.protocol === 'readest:' && parsed.host === 'link' && path === '';
+  const isWebLink =
+    (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+    parsed.host === 'web.readest.com' &&
+    path === '/link';
+  if (!isAppLink && !isWebLink) return null;
+  return { code: parsed.searchParams.get('code') ?? '' };
+};
+
+/**
  * "browse groups" tile tap), where `groupId` is the group's Library id.
  */
 export const parseWidgetGroupDeepLink = (

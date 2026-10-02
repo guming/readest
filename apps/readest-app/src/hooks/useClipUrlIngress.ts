@@ -10,7 +10,7 @@ import { convertToEpubWithWorker } from '@/services/send/conversion/conversionWo
 import { clipPageWithSignInFallback, isClipCancelled } from '@/services/send/clipSignIn';
 import type { ConvertedBook } from '@/services/send/conversion/types';
 import { eventDispatcher } from '@/utils/event';
-import { parseAnnotationDeepLink } from '@/utils/deeplink';
+import { parseAnnotationDeepLink, parseDeviceLinkDeepLink } from '@/utils/deeplink';
 import { parseShareDeepLink } from '@/utils/share';
 import { useTranslation } from './useTranslation';
 
@@ -71,6 +71,9 @@ async function convertSharedHtml(url: string, htmlFile: string): Promise<Convert
  * Filter rules — only act on URLs that are:
  *   - http(s) (not file://, content://, lumen://, blob:, data:)
  *   - NOT an annotation deep link (those go to useOpenAnnotationLink)
+ *   - http(s) (not file://, content://, lumen://, blob:, data:)
+ *   - NOT an annotation deep link (those go to useOpenLaunchLinks)
+ *   - NOT a reader sign-in link (those go to useOpenDeviceLink)
  *
  * Failures surface as toasts. Successful clips show "Saving article…"
  * then "Saved to your library." once `ingestFile` completes.
@@ -194,6 +197,9 @@ export function useClipUrlIngress() {
       // share landing URL is run through the article clipper instead of
       // importing the shared book.
       if (parseShareDeepLink(url)) return;
+      // Reader sign-in links (https://web.readest.com/link?code=…) open the
+      // /link page; useOpenDeviceLink owns that path.
+      if (parseDeviceLinkDeepLink(url)) return;
       void clipAndImport(url);
     };
 
