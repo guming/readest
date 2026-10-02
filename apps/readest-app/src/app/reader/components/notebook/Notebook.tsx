@@ -21,6 +21,7 @@ import { uniqueId } from '@/utils/misc';
 import { eventDispatcher } from '@/utils/event';
 import { getBookDirFromLanguage } from '@/utils/book';
 import { getPanelTopInset } from '@/utils/insets';
+import { nextBooknoteStamp } from '@/utils/booknoteStamp';
 import { Overlay } from '@/components/Overlay';
 import { saveSysSettings } from '@/helpers/settings';
 import { NOTE_PREFIX } from '@/types/view';
@@ -232,7 +233,7 @@ const Notebook: React.FC = ({}) => {
         ...existing,
         note,
         text: selection.text || existing.text,
-        updatedAt: Date.now(),
+        updatedAt: nextBooknoteStamp(existing),
       };
       annotations[existingIndex] = updated;
       view?.addAnnotation({ ...updated, value: `${NOTE_PREFIX}${updated.cfi}` });
@@ -277,9 +278,9 @@ const Notebook: React.FC = ({}) => {
     const existingIndex = annotations.findIndex((item) => item.id === note.id);
     if (existingIndex === -1) return;
     if (isDelete) {
-      note.deletedAt = Date.now();
+      note.deletedAt = nextBooknoteStamp(note);
     } else {
-      note.updatedAt = Date.now();
+      note.updatedAt = nextBooknoteStamp(note);
     }
     note.page = progress.page;
     annotations[existingIndex] = note;

@@ -6,6 +6,8 @@ import { useEnv } from '@/context/EnvContext';
 import { useReaderStore } from '@/store/readerStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useBookDataStore } from '@/store/bookDataStore';
+import { eventDispatcher } from '@/utils/event';
+import { nextBooknoteStamp } from '@/utils/booknoteStamp';
 import {
   getHandlePositionsFromRange as getHandlePositionsForBook,
   HandlePositions,
@@ -68,7 +70,7 @@ export const useAnnotationEditor = ({
             ...existingAnnotation,
             cfi: newCfi,
             text: newText,
-            updatedAt: Date.now(),
+            updatedAt: nextBooknoteStamp(existingAnnotation),
           };
 
           // Both overlays of a unified record are keyed by its cfi, so a moved
