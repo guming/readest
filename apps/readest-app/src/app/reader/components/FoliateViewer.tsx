@@ -8,7 +8,7 @@ import {
   getPageProgressionRTL,
 } from '@/libs/document';
 import { BOOK_IDS_SEPARATOR } from '@/services/constants';
-import { BookConfig, PageInfo } from '@/types/book';
+import { BookConfig, PageInfo, ViewSettings } from '@/types/book';
 import { FoliateView, wrappedFoliateView } from '@/types/view';
 import { Insets } from '@/types/misc';
 import { useEnv } from '@/context/EnvContext';
@@ -46,6 +46,7 @@ import {
   applyThemeModeClass,
   applyTranslationStyle,
   getOverlayerBlendMode,
+  getPDFPageColors,
   getStyles,
   getThemeCode,
   keepTextAlignment,
@@ -154,6 +155,10 @@ const FoliateViewer: React.FC<{
   const bookData = getBookData(bookKey);
   const viewState = getViewState(bookKey);
   const viewSettings = getViewSettings(bookKey);
+  // PDF theme colors reach the canvas through CanvasRenderingContext2D.filter,
+  // which WebKit lacks, so a setting synced from another device can't apply here.
+  const getPageViewSettings = (vs: ViewSettings): ViewSettings =>
+    appService?.supportsCanvasContext2DFilter ? vs : { ...vs, applyThemeToPDF: false };
 
   const viewRef = useRef<FoliateView | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -408,15 +413,10 @@ const FoliateViewer: React.FC<{
       });
 
       if (bookDoc.rendition?.layout === 'pre-paginated') {
-        applyFixedlayoutStyles(detail.doc, viewSettings, undefined, bookData.book?.format);
-        const themeCode = getThemeCode();
-        if (bookData.book?.format === 'PDF' && themeCode && renderer) {
-          renderer.pageColors = viewSettings.applyThemeToPDF
-            ? {
-                background: themeCode.bg,
-                foreground: themeCode.fg,
-              }
-            : undefined;
+        const pageSettings = getPageViewSettings(viewSettings);
+        applyFixedlayoutStyles(detail.doc, pageSettings, undefined, bookData.book?.format);
+        if (bookData.book?.format === 'PDF' && renderer) {
+          renderer.pageColors = getPDFPageColors(pageSettings, getThemeCode());
         }
       }
 
@@ -1004,11 +1004,12 @@ const FoliateViewer: React.FC<{
     if (viewRef.current && viewRef.current.renderer) {
       const renderer = viewRef.current.renderer;
       const viewSettings = getViewSettings(bookKey)!;
+      const pageSettings = getPageViewSettings(viewSettings);
       viewRef.current.renderer.setStyles?.(getStyles(viewSettings, undefined, getLoadedFonts()));
       const docs = viewRef.current.renderer.getContents();
       docs.forEach(({ doc }) => {
         if (bookDoc.rendition?.layout === 'pre-paginated') {
-          applyFixedlayoutStyles(doc, viewSettings, undefined, bookData?.book?.format);
+          applyFixedlayoutStyles(doc, pageSettings, undefined, bookData?.book?.format);
         }
         applyThemeModeClass(doc, isDarkMode);
         applyScrollModeClass(doc, viewSettings.scrolled || false);
@@ -1017,12 +1018,7 @@ const FoliateViewer: React.FC<{
       });
 
       if (bookData?.book?.format === 'PDF' && themeCode && renderer) {
-        renderer.pageColors = viewSettings.applyThemeToPDF
-          ? {
-              background: themeCode.bg,
-              foreground: themeCode.fg,
-            }
-          : undefined;
+        renderer.pageColors = getPDFPageColors(pageSettings, themeCode);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1052,7 +1048,7 @@ const FoliateViewer: React.FC<{
         isBwEink: !!viewSettings.isEink && !viewSettings.isColorEink,
         isFixedLayout: bookDoc.rendition?.layout === 'pre-paginated',
         invertImgColorInDark: !!viewSettings.invertImgColorInDark,
-        applyThemeToPDF: !!viewSettings.applyThemeToPDF,
+        applyThemeToPDF: !!getPageViewSettings(viewSettings).applyThemeToPDF,
         format: bookData?.book?.format,
       }),
     );
