@@ -111,7 +111,11 @@ import AutoScrollSpeedOverlay from './AutoScrollSpeedOverlay';
 import Spinner from '@/components/Spinner';
 import KOSyncConflictResolver from './KOSyncResolver';
 import ImageViewer from './ImageViewer';
+<<<<<<< HEAD
 import ImageAssistantDialog from './annotator/ImageAssistantDialog';
+=======
+import ImageContextMenu from './ImageContextMenu';
+>>>>>>> f1d17bcf6 (feat(reader): copy and save book images from one right-click menu (#6567))
 import TableViewer from './TableViewer';
 import ExternalLinkConfirm from './ExternalLinkConfirm';
 import { getTTSMiniPlayerClearance } from '../utils/ttsMiniPlayerPosition';
@@ -1153,6 +1157,7 @@ const FoliateViewer: React.FC<{
 
   return (
     <>
+      <ImageContextMenu bookKey={bookKey} />
       {selectedImage && (
         <ImageViewer
           gridInsets={gridInsets}
