@@ -19,6 +19,8 @@ import { useSidebarStore } from '@/store/sidebarStore';
 import { useCustomDictionaryStore } from '@/store/customDictionaryStore';
 import { isSystemDictionaryEnabled } from '@/services/dictionaries/registry';
 import { invokeSystemDictionary } from '@/services/dictionaries/systemDictionary';
+import { buildSelectionContext } from '@/services/dictionaries/contextDictionary';
+import type { DictionarySelectionContext } from '@/services/dictionaries/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { useDeviceControlStore } from '@/store/deviceStore';
@@ -326,6 +328,21 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
+  );
+
+  // The passage around the looked-up text, for the AI context dictionary (#5544).
+  const dictionarySelection = useMemo<DictionarySelectionContext | undefined>(
+    () =>
+      showDictionaryPopup && selection?.range
+        ? {
+            ...buildSelectionContext(selection.range),
+            bookTitle: bookData.book?.title,
+            bookAuthor: bookData.book?.author,
+            targetLang: viewSettings.translateTargetLang,
+          }
+        : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showDictionaryPopup, selection],
   );
 
   const getAnnotationText = useCallback(
@@ -1854,6 +1871,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
               <DictionarySheet
                 word={selection?.text as string}
                 lang={bookData.bookDoc?.metadata.language as string}
+                selection={dictionarySelection}
                 onDismiss={handleDismissPopupAndSelection}
                 onManage={onManage}
               />
@@ -1864,6 +1882,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
             <DictionaryPopup
               word={selection?.text as string}
               lang={bookData.bookDoc?.metadata.language as string}
+              selection={dictionarySelection}
               position={dictPopupPosition}
               trianglePosition={trianglePosition}
               popupWidth={dictPopupWidth}
