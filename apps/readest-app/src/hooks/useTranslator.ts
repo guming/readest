@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
   ErrorCodes,
@@ -11,6 +11,13 @@ import { getFromCache, storeInCache, UseTranslatorOptions } from '@/services/tra
 import { polish, preprocess } from '@/services/translators';
 import { eventDispatcher } from '@/utils/event';
 import { getLocale } from '@/utils/misc';
+import { useEnv } from '@/context/EnvContext';
+import {
+  ensureCustomTranslatorsLoaded,
+  useCustomTranslatorStore,
+} from '@/store/customTranslatorStore';
+import { isCustomTranslatorName } from '@/services/translators/custom';
+import { isCustomTranslatorAllowed } from '@/utils/access';
 import { useTranslation } from './useTranslation';
 import { useSettingsStore } from '@/store/settingsStore';
 import {
@@ -27,39 +34,46 @@ export function useTranslator({
   targetLang = 'EN',
   enablePolishing = true,
   enablePreprocessing = true,
+  promptId,
+  bookTitle,
+  bookAuthor,
 }: UseTranslatorOptions = {}) {
   const _ = useTranslation();
   const { token } = useAuth();
   const settings = useSettingsStore((state) => state.settings);
+  const { envConfig } = useEnv();
   const [loading, setLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(provider);
   const [translator, setTransltor] = useState(() =>
     provider === 'custom-ai' ? undefined : getTranslator(provider),
   );
-  const [translators] = useState(() => getTranslators());
+  const customTranslators = useCustomTranslatorStore((s) => s.translators);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const translators = useMemo(() => getTranslators(), [customTranslators]);
+
+  useEffect(() => {
+    ensureCustomTranslatorsLoaded(envConfig);
+  }, [envConfig]);
 
   useEffect(() => {
     setLoading(false);
   }, [provider, sourceLang, targetLang]);
 
   useEffect(() => {
-    if (
-      provider === 'custom-ai' &&
-      settings.aiSettings.enabled &&
-      resolveAIConnection(settings.aiSettings, 'translation')
-    ) {
+    if (provider === 'custom-ai' && settings.aiSettings.enabled && resolveAIConnection(settings.aiSettings, 'translation')) {
       setTransltor(undefined);
       setSelectedProvider('custom-ai');
       return;
     }
-    const availableTranslators = getTranslators().filter((t) => isTranslatorAvailable(t, !!token));
+    const hasPremium = isCustomTranslatorAllowed(token);
+    const availableTranslators = translators.filter((t) => isTranslatorAvailable(t, !!token, hasPremium));
     const selectedTranslator =
       availableTranslators.find((t) => t.name === provider) || availableTranslators[0]!;
     const selectedProviderName = selectedTranslator.name as TranslatorName;
-    setTransltor(getTranslator(selectedProviderName));
+    setTransltor(selectedTranslator);
     setSelectedProvider(selectedProviderName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provider, settings.aiSettings, token]);
+  }, [provider, settings.aiSettings, translators, token]);
 
   const translate = useCallback(
     async (
@@ -69,12 +83,13 @@ export function useTranslator({
       const sourceLanguage = options?.source || sourceLang;
       const targetLanguage = options?.target || targetLang || getLocale();
       const useCache = options?.useCache ?? false;
-      const textsToTranslate = enablePreprocessing ? preprocess(input) : input;
+      const context = { promptId, bookTitle, bookAuthor };
+      const activeTranslator = translators.find((t) => t.name === selectedProvider);
       const aiConnection = resolveAIConnection(settings.aiSettings, 'translation');
-      const cacheProvider =
-        selectedProvider === 'custom-ai' && aiConnection
-          ? `custom-ai:${aiConnection.id}`
-          : selectedProvider;
+      const cacheProvider = selectedProvider === 'custom-ai' && aiConnection
+        ? `custom-ai:${aiConnection.id}`
+        : activeTranslator?.getCacheKey?.(sourceLanguage, targetLanguage, context) ?? selectedProvider;
+      const textsToTranslate = enablePreprocessing ? preprocess(input) : input;
 
       if (textsToTranslate.length === 0 || textsToTranslate.every((t) => !t?.trim())) {
         return textsToTranslate;
@@ -164,16 +179,17 @@ export function useTranslator({
           return enablePolishing ? polish(results, targetLanguage) : results;
         }
 
-        const translator = translators.find((t) => t.name === selectedProvider);
-        if (!translator) {
+        if (!activeTranslator) {
           throw new Error(`No translator found for provider: ${selectedProvider}`);
         }
-        const translatedTexts = await translator.translate(
+        const translatedTexts = await activeTranslator.translate(
           textsNeedingTranslation,
           sourceLanguage,
           targetLanguage,
           token,
           useCache,
+          undefined,
+          context,
         );
 
         await Promise.all(
@@ -226,12 +242,23 @@ export function useTranslator({
           });
           setSelectedProvider('azure');
         }
+        if (
+          err instanceof Error &&
+          err.message === ErrorCodes.UNAUTHORIZED &&
+          isCustomTranslatorName(selectedProvider)
+        ) {
+          eventDispatcher.dispatch('toast', {
+            timeout: 5000,
+            message: _('Check the API key for {{name}}', { name: activeTranslator?.label }),
+            type: 'error',
+          });
+        }
         setLoading(false);
         throw err instanceof Error ? err : new Error(String(err));
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedProvider, sourceLang, targetLang, translator, token, settings],
+    [selectedProvider, sourceLang, targetLang, translators, token, promptId, bookTitle, bookAuthor, settings],
   );
 
   return {
