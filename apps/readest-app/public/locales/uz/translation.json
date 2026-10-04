@@ -2656,5 +2656,10 @@
   "AI Translator": "SI tarjimon",
   "Examples": "Misollar",
   "Synonyms": "Sinonimlar",
-  "Context Dictionary failed: {{message}}": "Kontekst lugʻatida xatolik: {{message}}"
+  "Context Dictionary failed: {{message}}": "Kontekst lugʻatida xatolik: {{message}}",
+  "Apply Theme Colors": "Mavzu ranglarini qoʻllash",
+  "Set Repeat Start (A)": "Takrorlash boshini belgilash (A)",
+  "Set Repeat End (B)": "Takrorlash oxirini belgilash (B)",
+  "Clear A-B Repeat": "A-B takrorlashni tozalash",
+  "Pause After Each Sentence": "Har bir gapdan keyin pauza"
 }

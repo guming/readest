@@ -2592,5 +2592,10 @@
   "AI Translator": "AI 翻訳サービス",
   "Examples": "例文",
   "Synonyms": "類義語",
-  "Context Dictionary failed: {{message}}": "文脈辞書でエラーが発生しました：{{message}}"
+  "Context Dictionary failed: {{message}}": "文脈辞書でエラーが発生しました：{{message}}",
+  "Apply Theme Colors": "テーマカラーを適用",
+  "Set Repeat Start (A)": "リピート開始点を設定 (A)",
+  "Set Repeat End (B)": "リピート終了点を設定 (B)",
+  "Clear A-B Repeat": "A-B リピートを解除",
+  "Pause After Each Sentence": "文ごとに一時停止"
 }
