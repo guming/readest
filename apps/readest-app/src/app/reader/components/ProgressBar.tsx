@@ -36,6 +36,13 @@ interface ProgressBarProps {
   gridInsets: Insets;
   // The spread's Column Gap (px) in effect, 0 when none.
   columnGap?: number;
+<<<<<<< HEAD
+=======
+  // Rounded screen corners this footer's ends run into.
+  cornerRadii?: BottomCornerRadii;
+  // A fixed-layout page that runs past the viewport (usePageOverflow).
+  hidden?: boolean;
+>>>>>>> adf3b9521 (fix(reader): keep scrolled PDFs smooth on iOS: virtualize the strip, hide PDF chrome by layout (#6626))
 }
 
 const ProgressBar: React.FC<ProgressBarProps> = ({
@@ -44,6 +51,8 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   contentInsets,
   gridInsets,
   columnGap = 0,
+  cornerRadii = NO_CORNERS,
+  hidden = false,
 }) => {
   const _ = useTranslation();
   const { appService } = useEnv();
@@ -250,6 +259,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
           ? 'text-white/75 mix-blend-difference'
           : 'text-base-content',
         isVertical ? 'writing-vertical-rl' : 'w-full',
+        hidden && 'invisible',
       )}
       aria-label={[
         progress

@@ -28,6 +28,8 @@ interface SectionInfoProps {
   gridInsets: Insets;
   // The spread's Column Gap (px) in effect, 0 when none (getSpreadColumnGap).
   columnGap?: number;
+  // A fixed-layout page that runs past the viewport.
+  hidden?: boolean;
 }
 
 const SectionInfo: React.FC<SectionInfoProps> = ({
@@ -41,6 +43,7 @@ const SectionInfo: React.FC<SectionInfoProps> = ({
   contentInsets,
   gridInsets,
   columnGap = 0,
+  hidden = false,
 }) => {
   const _ = useTranslation();
   const { appService } = useEnv();
@@ -113,6 +116,7 @@ const SectionInfo: React.FC<SectionInfoProps> = ({
       <div
         className={clsx(
           'sectioninfo absolute flex items-center overflow-hidden font-sans',
+          hidden && 'invisible',
           // A lifted band overlaps the notch mask (z-10) and must win as the
           // later sibling — z-auto would lose to any positive z. Only when
           // lifted: an unconditional z-10 also covers the desktop HeaderBar
