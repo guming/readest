@@ -2,11 +2,19 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useEnv } from '@/context/EnvContext';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useBookDataStore } from '@/store/bookDataStore';
+import { useHardcoverSyncStore } from '@/store/hardcoverSyncStore';
 import { useBookProgress } from '@/store/readerProgressStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { eventDispatcher } from '@/utils/event';
 import { debounce } from '@/utils/debounce';
-import { HardcoverClient, HardcoverSyncMapStore } from '@/services/hardcover';
+import {
+  HardcoverClient,
+  HardcoverSyncMapStore,
+  HardcoverAuthError,
+  HardcoverUnmatchedError,
+  isHardcoverConnected,
+  createHardcoverTokenStore,
+} from '@/services/hardcover';
 import { BookNote, HardcoverBookLink } from '@/types/book';
 
 // Hardcover throttles its API hard (≈1 req/1.15s), and the "currently reading"
@@ -43,12 +51,12 @@ export const useHardcoverSync = (bookKey: string) => {
 
   const getClient = useCallback(async () => {
     const { settings } = useSettingsStore.getState();
-    if (!settings.hardcover?.enabled || !settings.hardcover?.accessToken) {
+    if (!settings.hardcover?.enabled || !isHardcoverConnected(settings.hardcover)) {
       return null;
     }
     const appService = await envConfig.getAppService();
     const mapStore = new HardcoverSyncMapStore(appService);
-    return new HardcoverClient(settings.hardcover, mapStore);
+    return new HardcoverClient(settings.hardcover, mapStore, createHardcoverTokenStore(envConfig));
   }, [envConfig]);
 
   // Remember which Hardcover book a sync resolved to (#5846): the book menu
@@ -100,6 +108,9 @@ export const useHardcoverSync = (bookKey: string) => {
         return;
       }
 
+      const { begin, end } = useHardcoverSyncStore.getState();
+      let failure: string | null = null;
+      begin(bookKey);
       try {
         const result = await client.syncBookNotes(book, config);
         await rememberLink(result.link);
@@ -122,14 +133,19 @@ export const useHardcoverSync = (bookKey: string) => {
         }
       } catch (error) {
         console.error('Hardcover notes sync failed:', error);
+        const message = error instanceof Error ? error.message : String(error);
+        if (!(error instanceof HardcoverUnmatchedError)) failure = message;
         if (!silent) {
           eventDispatcher.dispatch('toast', {
-            message: _('Hardcover notes sync failed: {{error}}', {
-              error: error instanceof Error ? error.message : String(error),
-            }),
+            message:
+              error instanceof HardcoverAuthError
+                ? _('Authentication failed. Reconnect in Settings.')
+                : _('Hardcover notes sync failed: {{error}}', { error: message }),
             type: 'error',
           });
         }
+      } finally {
+        end(bookKey, failure);
       }
     },
     [_, bookKey, getBookData, getClient, getConfig, rememberLink, updateLastSyncedAt],
@@ -153,6 +169,9 @@ export const useHardcoverSync = (bookKey: string) => {
         return;
       }
 
+      const { begin, end } = useHardcoverSyncStore.getState();
+      let failure: string | null = null;
+      begin(bookKey);
       try {
         const link = await client.pushProgress(book, config);
         await rememberLink(link);
@@ -165,14 +184,19 @@ export const useHardcoverSync = (bookKey: string) => {
         }
       } catch (error) {
         console.error('Hardcover progress sync failed:', error);
+        const message = error instanceof Error ? error.message : String(error);
+        if (!(error instanceof HardcoverUnmatchedError)) failure = message;
         if (!silent) {
           eventDispatcher.dispatch('toast', {
-            message: _('Hardcover progress sync failed: {{error}}', {
-              error: error instanceof Error ? error.message : String(error),
-            }),
+            message:
+              error instanceof HardcoverAuthError
+                ? _('Authentication failed. Reconnect in Settings.')
+                : _('Hardcover progress sync failed: {{error}}', { error: message }),
             type: 'error',
           });
         }
+      } finally {
+        end(bookKey, failure);
       }
     },
     [_, bookKey, getBookData, getClient, getConfig, rememberLink, updateLastSyncedAt],

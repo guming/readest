@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useFileSyncStore } from '@/store/fileSyncStore';
+import { isHardcoverConnected } from '@/services/hardcover/hardcoverConnection';
 import { useTranslation } from '@/hooks/useTranslation';
 import { formatSyncTimeFromNow } from '@/utils/time';
 import {
@@ -101,6 +102,17 @@ export const useCloudSyncStatus = (nativeLastSyncedAt = 0): CloudSyncStatus => {
         syncing: !!fileSyncByKind[kind]?.isSyncing,
         failed: !!fileSyncLastError[kind],
       })),
+      ...(settings.hardcover?.enabled && isHardcoverConnected(settings.hardcover)
+        ? [
+            {
+              kind: 'hardcover' as const,
+              name: 'Hardcover',
+              lastSyncedAt: settings.hardcover.lastSyncedAt ?? 0,
+              syncing: false,
+              failed: false,
+            },
+          ]
+        : []),
     ];
 
     const syncing = providers.some((p) => p.syncing);

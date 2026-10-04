@@ -18,6 +18,8 @@ const h = vi.hoisted(() => {
 
   return {
     makeStore,
+    UnmatchedError: class extends Error {},
+    AuthError: class extends Error {},
     book,
     // Mutable settings — tests flip `hardcover.autoSync` between renders.
     settings: {
@@ -97,6 +99,10 @@ vi.mock('@/services/hardcover', () => ({
     }
   },
   HardcoverSyncMapStore: class {},
+  HardcoverUnmatchedError: h.UnmatchedError,
+  HardcoverAuthError: h.AuthError,
+  isHardcoverConnected: (hc?: { accessToken?: string }) => !!hc?.accessToken,
+  createHardcoverTokenStore: vi.fn(),
 }));
 
 vi.mock('@/utils/event', () => ({
@@ -299,5 +305,96 @@ describe('useHardcoverSync remembers the matched book (#5846)', () => {
       },
     ]);
     expect(h.saveConfigMock).not.toHaveBeenCalled();
+  });
+});
+describe('useHardcoverSync silent manual push (sync row)', () => {
+  const pushAll = async (detail: object) =>
+    act(async () => {
+      dispatch('hardcover-push-progress', { bookKey: 'h1-view1', ...detail });
+      dispatch('hardcover-push-notes', { bookKey: 'h1-view1', ...detail });
+      await flushMicrotasks();
+    });
+
+  test('pushes without any toast, including when Hardcover is not configured', async () => {
+    h.config = { progress: [5, 100], booknotes: [{ type: 'annotation' }], hardcover: undefined };
+    renderHook(() => useHardcoverSync('h1-view1'));
+
+    await pushAll({ silent: true });
+    expect(h.pushProgressMock).toHaveBeenCalledTimes(1);
+    expect(h.syncBookNotesMock).toHaveBeenCalledTimes(1);
+    expect(h.toasts).toHaveLength(0);
+
+    h.settings.hardcover.enabled = false;
+    await pushAll({ silent: true });
+    expect(h.pushProgressMock).toHaveBeenCalledTimes(1);
+    expect(h.toasts).toHaveLength(0);
+
+    await pushAll({});
+    expect(h.toasts.map((t) => t.message)).toContain('Configure Hardcover in Settings first.');
+  });
+});
+
+describe('useHardcoverSync push health store', () => {
+  test('counts a push while running, records a failure even when silent, and clears it on success', async () => {
+    let finish!: () => void;
+    h.pushProgressMock.mockImplementationOnce(
+      () => new Promise((resolve) => (finish = () => resolve(h.resolvedLink))),
+    );
+    h.pushProgressMock.mockRejectedValueOnce(new Error('offline'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderHook(() => useHardcoverSync('h1-view1'));
+    const push = () =>
+      act(async () => {
+        dispatch('hardcover-push-progress', { bookKey: 'h1-view1', silent: true });
+        await flushMicrotasks();
+      });
+    const state = () => useHardcoverSyncStore.getState().byBook['h1-view1'];
+
+    await push();
+    expect(state()?.pending).toBe(1);
+    await act(async () => {
+      finish();
+      await flushMicrotasks();
+    });
+    expect(state()).toMatchObject({ pending: 0, lastError: null });
+
+    await push();
+    expect(state()).toMatchObject({ pending: 0, lastError: 'offline' });
+
+    await push();
+    expect(state()).toMatchObject({ pending: 0, lastError: null });
+  });
+
+  test('a book Hardcover cannot match is not a failure', async () => {
+    h.pushProgressMock.mockRejectedValueOnce(
+      new h.UnmatchedError('Unable to resolve this book in Hardcover'),
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderHook(() => useHardcoverSync('h1-view1'));
+
+    await act(async () => {
+      dispatch('hardcover-push-progress', { bookKey: 'h1-view1', silent: true });
+      await flushMicrotasks();
+    });
+
+    expect(useHardcoverSyncStore.getState().byBook['h1-view1']).toEqual({
+      pending: 0,
+      lastError: null,
+    });
+  });
+
+  test('an auth failure toasts a reconnect hint instead of the raw error', async () => {
+    h.pushProgressMock.mockRejectedValueOnce(new h.AuthError('Hardcover token was rejected'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderHook(() => useHardcoverSync('h1-view1'));
+
+    await act(async () => {
+      dispatch('hardcover-push-progress', { bookKey: 'h1-view1' });
+      await flushMicrotasks();
+    });
+
+    expect(h.toasts).toEqual([
+      { message: 'Authentication failed. Reconnect in Settings.', type: 'error' },
+    ]);
   });
 });
