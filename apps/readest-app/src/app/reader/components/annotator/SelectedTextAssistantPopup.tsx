@@ -1,3 +1,4 @@
+import { googleProvider } from '@/services/translators/providers/google';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { PiArrowClockwise, PiCheck, PiCopy, PiFloppyDisk, PiPlay, PiSpinner } from 'react-icons/pi';
 import Popup from '@/components/Popup';
@@ -58,7 +59,7 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
   position,
   trianglePosition,
   popupWidth,
-  popupHeight,
+  popupHeight: _popupHeight,
   bookTitle,
   bookAuthor,
   chapterId,
@@ -71,6 +72,12 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
   const { envConfig } = useEnv();
   const { settings, setSettings, saveSettings } = useSettingsStore();
   const { getConfig, setConfig, saveConfig } = useBookDataStore();
+  const [selectedProvider, setSelectedProvider] = useState(() =>
+    action === 'translation'
+      ? 'google'
+      : resolveAIConnection(settings.aiSettings, 'notebook')?.id || '',
+  );
+  const useGoogle = action === 'translation' && selectedProvider === 'google';
   const [result, setResult] = useState('');
   const [explanationResult, setExplanationResult] = useState<ExpertExplanationResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -111,6 +118,11 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
   );
 
   const selectAssistantConnection = async (connectionId: string) => {
+    setSelectedProvider(connectionId);
+    setResult('');
+    setExplanationResult(null);
+    setError('');
+    if (connectionId === 'google') return;
     const latest = useSettingsStore.getState().settings;
     const connectionIdField =
       action === 'translation' ? 'translationConnectionId' : 'notebookConnectionId';
@@ -123,9 +135,6 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
     };
     setSettings(next);
     await saveSettings(envConfig, next);
-    setResult('');
-    setExplanationResult(null);
-    setError('');
   };
 
   useEffect(() => {
@@ -136,22 +145,24 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
     });
   }, [result]);
 
-  const configured = isNotebookAssistantConfigured(
-    assistant,
-    settings.aiSettings,
-    '',
-    action === 'translation' ? 'translation' : 'notebook',
-  );
+  const configured =
+    useGoogle ||
+    isNotebookAssistantConfigured(
+      assistant,
+      settings.aiSettings,
+      '',
+      action === 'translation' ? 'translation' : 'notebook',
+    );
   const run = async (options?: { followUp?: ExplanationFollowUp; rebuildProfile?: boolean }) => {
     if (!configured) return;
-    if (estimate.input > assistant.warnAboveTokens) {
+    if (!useGoogle && estimate.input > assistant.warnAboveTokens) {
       const accepted = window.confirm(
         _('This selection is long and may cost more than usual. Continue?'),
       );
       if (!accepted) return;
     }
     const limit = evaluateUsageLimit(assistant, estimate);
-    if (!limit.allowed) {
+    if (!useGoogle && !limit.allowed) {
       setError(
         _(
           'Daily token limit reached. Adjust the limit or cost mode in Notebook Assistant settings.',
@@ -159,7 +170,7 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
       );
       return;
     }
-    if (limit.needsConfirmation) {
+    if (!useGoogle && limit.needsConfirmation) {
       const accepted = window.confirm(
         _(
           'This request may exceed your daily token limit. Estimated total: {{total}} / {{limit}} tokens. Continue?',
@@ -173,7 +184,16 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
     setError('');
     setSaved(false);
     try {
-      if (action === 'translation') {
+      if (useGoogle) {
+        const translated = await googleProvider.translate(
+          [selection.text],
+          sourceLanguage || 'auto',
+          targetLanguageCode ||
+            settings.globalViewSettings.translateTargetLang ||
+            navigator.language,
+        );
+        setResult(translated.join('\n'));
+      } else if (action === 'translation') {
         const content = await runSelectedTextAssistant(
           {
             action,
@@ -237,7 +257,7 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
           }
         }
       }
-      if (assistant.usageTrackingEnabled) {
+      if (!useGoogle && assistant.usageTrackingEnabled) {
         recordNotebookAssistantUsage({
           action,
           contextType: 'selection',
@@ -250,7 +270,7 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
       }
     } catch (requestError) {
       setError((requestError as Error).message);
-      if (assistant.usageTrackingEnabled) {
+      if (!useGoogle && assistant.usageTrackingEnabled) {
         recordNotebookAssistantUsage({
           action,
           contextType: 'selection',
@@ -288,9 +308,9 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
           : result,
       contextType: 'selection',
       targetLanguage,
-      provider: assistantIdentity.provider,
-      model: assistantIdentity.model,
-      tokenEstimate: estimate,
+      provider: useGoogle ? 'google' : assistantIdentity.provider,
+      model: useGoogle ? '' : assistantIdentity.model,
+      tokenEstimate: useGoogle ? { input: 0, output: 0 } : estimate,
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -309,7 +329,6 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
     <Popup
       trianglePosition={trianglePosition}
       width={popupWidth}
-      height={Math.max(popupHeight, Math.min(680, window.innerHeight - 20))}
       maxHeight={Math.min(680, window.innerHeight - 20)}
       position={position}
       className='bg-base-100 text-base-content flex flex-col overflow-hidden font-sans'
@@ -327,25 +346,29 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
             </p>
           )}
           <p className='text-base-content/60 text-xs'>
-            {_('Selection')} · {selection.text.length} {_('characters')} · ~{estimate.input}{' '}
-            {_('input tokens')} · {_('max')} ~{estimate.output} {_('output tokens')}
+            {_('Selection')} · {selection.text.length} {_('characters')}
+            {!useGoogle && (
+              <>
+                {' '}
+                · ~{estimate.input} {_('input tokens')} · {_('max')} ~{estimate.output}{' '}
+                {_('output tokens')}
+              </>
+            )}
           </p>
-          {providerOptions.length > 0 && (
-            <label className='mt-1 flex items-center gap-2 text-xs'>
+          {(action === 'translation' || providerOptions.length > 0) && (
+            <label className='mt-2 flex flex-wrap items-center gap-2 text-xs'>
               <span className='text-base-content/60'>
                 {action === 'translation' ? _('Translation Provider') : _('Explanation Provider')}
               </span>
               <select
-                className='select select-bordered select-xs eink-bordered bg-base-100'
-                value={
-                  resolveAIConnection(
-                    settings.aiSettings,
-                    action === 'translation' ? 'translation' : 'notebook',
-                  )?.id || ''
-                }
+                className='select select-bordered select-xs eink-bordered bg-base-100 min-w-0 max-w-full'
+                value={selectedProvider}
                 onChange={(event) => void selectAssistantConnection(event.target.value)}
                 disabled={loading}
               >
+                {action === 'translation' && (
+                  <option value='google'>{_('Google Translate')}</option>
+                )}
                 {providerOptions.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.name} · {option.model}
@@ -375,8 +398,8 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
         </div>
       ) : (
         <>
-          <div ref={contentRef} className='min-h-0 flex-1 overflow-y-auto px-4'>
-            <div className='bg-base-200/50 mb-3 line-clamp-2 rounded-md p-3 text-sm'>
+          <div ref={contentRef} className='min-h-0 overflow-y-auto px-4'>
+            <div className='bg-base-200/50 eink-bordered mb-3 whitespace-pre-wrap break-words rounded-md p-3 text-sm leading-relaxed'>
               {selection.text}
             </div>
             {error && <p className='mb-3 text-sm text-red-500'>{error}</p>}

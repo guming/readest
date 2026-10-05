@@ -2,6 +2,7 @@ import { stubTranslation as _ } from '@/utils/misc';
 import { normalizeToShortLang } from '@/utils/lang';
 import { TranslationProvider } from '../types';
 
+<<<<<<< HEAD
 /**
  * The unofficial endpoint behind the Google Translate widget. It needs no key,
  * but Google decides per caller whether the traffic looks automated and answers
@@ -48,6 +49,40 @@ async function withRequestLimit<T>(task: () => Promise<T>): Promise<T> {
   }
 }
 
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+async function fetchTranslation(url: string): Promise<unknown> {
+  return withRequestLimit(async () => {
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        // Use the WebView network stack: Google returns 429 to the Tauri HTTP
+        // client for this endpoint, even when the same device's WebView gets 200.
+        const response = await window.fetch(url);
+        if (response.ok) return await response.json();
+        if (response.status !== 429) {
+          throw new Error(`Translation failed with status ${response.status}`);
+        }
+        if (attempt === 2) break;
+        const retryAfter = response.headers.get('Retry-After');
+        const seconds = retryAfter ? Number(retryAfter) : NaN;
+        const delay = Number.isFinite(seconds)
+          ? seconds * 1000
+          : retryAfter
+            ? Date.parse(retryAfter) - Date.now()
+            : 1000 * 2 ** attempt;
+        // Do not retry earlier than requested or hold the reader indefinitely.
+        if (delay > 30000) break;
+        await wait(Number.isFinite(delay) ? Math.max(0, delay) : 1000 * 2 ** attempt);
+      }
+      throw new Error(
+        _('Google Translate is rate limited (429). Please try again later or choose another provider.'),
+      );
+    } finally {
+      await wait(250);
+    }
+  });
+}
+
 const buildUrl = (line: string, sourceLang: string, targetLang: string) => {
   const url = new URL(TRANSLATE_URL);
   url.searchParams.append('client', 'gtx');
@@ -58,6 +93,45 @@ const buildUrl = (line: string, sourceLang: string, targetLang: string) => {
   url.searchParams.append('tl', normalizeToShortLang(targetLang).toLowerCase());
   url.searchParams.append('q', line);
   return url.toString();
+=======
+// Share the queue across popup and full-page translations.
+let requestQueue: Promise<unknown> = Promise.resolve();
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const fetchTranslation = (url: string): Promise<unknown> => {
+  const request = requestQueue.then(async () => {
+    const fetch = isTauriAppPlatform() ? tauriFetch : window.fetch.bind(window);
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const response = await fetch(url);
+        if (response.ok) return await response.json();
+        if (response.status !== 429) {
+          throw new Error(`Translation failed with status ${response.status}`);
+        }
+        if (attempt === 2) break;
+        const retryAfter = response.headers.get('Retry-After');
+        const seconds = retryAfter ? Number(retryAfter) : NaN;
+        const delay = Number.isFinite(seconds)
+          ? seconds * 1000
+          : retryAfter
+            ? Date.parse(retryAfter) - Date.now()
+            : 1000 * 2 ** attempt;
+        // Do not retry earlier than requested or hold the reader indefinitely.
+        if (delay > 30000) break;
+        await wait(Number.isFinite(delay) ? Math.max(0, delay) : 1000 * 2 ** attempt);
+      }
+      throw new Error(
+        _(
+          'Google Translate is rate limited (429). Please try again later or choose another provider.',
+        ),
+      );
+    } finally {
+      await wait(250);
+    }
+  });
+  requestQueue = request.catch(() => {});
+  return request;
+>>>>>>> 47e21c0b2 (fix: handle Google translation rate limits and improve selection popup)
 };
 
 export const googleProvider: TranslationProvider = {
@@ -79,14 +153,7 @@ export const googleProvider: TranslationProvider = {
         return;
       }
 
-      const fetch = window.fetch.bind(window);
-      const response = await withRequestLimit(() => fetch(buildUrl(line, sourceLang, targetLang)));
-
-      if (!response.ok) {
-        throw new Error(`Translation failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await fetchTranslation(buildUrl(line, sourceLang, targetLang));
       if (Array.isArray(data) && Array.isArray(data[0])) {
         const translatedText = data[0]
           .filter((segment) => Array.isArray(segment) && segment[0])
