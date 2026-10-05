@@ -66,6 +66,7 @@ describe('googleProvider', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -121,6 +122,51 @@ describe('googleProvider', () => {
     const { googleProvider } = await import('@/services/translators/providers/google');
     const result = await googleProvider.translate(['Hello'], 'en', 'fr');
     expect(result).toEqual(['Hello']);
+  });
+
+  it('serializes simultaneous translations', async () => {
+    vi.useFakeTimers();
+    let active = 0;
+    let peak = 0;
+    mockFetch.mockImplementation(async () => {
+      active++;
+      peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active--;
+      return { ok: true, json: async () => [[['translated']]] };
+    });
+    const { googleProvider } = await import('@/services/translators/providers/google');
+    const result = Promise.all([
+      googleProvider.translate(['Hello', 'World'], 'en', 'fr'),
+      googleProvider.translate(['Another'], 'en', 'fr'),
+    ]);
+    await vi.runAllTimersAsync();
+    await result;
+    expect(peak).toBe(1);
+  });
+
+  it('retries a temporary 429 response', async () => {
+    vi.useFakeTimers();
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 429, headers: new Headers() })
+      .mockResolvedValue({ ok: true, json: async () => [[['Bonjour']]] });
+    const { googleProvider } = await import('@/services/translators/providers/google');
+    const result = googleProvider.translate(['Hello'], 'en', 'fr');
+    await vi.runAllTimersAsync();
+    expect(await result).toEqual(['Bonjour']);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops retrying persistent rate limits with an actionable error', async () => {
+    vi.useFakeTimers();
+    mockFetch.mockResolvedValue({ ok: false, status: 429, headers: new Headers() });
+    const { googleProvider } = await import('@/services/translators/providers/google');
+    const result = expect(googleProvider.translate(['Hello'], 'en', 'fr')).rejects.toThrow(
+      'Google Translate',
+    );
+    await vi.runAllTimersAsync();
+    await result;
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
   it('has correct provider metadata', async () => {
