@@ -13,7 +13,9 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { getCloudSyncProvider } from '@/services/sync/cloudSyncProvider';
 import { runActiveFileLibrarySync } from '@/services/sync/file/runLibrarySync';
 import { checkMixedFleetOnce } from '@/services/sync/fleetDetection';
+import { isDemoBook } from '@/services/demoBooks';
 import { useSyncContext } from '@/context/SyncContext';
+import { isAudiobook, parseAbsFilePath } from '@/utils/audiobook';
 import {
   pickFresherReadingStatus,
   needsCoverRefresh,
@@ -149,10 +151,33 @@ export const useBooksSync = () => {
   const updateLibrary = useCallback(async () => {
     if (!syncedBooks?.length) return;
 
+    // A cloud row for a demo book can only be a stale one pushed before #5049.
+    // Merging it back would write over the local demo row — and, for a demo
+    // book deleted before deletes stamped `updatedAt` (#6663), the not-deleted
+    // cloud row wins the LWW tie and clears `deletedAt`, resurrecting a book
+    // the user deleted (coverless, since its cover was never uploaded either).
+    const demoHashes = new Set(
+      useLibraryStore
+        .getState()
+        .library.filter(isDemoBook)
+        .map((book) => book.hash),
+    );
+    const cloudBooks = syncedBooks.filter(
+      // An ABS row arrives with its `abs://` filePath rebuilt from
+      // `metadata.absSource` (transformBookFromDB). A row that still has none
+      // — pushed before the mirror existed, when the push stripped filePath
+      // and carried nothing in its place — is dead on arrival: nothing can
+      // resolve the server or item it came from. Drop it rather than shelving
+      // an unopenable entry.
+      (book) =>
+        !demoHashes.has(book.hash) && !(isAudiobook(book) && !parseAbsFilePath(book.filePath)),
+    );
+    if (!cloudBooks.length) return;
+
     // Process old books first so that when we update the library the order is preserved
-    syncedBooks.sort((a, b) => a.updatedAt - b.updatedAt);
-    const bookHashesInSynced = new Set(syncedBooks.map((book) => book.hash));
-    const syncedByHash = new Map(syncedBooks.map((book) => [book.hash, book]));
+    cloudBooks.sort((a, b) => a.updatedAt - b.updatedAt);
+    const bookHashesInSynced = new Set(cloudBooks.map((book) => book.hash));
+    const syncedByHash = new Map(cloudBooks.map((book) => [book.hash, book]));
     const liveLibrary = useLibraryStore.getState().library;
     const oldBooks = liveLibrary.filter((book) => bookHashesInSynced.has(book.hash));
     // Books whose cover must be (re)fetched: never-downloaded, or a newer cover
@@ -201,7 +226,7 @@ export const useBooksSync = () => {
     appService?.saveLibraryBooks(updatedLibrary);
 
     const bookHashesInLibrary = new Set(updatedLibrary.map((book) => book.hash));
-    const newBooks = syncedBooks.filter(
+    const newBooks = cloudBooks.filter(
       (newBook) =>
         !bookHashesInLibrary.has(newBook.hash) && newBook.uploadedAt && !newBook.deletedAt,
     );
