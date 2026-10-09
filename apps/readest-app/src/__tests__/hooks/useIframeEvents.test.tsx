@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, fireEvent } from '@testing-library/react';
 
 vi.mock('@/store/readerStore', () => {
   return {
@@ -18,6 +18,7 @@ vi.mock('@/utils/event', () => ({
 }));
 
 import { useMouseEvent } from '@/app/reader/hooks/useIframeEvents';
+import { eventDispatcher } from '@/utils/event';
 
 function dispatchWheelMessage(bookKey: string, deltaY = 100) {
   // useMouseEvent listens on `message`, not `window.postMessage` directly,
@@ -31,6 +32,34 @@ function dispatchWheelMessage(bookKey: string, deltaY = 100) {
 describe('useMouseEvent wheel handling', () => {
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
+  });
+
+  test.each([-50, 50])('outer Ctrl+wheel with delta %s zooms without turning pages', (deltaY) => {
+    const handler = vi.fn();
+    function Wrapper() {
+      const handlers = useMouseEvent('book-1', handler);
+      return <div data-testid='reader' {...handlers} />;
+    }
+    const { getByTestId } = render(<Wrapper />);
+    fireEvent.wheel(getByTestId('reader'), { ctrlKey: true, deltaY });
+    expect(eventDispatcher.dispatch).toHaveBeenCalledExactlyOnceWith(
+      deltaY < 0 ? 'zoom-in' : 'zoom-out',
+      { factor: 0.5 },
+    );
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('ordinary outer wheel preserves native scrolling without zoom or page turns', () => {
+    const handler = vi.fn();
+    function Wrapper() {
+      const handlers = useMouseEvent('book-1', handler);
+      return <div data-testid='reader' {...handlers} />;
+    }
+    const { getByTestId } = render(<Wrapper />);
+    fireEvent.wheel(getByTestId('reader'), { deltaY: 120 });
+    expect(handler).not.toHaveBeenCalled();
+    expect(eventDispatcher.dispatch).not.toHaveBeenCalled();
   });
 
   test('wheel flip dispatches to the latest handlePageFlip after re-render', () => {

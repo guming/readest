@@ -26,19 +26,21 @@ export const useMouseEvent = (
   if (!wheelDetectorRef.current) {
     wheelDetectorRef.current = createWheelGestureDetector();
   }
+  const handleZoomWheel = (deltaY: number) => {
+    // A zoom gesture must not leave travel queued for a later page turn.
+    wheelDetectorRef.current!.reset();
+    if (deltaY > 0) {
+      eventDispatcher.dispatch('zoom-out', { factor: Math.abs(deltaY) / 100 });
+    } else if (deltaY < 0) {
+      eventDispatcher.dispatch('zoom-in', { factor: Math.abs(deltaY) / 100 });
+    }
+  };
   const handleMouseEvent = (msg: MessageEvent | React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (msg instanceof MessageEvent) {
       if (msg.data && msg.data.bookKey === bookKey) {
         if (msg.data.type === 'iframe-wheel') {
           if (msg.data.ctrlKey) {
-            // Pinch/ctrl-wheel zoom is not a page-turn gesture — drop any
-            // travel accumulated so far so it can't bleed into a later flip.
-            wheelDetectorRef.current!.reset();
-            if (msg.data.deltaY > 0) {
-              eventDispatcher.dispatch('zoom-out', { factor: Math.abs(msg.data.deltaY) / 100 });
-            } else if (msg.data.deltaY < 0) {
-              eventDispatcher.dispatch('zoom-in', { factor: Math.abs(msg.data.deltaY) / 100 });
-            }
+            handleZoomWheel(msg.data.deltaY);
           } else {
             const flip = wheelDetectorRef.current!.feed({
               deltaX: msg.data.deltaX ?? 0,
@@ -73,7 +75,14 @@ export const useMouseEvent = (
 
   return {
     onClick: handlePageFlip,
-    onWheel: handleMouseEvent,
+    onWheel: (event: React.WheelEvent<HTMLDivElement>) => {
+      // Scrolled fixed-layout pages disable iframe pointer events, so their
+      // wheel gestures reach this outer container instead of iframe-wheel.
+      if (event.ctrlKey) {
+        event.preventDefault();
+        handleZoomWheel(event.deltaY);
+      }
+    },
   };
 };
 

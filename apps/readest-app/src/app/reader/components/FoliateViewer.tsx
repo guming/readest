@@ -14,6 +14,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useCustomFontStore } from '@/store/customFontStore';
 import { useParallelViewStore } from '@/store/parallelViewStore';
 import { useMouseEvent, useTouchEvent, useOpenMediaEvent } from '../hooks/useIframeEvents';
+import { useWebkitPinchZoom } from '../hooks/useWebkitPinchZoom';
 import { useCapturedTurn, applyPageTurnAttributes } from '../hooks/useCapturedTurn';
 import { useBrightnessGesture } from '../hooks/useBrightnessGesture';
 import BrightnessOverlay from './BrightnessOverlay';
@@ -58,6 +59,7 @@ import {
   handleTouchStart,
   handleTouchMove,
   handleTouchEnd,
+  handleWebkitGesture,
   addLongPressListeners,
 } from '../utils/iframeEventHandlers';
 import { getMaxInlineSize } from '@/utils/config';
@@ -424,6 +426,11 @@ const FoliateViewer: React.FC<{
           handleClick.bind(null, bookKey, doubleClickDisabled, !!bookData?.isFixedLayout),
         );
         detail.doc.addEventListener('wheel', handleWheel.bind(null, bookKey));
+        for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+          detail.doc.addEventListener(type, handleWebkitGesture.bind(null, bookKey), {
+            passive: false,
+          });
+        }
         detail.doc.addEventListener('touchstart', handleTouchStart.bind(null, bookKey));
         detail.doc.addEventListener('touchmove', handleTouchMove.bind(null, bookKey));
         detail.doc.addEventListener('touchend', handleTouchEnd.bind(null, bookKey));
@@ -543,6 +550,7 @@ const FoliateViewer: React.FC<{
   const { handlePageFlip } = usePagination(bookKey, viewRef, containerRef);
   const mouseHandlers = useMouseEvent(bookKey, handlePageFlip);
   const touchHandlers = useTouchEvent(bookKey);
+  useWebkitPinchZoom(bookKey, containerRef);
   const autoscrollAnchor = useMiddleClickAutoscroll(bookKey, viewRef, containerRef);
   const autoScroll = useAutoScroll(bookKey, viewRef);
 

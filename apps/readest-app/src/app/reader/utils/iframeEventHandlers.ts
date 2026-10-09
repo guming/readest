@@ -403,6 +403,16 @@ export const handleTouchEnd = (bookKey: string, event: TouchEvent) => {
   handleTouchEv(bookKey, event, 'iframe-touchend');
 };
 
+// WebKit on macOS sends trackpad pinches as GestureEvents. Forward the small,
+// serializable part of that event to the reader window so React owns the
+// listener lifetime rather than retaining a component callback in an iframe.
+export const handleWebkitGesture = (bookKey: string, event: Event) => {
+  const scale = (event as Event & { scale?: number }).scale;
+  if (scale == null || !Number.isFinite(scale) || scale <= 0) return;
+  event.preventDefault();
+  window.postMessage({ type: 'iframe-gesture', bookKey, phase: event.type, scale }, '*');
+};
+
 export const addLongPressListeners = (bookKey: string, doc: Document) => {
   const longPressDuration = 500;
   const moveThreshold = 10; // pixels - movement threshold to detect dragging/selection
