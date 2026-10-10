@@ -10,4 +10,5 @@ export type AnnotationToolType =
   | 'explain'
   | 'tts'
   | 'proofread'
-  | 'share';
+  | 'share'
+  | 'quotecard';

@@ -2,6 +2,7 @@ import { IconType } from 'react-icons';
 import { FiSearch } from 'react-icons/fi';
 import { FiCopy } from 'react-icons/fi';
 import { FiShare } from 'react-icons/fi';
+import { FiImage } from 'react-icons/fi';
 import { PiHighlighterFill, PiSparkle, PiLightbulb } from 'react-icons/pi';
 import { BsPencilSquare } from 'react-icons/bs';
 import { BsTranslate } from 'react-icons/bs';
@@ -108,6 +109,12 @@ export const annotationToolButtons = createAnnotationToolButtons([
     tooltip: _('Share text after selection'),
     Icon: FiShare,
     quickAction: true,
+  },
+  {
+    type: 'quotecard',
+    label: _('Quote Card'),
+    tooltip: _('Create a quote card image from the selection'),
+    Icon: FiImage,
   },
 ]);
 
