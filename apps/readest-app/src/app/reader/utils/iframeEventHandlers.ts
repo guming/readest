@@ -619,6 +619,7 @@ export const handleClick = (
         clientY: event.clientY,
         offsetX: event.offsetX,
         offsetY: event.offsetY,
+        ...getWindowPoint(event),
         ...getKeyStatus(event),
       },
       '*',

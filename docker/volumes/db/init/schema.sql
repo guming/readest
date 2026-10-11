@@ -96,6 +96,7 @@ CREATE TABLE public.book_notes (
   page integer NULL,
   global boolean NULL,
   reference_data jsonb NULL,
+  ink jsonb NULL,
   created_at timestamp with time zone NULL DEFAULT now(),
   updated_at timestamp with time zone NULL DEFAULT now(),
   deleted_at timestamp with time zone NULL,

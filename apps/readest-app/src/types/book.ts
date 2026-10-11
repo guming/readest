@@ -1,3 +1,4 @@
+import type { InkStroke } from '@/services/handwriting/model';
 import { BookMetadata } from '@/libs/document';
 import type {
   BookExpertProfile,
@@ -30,7 +31,7 @@ export type BookFormat =
   | 'OPDSAUDIO'
   // Streaming audiobook from BookOrbit's audiobook API; filePath is bookorbit://<bookId> (#6224)
   | 'BOOKORBIT';
-export type BookNoteType = 'bookmark' | 'annotation' | 'excerpt' | 'notebook' | 'reference';
+export type BookNoteType = 'bookmark' | 'annotation' | 'excerpt' | 'notebook' | 'reference' | 'ink';
 
 export interface BookReferenceData {
   kind: 'external' | 'footnote' | 'internal';
@@ -232,6 +233,12 @@ export interface BookNote {
    * bookmarks and excerpts, and for fixed-layout formats (e.g. PDF).
    */
   global?: boolean;
+  /**
+   * Handwriting of an `ink` note: strokes pinned to the content at `cfi` (a
+   * reflowable book) or drawn on the page at `cfi` (fixed layout). See
+   * services/handwriting.
+   */
+  ink?: InkStroke[];
 
   createdAt: number;
   updatedAt: number;

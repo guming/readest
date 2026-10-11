@@ -198,6 +198,7 @@ export const transformBookNoteToDB = (bookNote: unknown, userId: string): DBBook
     note,
     global,
     referenceData,
+    ink,
     createdAt,
     updatedAt,
     deletedAt,
@@ -219,6 +220,8 @@ export const transformBookNoteToDB = (bookNote: unknown, userId: string): DBBook
     note,
     global,
     reference_data: referenceData,
+    // Absent for other notes, so an upsert never clears stored strokes.
+    ink,
     created_at: new Date(createdAt ?? Date.now()).toISOString(),
     updated_at: new Date(updatedAt ?? Date.now()).toISOString(),
     // note that only null deleted_at is updated to the database, undefined is not
@@ -242,6 +245,7 @@ export const transformBookNoteFromDB = (dbBookNote: DBBookNote): BookNote => {
     note,
     global,
     reference_data,
+    ink,
     created_at,
     updated_at,
     deleted_at,
@@ -262,6 +266,9 @@ export const transformBookNoteFromDB = (dbBookNote: DBBookNote): BookNote => {
     note,
     global,
     referenceData: reference_data,
+    // No key without strokes: a pulled note is merged over the local one, and
+    // a server without the column must not wipe strokes held locally.
+    ...(ink ? { ink } : {}),
     createdAt: new Date(created_at!).getTime(),
     updatedAt: new Date(updated_at!).getTime(),
     deletedAt: deleted_at ? new Date(deleted_at).getTime() : null,

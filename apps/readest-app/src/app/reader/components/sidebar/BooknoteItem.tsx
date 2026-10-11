@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import React, { useMemo, useState } from 'react';
 import { MdEdit, MdDelete, MdContentCopy, MdLibraryAdd } from 'react-icons/md';
+import { PiBookmarkSimple, PiHighlighter, PiNotePencil, PiScribbleLoop } from 'react-icons/pi';
 
 import { useEnv } from '@/context/EnvContext';
 import { BookNote, HighlightColor } from '@/types/book';
@@ -27,6 +28,14 @@ import TextEditor from '@/components/TextEditor';
 import { BooknoteTimeLabel } from './BooknoteTime';
 import { openExternalUrl } from '@/utils/open';
 import { getArxivPdfUrl, importArxivPaper } from '../../utils/arxiv';
+
+/** The icon and name that lead an item, by what it is. */
+const kindOf = (item: BookNote) => {
+  if (item.type === 'bookmark') return { label: 'Bookmark', Icon: PiBookmarkSimple };
+  if (item.type === 'ink') return { label: 'Drawing', Icon: PiScribbleLoop };
+  if (item.note) return { label: 'Note', Icon: PiNotePencil };
+  return { label: 'Highlight', Icon: PiHighlighter };
+};
 
 interface BooknoteItemProps {
   bookKey: string;
@@ -55,6 +64,8 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
   const customColors = globalReadSettings.customHighlightColors;
 
   const { text, cfi, note } = item;
+  const kind = kindOf(item);
+  const kindIconSize = useResponsiveSize(12);
   const isBookmark = item.type === 'bookmark';
   const saveBooknoteNoteText = useSaveBooknoteNoteText(bookKey);
   const saveBookmarkText = (draftText: string) => {
@@ -273,29 +284,28 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
         }
       }}
     >
-      <div
-        className={clsx('min-h-4 p-0 transition-all duration-300 ease-in-out')}
-        style={
-          {
-            '--top-override': '0.7rem',
-            '--end-override': '0.3rem',
-          } as React.CSSProperties
-        }
-      >
-        {item.note && (
-          <div
-            className='content prose prose-sm font-size-sm'
-            dir='auto'
-            dangerouslySetInnerHTML={{ __html: noteHtml }}
-          ></div>
-        )}
-        <div className='flex items-start'>
+      <div className='flex items-start gap-2'>
+        <span
+          role='img'
+          aria-label={_(kind.label)}
+          className='bg-base-content/10 text-base-content/60 flex h-5 w-5 shrink-0 items-center justify-center rounded-full'
+        >
+          <kind.Icon size={kindIconSize} aria-hidden='true' />
+        </span>
+        <div
+          className={clsx('min-h-4 min-w-0 flex-1 p-0 transition-all duration-300 ease-in-out')}
+          style={
+            {
+              '--top-override': '0.7rem',
+              '--end-override': '0.3rem',
+            } as React.CSSProperties
+          }
+        >
           {item.note && (
             <div
-              className='me-2 mt-2.5 min-h-full self-stretch rounded-xl bg-gray-300'
-              style={{
-                minWidth: `${separatorWidth}px`,
-              }}
+              className='content prose prose-sm font-size-sm'
+              dir='auto'
+              dangerouslySetInnerHTML={{ __html: noteHtml }}
             ></div>
           )}
           <div
@@ -329,7 +339,7 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
                 } as React.CSSProperties
               }
             >
-              {text || ''}
+              {text || (item.type === 'ink' ? _('Drawing') : '')}
             </span>
             {item.type === 'reference' && (
               <div className='text-base-content/60 mt-1 text-xs'>
