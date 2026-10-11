@@ -696,6 +696,11 @@ const TTSPlayerSheet = ({
                   >
                     {_(voice.name)}
                   </span>
+                  {voice.tier && (
+                    <span className='badge badge-sm badge-ghost shrink-0'>
+                      {voice.tier === 'pro' ? _('Pro') : _('Plus')}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
