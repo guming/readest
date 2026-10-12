@@ -1078,6 +1078,9 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
       } catch (error) {
         // A start the user cancelled must not touch the session after it.
         if (startGenerationRef.current !== generation) return;
+        // The full player may already be open (it opens before init): close
+        // it with the mini player rather than leave dead controls up.
+        onRequestHidePanel?.();
         setShowIndicator(false);
         setIsPlaying(false);
         eventDispatcher.dispatch('toast', {
