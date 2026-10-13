@@ -322,6 +322,116 @@ fn default_window_size(work_area: Option<(f64, f64)>) -> (f64, f64) {
     )
 }
 
+/// Windows 10 renders the native shadow of an undecorated window as a 1px
+/// border on the left, right and bottom edges but not the top, which reads
+/// as a broken frame (tauri-apps/tauri#13134). Windows 11 (build >= 22000)
+/// draws a uniform border, so only there is the shadow worth keeping.
+#[cfg(all(desktop, target_os = "windows"))]
+fn undecorated_shadow_is_symmetric() -> bool {
+    use winreg::enums::HKEY_LOCAL_MACHINE;
+    use winreg::RegKey;
+
+    RegKey::predef(HKEY_LOCAL_MACHINE)
+        .open_subkey("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")
+        .and_then(|key| key.get_value::<String, _>("CurrentBuild"))
+        // Unknown version: keep the current (shadowed) behavior.
+        .map_or(true, |build| {
+            build.parse::<u32>().map_or(true, |b| b >= 22000)
+        })
+}
+
+#[cfg(all(desktop, not(target_os = "windows"), not(target_os = "macos")))]
+fn undecorated_shadow_is_symmetric() -> bool {
+    true
+}
+
+/// Restores the main window's saved geometry on Windows, after repairing the
+/// window's client area.
+///
+/// The main window is created hidden (`visible(false)`) with undecorated
+/// shadows. While the window stays hidden, tao's `WM_NCCALCSIZE` handler is
+/// never invoked again, so the client area keeps the rect Windows computed at
+/// creation time from the native frame styles — shorter than intended by the
+/// titlebar height. Restoring the saved size on top of that makes tao
+/// compensate with the stale window-to-client offset, and the difference is
+/// baked into the real client area on every launch: the window grows by
+/// roughly one titlebar height per start (#6373).
+///
+/// A single frame re-evaluation (`SWP_FRAMECHANGED`) after creation lets
+/// tao's handler measure the client area correctly; the saved geometry is
+/// then replayed through the plugin's own `restore_state` against the
+/// corrected rect, all while the window is still hidden.
+#[cfg(all(desktop, target_os = "windows"))]
+fn restore_main_window_state(window: &tauri::WebviewWindow) {
+    use tauri_plugin_window_state::{StateFlags, WindowExt};
+
+    if let Ok(hwnd) = window.hwnd() {
+        // Leading `::` because this crate has its own `mod windows`.
+        use ::windows::Win32::Foundation::HWND;
+        use ::windows::Win32::UI::WindowsAndMessaging::{
+            SetWindowPos, SET_WINDOW_POS_FLAGS, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
+            SWP_NOSIZE, SWP_NOZORDER,
+        };
+        // SAFETY: `hwnd` is the live top-level window of this webview. The
+        // flags only force a nonclient-area recalculation — no move, no
+        // resize, no z-order change, no activation.
+        unsafe {
+            if let Err(e) = SetWindowPos(
+                HWND(hwnd.0),
+                None,
+                0,
+                0,
+                0,
+                0,
+                SET_WINDOW_POS_FLAGS(
+                    SWP_FRAMECHANGED.0
+                        | SWP_NOMOVE.0
+                        | SWP_NOSIZE.0
+                        | SWP_NOZORDER.0
+                        | SWP_NOACTIVATE.0,
+                ),
+            ) {
+                // Restoring proceeds either way; the saved geometry just comes
+                // back with the pre-fix growth for this launch.
+                log::error!("Failed to re-evaluate the main window frame: {e}");
+            }
+        }
+    }
+    // VISIBLE is excluded: the plugin would otherwise show the window at the
+    // end of the restore — before the webview has painted its first frame,
+    // which flashes the window background on dark hosts. The window is shown
+    // by the frontend's `window-themed` event instead (see the listener in
+    // `run`), with a timeout fallback for the case where that event never
+    // arrives.
+    let restore_flags = StateFlags::all() & !StateFlags::VISIBLE;
+    if let Err(e) = window.restore_state(restore_flags) {
+        // A failed restore leaves the main window invisible for this launch —
+        // surface it at its creation-time size instead. The state file is
+        // untouched, so the next launch retries the restore.
+        log::error!("Failed to restore the main window state: {e}");
+        let _ = window.show();
+    }
+}
+
+/// Re-applies the main window's saved maximized and fullscreen state on Linux,
+/// now that the window is shown.
+///
+/// The main window is created hidden, and the window-state plugin maximizes
+/// it before showing it. On X11 a window changes those states by asking the
+/// window manager with a `_NET_WM_STATE` client message, which the window
+/// manager ignores while the window is still unmapped — so the window always
+/// came back at its restored size, never maximized (#6657). Asked again after
+/// the plugin's `show()`, the request reaches the window manager after the
+/// map, as it does for a window created visible.
+#[cfg(target_os = "linux")]
+fn restore_main_window_maximized<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
+    use tauri_plugin_window_state::{StateFlags, WindowExt};
+
+    if let Err(e) = window.restore_state(StateFlags::MAXIMIZED | StateFlags::FULLSCREEN) {
+        log::error!("Failed to restore the main window's maximized state: {e}");
+    }
+}
+
 // Pure decision for whether the in-app updater should be hidden. Kept
 // dependency-free so it can be unit tested for every platform combination.
 //
@@ -933,7 +1043,48 @@ pub fn run() {
 
             #[cfg(not(target_os = "macos"))]
             {
-                win_builder.build().unwrap();
+                let _main_window = win_builder.build().unwrap();
+                #[cfg(windows)]
+                restore_main_window_state(&_main_window);
+                #[cfg(target_os = "linux")]
+                restore_main_window_maximized(&_main_window);
+                // The window is created hidden and the state-restore show is
+                // suppressed (see restore_main_window_state): the frontend
+                // signals once the theme is applied — WebView2 has painted
+                // the themed page — and only then is the window mapped, so
+                // the user never sees the pre-theme background. The timeout
+                // covers a wedged frontend by surfacing the window at its
+                // fallback background (the pre-fix behavior) instead of
+                // nothing. Non-Windows platforms keep their existing
+                // show-at-restore behavior.
+                #[cfg(windows)]
+                {
+                    use std::sync::atomic::{AtomicBool, Ordering};
+                    use std::sync::Arc;
+                    let theme_shown = Arc::new(AtomicBool::new(false));
+                    if let Some(theme_window) = app.get_webview_window("main") {
+                        {
+                            let theme_shown = Arc::clone(&theme_shown);
+                            let theme_window = theme_window.clone();
+                            std::thread::spawn(move || {
+                                std::thread::sleep(std::time::Duration::from_secs(30));
+                                if !theme_shown.swap(true, Ordering::SeqCst) {
+                                    log::warn!("window-themed event timed out; showing the main window at its fallback background");
+                                    let _ = theme_window.show();
+                                    let _ = theme_window.set_focus();
+                                }
+                            });
+                        }
+                        let theme_shown_for_listen = Arc::clone(&theme_shown);
+                        let theme_window_for_listen = theme_window.clone();
+                        app.listen("window-themed", move |_| {
+                            if !theme_shown_for_listen.swap(true, Ordering::SeqCst) {
+                                let _ = theme_window_for_listen.show();
+                                let _ = theme_window_for_listen.set_focus();
+                            }
+                        });
+                    }
+                }
             }
             // let win = win_builder.build().unwrap();
             // win.open_devtools();
