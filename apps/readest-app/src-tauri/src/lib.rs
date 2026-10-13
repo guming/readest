@@ -37,6 +37,8 @@ mod dir_scanner;
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
 mod discord_rpc;
 mod epub_parser;
+#[cfg(desktop)]
+mod file_reveal;
 #[cfg(all(target_os = "linux", any(feature = "cef", test)))]
 mod linux_display;
 mod localsend;
@@ -559,6 +561,8 @@ pub fn run() {
             upload_file,
             get_environment_variable,
             get_executable_dir,
+            #[cfg(desktop)]
+            file_reveal::reveal_item_in_dir,
             set_webview_info,
             get_webview_version,
             #[cfg(desktop)]
