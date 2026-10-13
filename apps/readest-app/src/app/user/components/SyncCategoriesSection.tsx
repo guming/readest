@@ -56,6 +56,10 @@ const useCategoryCopy = (): Record<SyncCategory, CategoryCopy> => {
       title: _('Translators'),
       description: _('Custom translation providers, prompts, and (encrypted) API keys'),
     },
+    custom_tts: {
+      title: _('TTS Services'),
+      description: _('Custom text-to-speech services and (encrypted) API keys'),
+    },
     settings: {
       title: _('App settings'),
       description: _(
