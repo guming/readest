@@ -23,6 +23,8 @@ import {
   getPrimaryLanguage,
   getMetadataHash,
   getStableMetadataHash,
+  parseSeriesPosition,
+  getBookDocPageCount,
 } from '@/utils/book';
 import type { BookNav } from '@/services/nav';
 import { partialMD5, md5 } from '@/utils/md5';
@@ -718,6 +720,7 @@ export async function importBook(
       // property of the file, so it is re-derived on every (re)import rather
       // than synced as user data.
       hasNarration: hasMediaOverlays(loadedBook) || undefined,
+      pageCount: getBookDocPageCount(loadedBook, format),
       metadata: loadedBook.metadata,
       createdAt: existingBook ? existingBook.createdAt : Date.now(),
       uploadedAt: existingBook ? existingBook.uploadedAt : null,
@@ -756,6 +759,7 @@ export async function importBook(
       existingBook.author = book.author;
       existingBook.primaryLanguage = book.primaryLanguage;
       existingBook.metadata = book.metadata;
+      existingBook.pageCount = book.pageCount;
       existingBook.uploadedAt = null;
       existingBook.downloadedAt = Date.now();
     } else if (existingBook) {
@@ -769,6 +773,7 @@ export async function importBook(
       existingBook.author = book.author;
       existingBook.primaryLanguage = book.primaryLanguage;
       existingBook.metadata = book.metadata;
+      existingBook.pageCount = book.pageCount;
       existingBook.metadataUpdatedAt = existingBook.updatedAt;
       existingBook.downloadedAt = Date.now();
     }
@@ -1183,7 +1188,7 @@ export async function fetchBookDetails(
 
 /**
  * Refresh metadata for a single book by re-opening and re-parsing its file.
- * Updates series info, language, and other metadata fields without modifying
+ * Updates series info, language, page count, and other metadata fields without modifying
  * user-edited titles or reading progress.
  * Returns true if the metadata was successfully refreshed.
  */
@@ -1204,6 +1209,8 @@ export async function refreshBookMetadata(fs: FileSystem, book: Book): Promise<b
     if (primaryLanguage) {
       book.primaryLanguage = primaryLanguage;
     }
+    // Books imported before #6662 have no import-time page count; fill it in.
+    book.pageCount = getBookDocPageCount(bookDoc, book.format);
 
     // Update series info from metadata
     if (book.metadata?.belongsTo?.series) {

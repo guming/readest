@@ -26,6 +26,7 @@ export const LibrarySortByType = {
   Format: 'format',
   Published: 'published',
   Progress: 'progress',
+  Pages: 'pages',
   TimeRemaining: 'timeRemaining',
 } as const;
 
