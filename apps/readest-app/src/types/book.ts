@@ -407,6 +407,7 @@ export interface ViewConfig {
   sideBarTab: string;
   uiLanguage: string;
   sortedTOC: boolean;
+  showTOCThumbnails: boolean;
 
   doubleBorder: boolean;
   borderColor: string;

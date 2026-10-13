@@ -478,6 +478,7 @@ export const DEFAULT_VIEW_CONFIG: ViewConfig = {
   sideBarTab: 'toc',
   uiLanguage: '',
   sortedTOC: false,
+  showTOCThumbnails: true,
 
   doubleBorder: false,
   borderColor: 'red',
