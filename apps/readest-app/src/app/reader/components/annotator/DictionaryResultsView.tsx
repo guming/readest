@@ -86,6 +86,7 @@ export function useDictionaryResults({
     settings,
     dictionaries,
     fs: appService ?? undefined,
+    appService,
   });
   const providersSignature = computedProviders.map((p) => p.id).join('|');
   // eslint-disable-next-line react-hooks/exhaustive-deps

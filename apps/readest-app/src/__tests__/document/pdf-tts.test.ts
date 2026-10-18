@@ -366,6 +366,22 @@ describe('PDF TTS', () => {
       expect(book.metadata.title).toBeTruthy();
     });
 
+    it('opens the same PDF as a reflowable HTML book when requested', async () => {
+      const pdfPath = resolve(__dirname, '../fixtures/data/sample-alice.pdf');
+      const buffer = readFileSync(pdfPath);
+      const file = new File([buffer], 'sample-alice.pdf', { type: 'application/pdf' });
+      const result = await new DocumentLoader(file, { pdfReflow: true }).open();
+
+      expect(result.format).toBe('PDF');
+      expect(result.book.rendition.layout).toBe('reflowable');
+      expect(result.book.isPDFReflow).toBe(true);
+      expect(result.book.sections.length).toBeLessThan(book.sections.length);
+
+      const doc = await result.book.sections[0]!.createDocument();
+      expect(doc.body.dataset['pdfReflow']).toBe('true');
+      expect(doc.body.textContent).toContain('Alice');
+    }, 30_000);
+
     it('should provide createDocument on every section', () => {
       for (const section of book.sections) {
         expect(typeof section.createDocument).toBe('function');

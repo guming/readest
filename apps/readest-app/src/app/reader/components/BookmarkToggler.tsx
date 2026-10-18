@@ -13,6 +13,7 @@ import { getCurrentPage } from '@/utils/book';
 import { eventDispatcher } from '@/utils/event';
 import { isCfiInLocation } from '@/utils/cfi';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
+import { createPDFTextAnchor } from '../utils/pdfAnchor';
 
 interface BookmarkTogglerProps {
   bookKey: string;
@@ -50,6 +51,8 @@ const BookmarkToggler: React.FC<BookmarkTogglerProps> = ({ bookKey }) => {
         text: truncatedText ? truncatedText : `${getCurrentPage(bookData.book!, progress)}`,
         note: '',
         page: progress.page,
+        pdfAnchor:
+          bookData.book?.format === 'PDF' ? createPDFTextAnchor(range, progress.index) : undefined,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };

@@ -128,7 +128,7 @@ const LangPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset 
     return [
       {
         value: 'custom-ai',
-        label: _('Custom AI'),
+        label: _('AI Translation'),
         disabled: !customAIConfigured,
       },
       ...getTranslators().map((t) => ({

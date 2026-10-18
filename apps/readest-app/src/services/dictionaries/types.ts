@@ -7,7 +7,15 @@
  * order; each provider writes lookup output into a per-tab container.
  */
 
-export type DictionaryProviderKind = 'builtin' | 'stardict' | 'mdict' | 'dict' | 'slob' | 'web';
+export type DictionaryProviderKind =
+  | 'builtin'
+  | 'stardict'
+  | 'mdict'
+  | 'dict'
+  | 'slob'
+  | 'bgl'
+  | 'plugin'
+  | 'web';
 
 export interface DictionaryLookupContext {
   /** Source language hint, e.g. book primary language code (`en`, `zh`). */
@@ -58,7 +66,7 @@ export interface DictionaryProvider {
  */
 export interface ImportedDictionary {
   id: string;
-  kind: 'stardict' | 'mdict' | 'dict' | 'slob';
+  kind: 'stardict' | 'mdict' | 'dict' | 'slob' | 'bgl' | 'plugin';
   /** Display name, derived from `.ifo` `bookname`, `.mdx` `Title`, slob `label`, or DICT `00databaseshort`. */
   name: string;
   /**
@@ -113,6 +121,16 @@ export interface ImportedDictionary {
     index?: string;
     // Slob bundle: a single self-contained `.slob` file.
     slob?: string;
+    bgl?: string;
+    pluginSource?: string;
+  };
+  plugin?: {
+    recordVersion: 1;
+    pluginId: string;
+    formatId: string;
+    sourceFormatVersion: number;
+    indexVersion: number;
+    source: { filename: string; byteSize: number; sha256: string };
   };
   /** Source language code if known. */
   lang?: string;

@@ -169,6 +169,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         var pluginEventTrigger: ((String, JSObject) -> Unit)? = null
 
+        @Volatile
+        var ownsAudioFocus: Boolean = true
+
         var currentTitle: String = "Read Aloud"
         var currentArtist: String = "Reading your content"
         var currentArtwork: Bitmap? = null
@@ -308,7 +311,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         if (!sessionActive) {
             sessionActive = true
 
-            requestFocus()
+            if (ownsAudioFocus) requestFocus()
             if (!noisyReceiverRegistered) {
                 noisyReceiverRegistered = true
                 ContextCompat.registerReceiver(

@@ -7,6 +7,7 @@ import { Book } from '@/types/book';
 import { useEnv } from '@/context/EnvContext';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useBookDataStore } from '@/store/bookDataStore';
+import { useLibraryStore } from '@/store/libraryStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useGamepad } from '@/hooks/useGamepad';
@@ -29,6 +30,7 @@ import { clearDiscordPresence } from '@/utils/discord';
 import { BOOK_IDS_SEPARATOR } from '@/services/constants';
 import { BookDetailModal } from '@/components/metadata';
 import ShareBookDialog from '@/app/library/components/ShareBookDialog';
+import AudiobookPairingDialog from './audiobook/AudiobookPairingDialog';
 import { useAuth } from '@/context/AuthContext';
 
 import useBooksManager from '../hooks/useBooksManager';
@@ -52,6 +54,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
   const { initViewState, getViewState, clearViewState } = useReaderStore();
   const { isSettingsDialogOpen, settingsDialogBookKey } = useSettingsStore();
   const [showDetailsBook, setShowDetailsBook] = useState<Book | null>(null);
+  const [audiobookBookKey, setAudiobookBookKey] = useState<string | null>(null);
   const [shareDialogState, setShareDialogState] = useState<{
     book: Book;
     cfi: string | null;
@@ -70,7 +73,19 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
 
     const pathname = window.location.pathname;
     const bookIds = ids || searchParams?.get('ids') || pathname.split('/reader/')[1] || '';
-    const initialIds = bookIds.split(BOOK_IDS_SEPARATOR).filter(Boolean);
+    const requestedIds = bookIds.split(BOOK_IDS_SEPARATOR).filter(Boolean);
+    const audiobook =
+      requestedIds.length === 1
+        ? useLibraryStore.getState().library.find((book) => book.hash === requestedIds[0])
+        : undefined;
+    if (audiobook?.format === 'ABS') {
+      router.replace(`/player?id=${encodeURIComponent(audiobook.hash)}`);
+      return;
+    }
+    const initialIds = requestedIds.filter((id) => {
+      const book = useLibraryStore.getState().library.find((item) => item.hash === id);
+      return book?.format !== 'ABS';
+    });
     const initialBookKeys = initialIds.map((id) => `${id}-${uniqueId()}`);
     setBookKeys(initialBookKeys);
     const uniqueIds = new Set<string>();
@@ -97,6 +112,15 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const handleManageAudiobook = (event: CustomEvent) => {
+      const detail = event.detail as { bookKey?: string } | undefined;
+      if (detail?.bookKey) setAudiobookBookKey(detail.bookKey);
+    };
+    eventDispatcher.on('manage-audiobook', handleManageAudiobook);
+    return () => eventDispatcher.off('manage-audiobook', handleManageAudiobook);
   }, []);
 
   useEffect(() => {
@@ -305,6 +329,13 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
         cfi={shareDialogState?.cfi ?? null}
         onClose={() => setShareDialogState(null)}
       />
+      {audiobookBookKey && getBookData(audiobookBookKey)?.bookDoc && (
+        <AudiobookPairingDialog
+          bookKey={audiobookBookKey}
+          bookDoc={getBookData(audiobookBookKey)!.bookDoc!}
+          onClose={() => setAudiobookBookKey(null)}
+        />
+      )}
     </div>
   );
 };

@@ -8,12 +8,25 @@ import { SYNC_NOTES_INTERVAL_SEC } from '@/services/constants';
 import { throttle } from '@/utils/throttle';
 import { getXPointerFromCFI, getCFIFromXPointer, XCFI } from '@/utils/xcfi';
 import { getIndexFromCfi } from '@/utils/cfi';
+import { removeBookNoteOverlays } from '../utils/annotatorUtil';
+import { removeGlobalAnnotationOverlays } from '../utils/globalAnnotations';
+
+const latestChangeAt = (note: BookNote) => Math.max(note.updatedAt, note.deletedAt ?? 0);
+
+const incomingWins = (existing: BookNote, incoming: BookNote) => {
+  const existingAt = latestChangeAt(existing);
+  const incomingAt = latestChangeAt(incoming);
+  return (
+    incomingAt > existingAt ||
+    (incomingAt === existingAt && !!incoming.deletedAt && !existing.deletedAt)
+  );
+};
 
 export const useNotesSync = (bookKey: string) => {
   const { user } = useAuth();
   const { syncedNotes, syncNotes, lastSyncedAtNotes } = useSync(bookKey);
   const { getConfig, setConfig, getBookData } = useBookDataStore();
-  const { getView } = useReaderStore();
+  const { getView, getViewsById } = useReaderStore();
 
   const config = getConfig(bookKey);
 
@@ -59,12 +72,16 @@ export const useNotesSync = (bookKey: string) => {
   const convertXPointersOnPull = async (notes: BookNote[]): Promise<BookNote[]> => {
     const bookData = getBookData(bookKey);
     const book = bookData?.book;
-    if (!book || FIXED_LAYOUT_FORMATS.has(book.format)) return notes.filter((n) => n.cfi);
+    if (!book || FIXED_LAYOUT_FORMATS.has(book.format)) {
+      return notes.filter((note) => note.cfi || note.deletedAt);
+    }
 
     const view = getView(bookKey);
     const converted: BookNote[] = [];
     for (const note of notes) {
-      if (note.xpointer0 && !note.cfi) {
+      if (note.deletedAt) {
+        converted.push(note);
+      } else if (note.xpointer0 && !note.cfi) {
         try {
           let cfi: string | undefined;
           if (note.xpointer1) {
@@ -164,13 +181,15 @@ export const useNotesSync = (bookKey: string) => {
       const oldNotes = config?.booknotes ?? [];
       const existingNote = oldNotes.find((oldNote) => oldNote.id === note.id);
       if (existingNote) {
-        if (
-          existingNote.updatedAt < note.updatedAt ||
-          (existingNote.deletedAt ?? 0) < (note.deletedAt ?? 0)
-        ) {
-          return { ...existingNote, ...note };
+        if (incomingWins(existingNote, note)) {
+          return {
+            ...existingNote,
+            ...note,
+            cfi: note.cfi || existingNote.cfi,
+            deletedAt: note.deletedAt,
+          };
         } else {
-          return { ...note, ...existingNote };
+          return { ...note, ...existingNote, deletedAt: existingNote.deletedAt };
         }
       }
       return note;
@@ -185,15 +204,24 @@ export const useNotesSync = (bookKey: string) => {
       if (!newNotes.length) return;
       // Convert xpointer-only notes (from KOReader) to CFI
       const convertedNotes = await convertXPointersOnPull(newNotes);
+      const oldNotes = config.booknotes ?? [];
       convertedNotes.forEach((note) => {
-        if (note.cfi) {
+        if (note.deletedAt) {
+          const local = oldNotes.find((oldNote) => oldNote.id === note.id);
+          if (local && !local.deletedAt && incomingWins(local, note)) {
+            getViewsById(bookKey.split('-')[0]!).forEach((currentView) => {
+              removeBookNoteOverlays(currentView, local);
+              if (local.global) removeGlobalAnnotationOverlays(currentView, local);
+            });
+            note.updatedAt = Date.now();
+          }
+        } else if (note.cfi) {
           const index = getIndexFromCfi(note.cfi);
-          if (!note.deletedAt && index === view?.renderer.primaryIndex) {
+          if (index === view?.renderer.primaryIndex) {
             view.addAnnotation(note);
           }
         }
       });
-      const oldNotes = config.booknotes ?? [];
       const mergedNotes = [
         ...oldNotes.filter((oldNote) => !convertedNotes.some((n) => n.id === oldNote.id)),
         ...convertedNotes.map(processNewNote),

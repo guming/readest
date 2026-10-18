@@ -29,6 +29,8 @@ import { createDictProvider } from './providers/dictProvider';
 import { createSlobProvider } from './providers/slobProvider';
 import { createWebSearchProvider } from './providers/webSearchProvider';
 import { getBuiltinWebSearch } from './webSearchTemplates';
+import type { AppService } from '@/types/system';
+import { createPluginDictionaryProvider } from './plugins/provider';
 
 const instanceCache = new Map<string, DictionaryProvider>();
 
@@ -41,6 +43,7 @@ interface RegistryArgs {
    * lookup. Builtin-only callers (e.g. tests) may omit it.
    */
   fs?: DictionaryFileOpener;
+  appService?: AppService | null;
 }
 
 const builtinFor = (id: string): DictionaryProvider | undefined => {
@@ -69,6 +72,7 @@ const getOrCreate = (
   dict: ImportedDictionary | undefined,
   fs: DictionaryFileOpener | undefined,
   settings: DictionarySettings,
+  appService?: AppService | null,
 ): DictionaryProvider | undefined => {
   const cached = instanceCache.get(id);
   if (cached) return cached;
@@ -106,6 +110,11 @@ const getOrCreate = (
     instanceCache.set(id, provider);
     return provider;
   }
+  if (dict.kind === 'plugin' && appService) {
+    const provider = createPluginDictionaryProvider({ dict, host: appService });
+    instanceCache.set(id, provider);
+    return provider;
+  }
   return undefined;
 };
 
@@ -122,6 +131,7 @@ export const getEnabledProviders = ({
   settings,
   dictionaries,
   fs,
+  appService,
 }: RegistryArgs): DictionaryProvider[] => {
   const dictById = new Map(dictionaries.map((d) => [d.id, d]));
   const out: DictionaryProvider[] = [];
@@ -144,7 +154,7 @@ export const getEnabledProviders = ({
     const dict = dictById.get(id);
     if (!dict) continue;
     if (dict.deletedAt || dict.unavailable || dict.unsupported) continue;
-    const provider = getOrCreate(id, dict, fs, settings);
+    const provider = getOrCreate(id, dict, fs, settings, appService);
     if (provider) out.push(provider);
   }
   return out;

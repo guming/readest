@@ -12,7 +12,11 @@ import { broadcastGlobalSettings } from '@/utils/settingsSync';
 export type CloudSyncActivationKind = CloudSyncProviderKind | null;
 
 const isThirdParty = (active: CloudSyncActivationKind): active is FileSyncBackendKind =>
-  active === 'webdav' || active === 'gdrive' || active === 's3' || active === 'onedrive';
+  active === 'webdav' ||
+  active === 'gdrive' ||
+  active === 's3' ||
+  active === 'onedrive' ||
+  active === 'icloud';
 
 /**
  * Return settings with exactly one third-party cloud-sync provider active (or
@@ -60,6 +64,13 @@ export const withActiveCloudProvider = (
     ...settings.onedrive,
     enabled: active === 'onedrive',
     ...(active === 'onedrive' && !settings.onedrive?.enabled
+      ? { syncBooks: true, providerSelectedAt: Date.now() }
+      : {}),
+  },
+  icloud: {
+    ...settings.icloud,
+    enabled: active === 'icloud',
+    ...(active === 'icloud' && !settings.icloud?.enabled
       ? { syncBooks: true, providerSelectedAt: Date.now() }
       : {}),
   },

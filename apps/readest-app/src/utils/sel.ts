@@ -1,3 +1,5 @@
+import { getPdfTextFromRange, getPdfTextLayer } from '@/utils/pdfText';
+
 export interface Frame {
   top: number;
   left: number;
@@ -773,6 +775,11 @@ export const repairJumpedSelectionRange = (
 };
 
 export const getTextFromRange = (range: Range, rejectTags: string[] = []): string => {
+  // pdf.js breaks every printed line with a <br>; rebuild paragraphs from the
+  // page geometry instead of emitting one line per line (#5814).
+  const textLayer = getPdfTextLayer(range);
+  if (textLayer) return getPdfTextFromRange(range, textLayer);
+
   const clonedRange = range.cloneRange();
   const fragment = clonedRange.cloneContents();
   const walker = document.createTreeWalker(
@@ -789,18 +796,20 @@ export const getTextFromRange = (range: Range, rejectTags: string[] = []): strin
     },
   );
 
-  // pdf.js inserts <br role="presentation"> between text spans at line endings
-  // (see TextLayer#appendText in pdfjs). Without this, multi-line PDF
-  // selections collapse adjacent line-final and line-initial words into a
-  // single token (e.g. "lastfirst"). Treat <br> as a newline, matching how
-  // Selection.toString() handles line breaks in the browser.
+  // Preserve explicit line and paragraph boundaries. Without this, adjacent
+  // PDF lines or HTML paragraphs collapse into a single token.
   let text = '';
   let node: Node | null;
   while ((node = walker.nextNode())) {
     if (node.nodeType === Node.TEXT_NODE) {
       text += (node as Text).nodeValue ?? '';
-    } else if ((node as Element).tagName === 'BR') {
-      text += '\n';
+    } else {
+      const tagName = (node as Element).tagName.toLowerCase();
+      if (tagName === 'p' && text && !text.endsWith('\n')) {
+        text += '\n';
+      } else if (tagName === 'br') {
+        text += '\n';
+      }
     }
   }
 

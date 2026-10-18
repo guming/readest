@@ -403,6 +403,13 @@ export const handleTouchEnd = (bookKey: string, event: TouchEvent) => {
   handleTouchEv(bookKey, event, 'iframe-touchend');
 };
 
+/** Clear the parent touch recognizer when a capture-phase gesture consumes release. */
+export const setLayeredTurnTouchClaimed = (bookKey: string, claimed: boolean) => {
+  if (!claimed) {
+    window.postMessage({ type: 'iframe-touch-reset', bookKey }, '*');
+  }
+};
+
 // WebKit on macOS sends trackpad pinches as GestureEvents. Forward the small,
 // serializable part of that event to the reader window so React owns the
 // listener lifetime rather than retaining a component callback in an iframe.

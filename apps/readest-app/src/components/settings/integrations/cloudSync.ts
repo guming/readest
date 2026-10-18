@@ -8,3 +8,12 @@ export {
   persistActiveCloudProvider,
   type CloudSyncActivationKind,
 } from '@/services/sync/cloudSyncActivation';
+import { persistActiveCloudProvider } from '@/services/sync/cloudSyncActivation';
+import type { EnvConfigType } from '@/services/environment';
+import type { FileSyncBackendKind } from '@/services/sync/file/providerRegistry';
+
+export const persistCloudProviderEnabled = (
+  envConfig: EnvConfigType,
+  kind: FileSyncBackendKind,
+  enabled: boolean,
+) => persistActiveCloudProvider(envConfig, enabled ? kind : null);

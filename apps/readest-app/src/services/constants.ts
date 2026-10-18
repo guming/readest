@@ -19,6 +19,7 @@ import {
 } from '@/types/book';
 import {
   HardcoverSettings,
+  BookOrbitSettings,
   KOSyncSettings,
   LibraryGroupByType,
   LibrarySortByType,
@@ -29,6 +30,7 @@ import {
   GoogleDriveSettings,
   S3Settings,
   OneDriveSettings,
+  ICloudSettings,
 } from '@/types/settings';
 import { UserStorageQuota, UserDailyTranslationQuota } from '@/types/quota';
 import { getDefaultMaxBlockSize, getDefaultMaxInlineSize } from '@/utils/config';
@@ -80,6 +82,20 @@ export const DEFAULT_KOSYNC_SETTINGS = {
   strategy: 'prompt',
   enabled: false,
 } as KOSyncSettings;
+
+export const DEFAULT_BOOKORBIT_SETTINGS = {
+  enabled: false,
+  serverUrl: '',
+  username: '',
+  userkey: '',
+  deviceId: '',
+  deviceName: '',
+  strategy: 'prompt',
+  syncProgress: true,
+  syncNotes: true,
+  syncStats: true,
+  syncBookStates: true,
+} as BookOrbitSettings;
 
 export const READWISE_API_BASE_URL = 'https://readwise.io/api/v2';
 
@@ -145,6 +161,16 @@ export const DEFAULT_ONEDRIVE_SETTINGS = {
   lastSyncedAt: 0,
 } as OneDriveSettings;
 
+export const DEFAULT_ICLOUD_SETTINGS = {
+  enabled: false,
+  syncProgress: true,
+  syncNotes: true,
+  syncBooks: false,
+  strategy: 'silent',
+  deviceId: '',
+  lastSyncedAt: 0,
+} as ICloudSettings;
+
 export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   keepLogin: false,
   autoUpload: true,
@@ -154,6 +180,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   autoCheckUpdates: true,
   updateChannel: 'stable',
   screenWakeLock: false,
+  autohideCursor: true,
   screenBrightness: -1, // -1~100, -1 for system default
   autoScreenBrightness: true,
   swipeBrightnessGesture: true,
@@ -181,6 +208,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   libraryCoverFit: 'crop',
   libraryAutoColumns: true,
   libraryColumns: 6,
+  libraryHideCovers: false,
   libraryRecentShelfEnabled: false,
 
   metadataSeriesCollapsed: false,
@@ -199,12 +227,14 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   },
 
   kosync: DEFAULT_KOSYNC_SETTINGS,
+  bookorbit: DEFAULT_BOOKORBIT_SETTINGS,
   readwise: DEFAULT_READWISE_SETTINGS,
   hardcover: DEFAULT_HARDCOVER_SETTINGS,
   webdav: DEFAULT_WEBDAV_SETTINGS,
   googleDrive: DEFAULT_GOOGLE_DRIVE_SETTINGS,
   s3: DEFAULT_S3_SETTINGS,
   onedrive: DEFAULT_ONEDRIVE_SETTINGS,
+  icloud: DEFAULT_ICLOUD_SETTINGS,
   aiSettings: DEFAULT_AI_SETTINGS,
   notebookAssistant: DEFAULT_NOTEBOOK_ASSISTANT_SETTINGS,
 
@@ -253,7 +283,6 @@ export const DEFAULT_READSETTINGS: ReadSettings = {
   notebookWidth: '25%',
   isNotebookPinned: false,
   notebookActiveTab: 'notes',
-  autohideCursor: true,
   translationProvider: 'deepl',
   translateTargetLang: 'EN',
   wordLensAutoDownload: true,
@@ -298,6 +327,7 @@ export const DEFAULT_BOOK_LAYOUT: BookLayout = {
   compactMarginRightPx: 16,
   gapPercent: 5,
   scrolled: false,
+  scrolledDirection: 'vertical',
   webtoonMode: false,
   noContinuousScroll: false,
   disableClick: false,
@@ -352,6 +382,7 @@ export const DEFAULT_BOOK_STYLE: BookStyle = {
   keepCoverSpread: true,
   invertImgColorInDark: false,
   applyThemeToPDF: false,
+  pdfReflow: false,
   contrast: 100,
 };
 
@@ -425,6 +456,7 @@ export const DEFAULT_TTS_CONFIG: TTSConfig = {
   ttsSentenceGap: DEFAULT_SENTENCE_GAP_SEC,
   ttsParagraphGap: DEFAULT_PARAGRAPH_GAP_SEC,
   ttsVoice: '',
+  ttsUseNarration: true,
   ttsLocation: '',
   ttsHighlightOptions: { style: 'highlight', color: '#808080' },
   ttsHighlightGranularity: 'word',
@@ -457,6 +489,7 @@ export const DEFAULT_NOTE_EXPORT_CONFIG: NoteExportConfig = {
   useCustomTemplate: false,
   customTemplate: '',
   exportAsPlainText: false,
+  exportFormat: 'markdown',
   excludedColors: [],
   excludedStyles: [],
 };

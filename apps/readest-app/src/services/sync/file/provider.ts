@@ -1,3 +1,5 @@
+import type { ProgressHandler } from '@/utils/transfer';
+
 /**
  * Transport abstraction for a file-based sync backend.
  *
@@ -83,5 +85,9 @@ export interface FileSyncProvider {
    * Optional streaming download: GET `remotePath` straight to `localPath`.
    * Same ownership + fallback rules as {@link uploadStream}.
    */
-  downloadStream?(remotePath: string, localPath: string): Promise<boolean>;
+  downloadStream?(
+    remotePath: string,
+    localPath: string,
+    onProgress?: ProgressHandler,
+  ): Promise<boolean>;
 }

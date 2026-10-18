@@ -3,31 +3,43 @@ import { useRef } from 'react';
 import { MdInfoOutline } from 'react-icons/md';
 import { Book } from '@/types/book';
 import { useThemeStore } from '@/store/themeStore';
+import { useSidebarStore } from '@/store/sidebarStore';
+import { useBookDataStore } from '@/store/bookDataStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { eventDispatcher } from '@/utils/event';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { formatAuthors, formatTitle } from '@/utils/book';
 import BookCover from '@/components/BookCover';
+import BookCoverViewer, { useBookCoverViewer } from '@/components/BookCoverViewer';
 
 const BookCard = ({ book }: { book: Book }) => {
   const { title, author } = book;
   const _ = useTranslation();
   const { isDarkMode } = useThemeStore();
   const iconSize18 = useResponsiveSize(18);
-  const bookCoverRef = useRef<HTMLDivElement | null>(null);
+  const bookCoverRef = useRef<HTMLButtonElement | null>(null);
+  const { coverSrc, openCoverViewer, closeCoverViewer } = useBookCoverViewer(book);
 
   const showBookDetails = () => {
-    eventDispatcher.dispatchSync('show-book-details', book);
+    // `book` is the snapshot taken when the reader opened it, so its page count
+    // is the previous session's — and missing altogether on a first read. The
+    // live config carries the count for the layout on screen now (#5516).
+    const { sideBarBookKey } = useSidebarStore.getState();
+    const progress = useBookDataStore.getState().getConfig(sideBarBookKey)?.progress;
+    eventDispatcher.dispatchSync('show-book-details', progress ? { ...book, progress } : book);
   };
 
   return (
     <div className='flex h-20 w-full items-center'>
-      <div
+      <button
         ref={bookCoverRef}
+        type='button'
+        aria-label={_('View Book Cover')}
         className={clsx(
           'me-4 aspect-[28/41] max-h-16 w-[15%] max-w-12 overflow-hidden rounded-sm shadow-md',
           isDarkMode ? 'mix-blend-screen' : 'mix-blend-multiply',
         )}
+        onClick={openCoverViewer}
       >
         <BookCover
           book={book}
@@ -36,7 +48,8 @@ const BookCard = ({ book }: { book: Book }) => {
           imageClassName='rounded-sm'
           onImageError={() => (bookCoverRef.current!.style.display = 'none')}
         />
-      </div>
+      </button>
+      {coverSrc && <BookCoverViewer src={coverSrc} onClose={closeCoverViewer} />}
       <div className='min-w-0 flex-1'>
         <h4 className='line-clamp-2 w-[90%] text-sm font-semibold'>
           {formatTitle(title).replace(/\u00A0/g, ' ')}

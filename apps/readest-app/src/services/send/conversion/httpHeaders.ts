@@ -62,3 +62,8 @@ export function imageFetchHeaders(referer: string | null): Record<string, string
 export function isLikelyBotBlock(status: number): boolean {
   return status === 401 || status === 403 || status === 429 || status === 503;
 }
+
+/** Retry transient gateway failures while importing remote chapters. */
+export function isTransientUpstreamError(status: number): boolean {
+  return status === 502 || status === 504 || (status >= 520 && status <= 527);
+}

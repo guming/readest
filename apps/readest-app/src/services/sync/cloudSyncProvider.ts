@@ -29,7 +29,8 @@ export interface CloudSyncGate {
 /** Settings slice key for a third-party backend kind. */
 export const settingsKeyForBackend = (
   kind: FileSyncBackendKind,
-): 'webdav' | 'googleDrive' | 's3' | 'onedrive' => (kind === 'gdrive' ? 'googleDrive' : kind);
+): 'webdav' | 'googleDrive' | 's3' | 'onedrive' | 'icloud' =>
+  kind === 'gdrive' ? 'googleDrive' : kind;
 
 /** Human-readable provider name (product names — deliberately untranslated). */
 export const cloudProviderDisplayName = (kind: CloudSyncProviderKind): string =>
@@ -41,7 +42,9 @@ export const cloudProviderDisplayName = (kind: CloudSyncProviderKind): string =>
         ? 'S3'
         : kind === 'onedrive'
           ? 'OneDrive'
-          : 'Local';
+          : kind === 'icloud'
+            ? 'iCloud'
+            : 'Local';
 
 export const getCloudSyncProvider = (
   settings: SystemSettings | null | undefined,
@@ -54,7 +57,9 @@ export const getCloudSyncProvider = (
         ? 's3'
         : settings?.onedrive?.enabled
           ? 'onedrive'
-          : 'local';
+          : settings?.icloud?.enabled
+            ? 'icloud'
+            : 'local';
 
 /** Cached for compatibility with older plan-aware call sites. */
 let cachedUserPlan: UserPlan = 'free';
@@ -93,6 +98,10 @@ export const applySyncBooksAutoEnable = (settings: SystemSettings): boolean => {
   }
   if (provider === 'onedrive' && settings.onedrive && !settings.onedrive.syncBooks) {
     settings.onedrive = { ...settings.onedrive, syncBooks: true };
+    return true;
+  }
+  if (provider === 'icloud' && settings.icloud && !settings.icloud.syncBooks) {
+    settings.icloud = { ...settings.icloud, syncBooks: true };
     return true;
   }
   return false;

@@ -11,6 +11,9 @@ import { DEFAULT_STATS_TRACKING_CONFIG } from '@/types/statistics';
 import { SyncClient } from '@/libs/sync';
 import { pushStats, pullStats } from '@/services/statistics/statsSync';
 import { isSyncCategoryEnabled } from '@/services/sync/syncCategories';
+import { useSettingsStore } from '@/store/settingsStore';
+import { BookOrbitClient } from '@/services/bookorbit/BookOrbitClient';
+import { pushStatsToBookOrbit } from '@/services/bookorbit/statsPush';
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 
@@ -43,12 +46,33 @@ export default function ReadingStatsTracker({ bookKey }: { bookKey: string }) {
 
   const syncEnabled = () => !!user && isSyncCategoryEnabled('stats');
 
+  // BookOrbit stats push needs no Readest account — only the integration.
+  const bookOrbitStatsPush = (db: StatisticsDb): Promise<unknown> | undefined => {
+    const { settings } = useSettingsStore.getState();
+    const bookorbit = settings.bookorbit;
+    if (
+      !bookorbit.enabled ||
+      !bookorbit.syncStats ||
+      !bookorbit.serverUrl ||
+      !bookorbit.username ||
+      !bookorbit.userkey
+    ) {
+      return undefined;
+    }
+    return pushStatsToBookOrbit(db, new BookOrbitClient(bookorbit));
+  };
+
+  const pushToAllTargets = (db: StatisticsDb) => {
+    if (syncEnabled()) runBestEffort(pushStats(db, new SyncClient()));
+    const bookOrbitPush = bookOrbitStatsPush(db);
+    if (bookOrbitPush) runBestEffort(bookOrbitPush);
+  };
+
   const schedulePush = () => {
-    if (!syncEnabled()) return;
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     pushTimerRef.current = setTimeout(() => {
       const db = dbRef.current;
-      if (db) runBestEffort(pushStats(db, new SyncClient()));
+      if (db) pushToAllTargets(db);
     }, 10_000);
   };
 
@@ -122,7 +146,7 @@ export default function ReadingStatsTracker({ bookKey }: { bookKey: string }) {
       if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
       runBestEffort(
         persist(coreRef.current.onClose(nowSec())).then(() => {
-          if (syncEnabled() && dbRef.current) return pushStats(dbRef.current, new SyncClient());
+          if (dbRef.current) pushToAllTargets(dbRef.current);
           return undefined;
         }),
       );

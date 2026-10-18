@@ -19,6 +19,7 @@ import {
   needsCoverRefresh,
   pickFresherCover,
 } from '@/app/library/utils/libraryUtils';
+import { pickFresherGroup } from '@/utils/book';
 
 export const useBooksSync = () => {
   const _ = useTranslation();
@@ -185,6 +186,14 @@ export const useBooksSync = () => {
         const cover = pickFresherCover(oldBook, matchingBook);
         mergedBook.coverHash = cover.coverHash;
         mergedBook.coverUpdatedAt = cover.coverUpdatedAt;
+        const group = pickFresherGroup(
+          oldBook,
+          matchingBook,
+          matchingBook.updatedAt >= oldBook.updatedAt,
+        );
+        mergedBook.groupId = group.groupId;
+        mergedBook.groupName = group.groupName;
+        mergedBook.groupUpdatedAt = group.groupUpdatedAt;
         return mergedBook;
       }
       return oldBook;

@@ -45,6 +45,11 @@ export interface SectionItem {
 
   loadText?: () => Promise<string | null>;
   createDocument: () => Promise<Document>;
+
+  // EPUB 3 Media Overlays: the manifest item of this section's SMIL file, or
+  // null when the section has no recorded narration. Populated by foliate's
+  // EPUB parser from the spine item's `media-overlay` attribute.
+  mediaOverlay?: { href: string; id: string } | null;
 }
 
 // A Calibre custom column embedded in the OPF as "user metadata"; parsed by
@@ -68,7 +73,7 @@ export type BookMetadata = {
   publisher?: string;
   published?: string;
   description?: string;
-  subject?: string | string[] | Contributor;
+  subject?: string | string[] | Contributor | Contributor[];
   identifier?: string;
   isbn?: string;
   altIdentifier?: string | string[] | Identifier;
@@ -88,10 +93,15 @@ export type BookMetadata = {
 
   calibreColumns?: CalibreCustomColumn[];
   feedUrl?: string;
+  absSource?: string;
+  absMediaType?: 'podcast';
+  absEpisodeCount?: number;
+  absDuration?: number;
 };
 
 export interface BookDoc {
   metadata: BookMetadata;
+  media?: { narrator?: string; duration?: number };
   rendition: {
     layout?: 'pre-paginated' | 'reflowable';
     spread?: 'auto' | 'none';
@@ -101,9 +111,17 @@ export interface BookDoc {
   toc?: Array<TOCItem>;
   pageList?: Array<TOCItem>;
   sections: Array<SectionItem>;
+  isPDFReflow?: boolean;
+  pdfPageCount?: number;
+  reflowSectionPageCount?: number;
   transformTarget?: EventTarget;
   splitTOCHref(href: string): Array<string | number>;
   getCover(): Promise<Blob | null>;
+  loadText?: (href: string) => Promise<string | null>;
+  loadBlob?: (href: string) => Promise<Blob | null>;
+  // EPUB books resolve real spine CFIs; formats with synthetic per-index CFIs
+  // may not provide this resolver.
+  resolveCFI?(cfi: string): { index: number; anchor?: (doc: Document) => Range | number } | null;
 }
 
 export const EXTS: Record<BookFormat, string> = {
@@ -117,6 +135,7 @@ export const EXTS: Record<BookFormat, string> = {
   FBZ: 'fbz',
   TXT: 'txt',
   MD: 'md',
+  ABS: 'abs',
 };
 
 export const MIMETYPES: Record<BookFormat, string[]> = {
@@ -130,6 +149,7 @@ export const MIMETYPES: Record<BookFormat, string[]> = {
   FBZ: ['application/x-zip-compressed-fb2', 'application/zip'],
   TXT: ['text/plain'],
   MD: ['text/markdown', 'text/x-markdown'],
+  ABS: [],
 };
 
 export interface DocumentLoaderOptions {
@@ -142,15 +162,19 @@ export interface DocumentLoaderOptions {
    * EPUB when the prefetch cache is hit.
    */
   nativeFilePath?: string;
+  /** Open PDFs as a generated reflowable HTML book instead of fixed pages. */
+  pdfReflow?: boolean;
 }
 
 export class DocumentLoader {
   private file: File;
   private nativeFilePath?: string;
+  private pdfReflow: boolean;
 
   constructor(file: File, options: DocumentLoaderOptions = {}) {
     this.file = file;
     this.nativeFilePath = options.nativeFilePath;
+    this.pdfReflow = options.pdfReflow ?? false;
   }
 
   private async isZip(): Promise<boolean> {
@@ -420,7 +444,7 @@ export class DocumentLoader {
         }
       } else if (await this.isPDF()) {
         const { makePDF } = await import('foliate-js/pdf.js');
-        book = await makePDF(this.file);
+        book = await makePDF(this.file, { reflow: this.pdfReflow });
         format = 'PDF';
       } else if (await (await import('foliate-js/mobi.js')).isMOBI(this.file)) {
         const fflate = await import('foliate-js/vendor/fflate.js');

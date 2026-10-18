@@ -1,17 +1,23 @@
 import clsx from 'clsx';
 import React from 'react';
-import { MdOutlineLightMode, MdOutlineDarkMode } from 'react-icons/md';
+import { MdOutlineLightMode, MdOutlineDarkMode, MdOutlineSensors } from 'react-icons/md';
 import { TbSunMoon } from 'react-icons/tb';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAtmosphereStore } from '@/store/atmosphereStore';
 import { SettingLabel } from '../primitives';
+import type { ThemeMode } from '@/styles/themes';
 
 interface ThemeModeSelectorProps {
-  themeMode: 'auto' | 'light' | 'dark';
-  onThemeModeChange: (mode: 'auto' | 'light' | 'dark') => void;
+  themeMode: ThemeMode;
+  onThemeModeChange: (mode: ThemeMode) => void;
+  hasAmbientLightSensor?: boolean;
 }
 
-const ThemeModeSelector: React.FC<ThemeModeSelectorProps> = ({ themeMode, onThemeModeChange }) => {
+const ThemeModeSelector: React.FC<ThemeModeSelectorProps> = ({
+  themeMode,
+  onThemeModeChange,
+  hasAmbientLightSensor,
+}) => {
   const _ = useTranslation();
   const { spinDirection, shaking, toggle, toggleWithShake, deactivate } = useAtmosphereStore();
 
@@ -38,7 +44,12 @@ const ThemeModeSelector: React.FC<ThemeModeSelectorProps> = ({ themeMode, onThem
     }
   };
 
-  const segments = [
+  const segments: {
+    mode: ThemeMode;
+    title: string;
+    onClick: () => void;
+    icon: React.ReactNode;
+  }[] = [
     { mode: 'auto' as const, title: _('Auto Mode'), onClick: handleAutoClick, icon: <TbSunMoon /> },
     {
       mode: 'light' as const,
@@ -69,6 +80,14 @@ const ThemeModeSelector: React.FC<ThemeModeSelectorProps> = ({ themeMode, onThem
       ),
     },
   ];
+  if (hasAmbientLightSensor) {
+    segments.push({
+      mode: 'ambient' as const,
+      title: _('Ambient Mode'),
+      onClick: () => onThemeModeChange('ambient'),
+      icon: <MdOutlineSensors />,
+    });
+  }
 
   return (
     <div className='flex items-center justify-between px-4'>

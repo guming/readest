@@ -42,6 +42,7 @@ import NotebookTabNavigation from './NotebookTabNavigation';
 import EmptyState from '../EmptyState';
 import BookLearningGuidePanel from '@/components/learning-guide/BookLearningGuidePanel';
 import { AskMeOneIcon, LearningGuideIcon, NotebookAssistantIcon } from './AssistantFeatureIcons';
+import { createPDFTextAnchor } from '../../utils/pdfAnchor';
 
 const MIN_NOTEBOOK_WIDTH = 0.15;
 const MAX_NOTEBOOK_WIDTH = 0.45;
@@ -213,7 +214,7 @@ const Notebook: React.FC = ({}) => {
     setNotebookEditAnnotation(null);
   };
 
-  const handleSaveNote = (selection: TextSelection, note: string) => {
+  const handleSaveNote = (selection: TextSelection, note: string, autoSave = false) => {
     if (!sideBarBookKey) return;
     const view = getView(sideBarBookKey);
     const config = getConfig(sideBarBookKey)!;
@@ -222,6 +223,11 @@ const Notebook: React.FC = ({}) => {
     if (!cfi) return;
 
     const { booknotes: annotations = [] } = config;
+    const bookData = getBookData(sideBarBookKey);
+    const pdfAnchor =
+      bookData?.book?.format === 'PDF'
+        ? createPDFTextAnchor(selection.range, selection.index)
+        : undefined;
     const existingIndex = findAnnotationAtCfi(annotations, cfi);
     if (existingIndex !== -1) {
       // Attach the note to the existing highlight at this CFI instead of
@@ -232,6 +238,7 @@ const Notebook: React.FC = ({}) => {
         ...existing,
         note,
         text: selection.text || existing.text,
+        pdfAnchor: existing.pdfAnchor ?? pdfAnchor,
         updatedAt: Date.now(),
       };
       annotations[existingIndex] = updated;
@@ -251,6 +258,7 @@ const Notebook: React.FC = ({}) => {
         note,
         page: selection.page,
         text: selection.text,
+        pdfAnchor,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -262,13 +270,13 @@ const Notebook: React.FC = ({}) => {
     if (updatedConfig) {
       saveConfig(envConfig, sideBarBookKey, updatedConfig, settings);
     }
-    setNotebookNewAnnotation(null);
+    if (!autoSave) setNotebookNewAnnotation(null);
     // The placeholder now carries a note (or a fresh unified record was created),
     // so it's a real annotation — drop the cancel-cleanup handle (#4791).
     setNotebookNewHighlightId(null);
   };
 
-  const handleEditNote = (note: BookNote, isDelete: boolean) => {
+  const handleEditNote = (note: BookNote, isDelete: boolean, autoSave = false) => {
     if (!sideBarBookKey) return;
     const view = getView(sideBarBookKey);
     const config = getConfig(sideBarBookKey)!;
@@ -288,7 +296,7 @@ const Notebook: React.FC = ({}) => {
     if (updatedConfig) {
       saveConfig(envConfig, sideBarBookKey, updatedConfig, settings);
     }
-    setNotebookEditAnnotation(null);
+    if (!autoSave) setNotebookEditAnnotation(null);
   };
 
   const { handleResizeStart: handleDragStart, handleResizeKeyDown: handleDragKeyDown } =
@@ -309,9 +317,6 @@ const Notebook: React.FC = ({}) => {
     (card) => !['learning_guide', 'quiz', 'mistake'].includes(card.type),
   );
   const quizCards = notebookCards.filter((card) => ['quiz', 'mistake'].includes(card.type));
-  const annotationNotes = allNotes
-    .filter((note) => note.type === 'annotation' && note.note && !note.deletedAt)
-    .sort((a, b) => b.createdAt - a.createdAt);
   const excerptNotes = allNotes
     .filter((note) => note.type === 'excerpt' && note.text && !note.deletedAt)
     .sort((a, b) => a.createdAt - b.createdAt);
@@ -326,14 +331,6 @@ const Notebook: React.FC = ({}) => {
       setSearchTerm('');
     }
   };
-
-  const filteredAnnotationNotes = useMemo(
-    () =>
-      isSearchBarVisible && searchResults
-        ? searchResults.filter((note) => note.type === 'annotation' && note.note && !note.deletedAt)
-        : annotationNotes,
-    [annotationNotes, searchResults, isSearchBarVisible],
-  );
 
   const filteredExcerptNotes = useMemo(
     () =>
@@ -520,12 +517,8 @@ const Notebook: React.FC = ({}) => {
   const { bookDoc } = bookData;
   const languageDir = getBookDirFromLanguage(bookDoc.metadata.language);
 
-  const hasSearchResults =
-    filteredAnnotationNotes.length > 0 ||
-    filteredExcerptNotes.length > 0 ||
-    filteredReferenceNotes.length > 0;
-  const hasAnyNotes =
-    annotationNotes.length > 0 || excerptNotes.length > 0 || referenceNotes.length > 0;
+  const hasSearchResults = filteredExcerptNotes.length > 0 || filteredReferenceNotes.length > 0;
+  const hasAnyNotes = excerptNotes.length > 0 || referenceNotes.length > 0;
   const isNotesTabEmpty =
     !notebookNewAnnotation && !notebookEditAnnotation && !isSearchBarVisible && !hasAnyNotes;
   const isReadingAssistantTab = notebookActiveTab === 'ai' || notebookActiveTab === 'review';
@@ -755,7 +748,7 @@ const Notebook: React.FC = ({}) => {
                         {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions*/}
                         <div
                           className='font-size-xs cursor-pointer align-bottom text-red-500 hover:text-red-600'
-                          onClick={handleEditNote.bind(null, item, true)}
+                          onClick={() => handleEditNote(item, true)}
                           aria-label={_('Delete')}
                         >
                           {_('Delete')}
@@ -784,25 +777,16 @@ const Notebook: React.FC = ({}) => {
               ))}
             </ul>
             <div dir='ltr'>
-              {(notebookNewAnnotation || filteredAnnotationNotes.length > 0) && (
-                <p className='content font-size-base'>
-                  {_('Notes')}
-                  {isSearchBarVisible && searchResults && filteredAnnotationNotes.length > 0 && (
-                    <span className='font-size-xs ml-2 text-gray-500'>
-                      ({filteredAnnotationNotes.length})
-                    </span>
-                  )}
-                </p>
+              {(notebookNewAnnotation || notebookEditAnnotation) && !isSearchBarVisible && (
+                <p className='content font-size-base'>{_('Notes')}</p>
               )}
             </div>
             {(notebookNewAnnotation || notebookEditAnnotation) && !isSearchBarVisible && (
-              <NoteEditor onSave={handleSaveNote} onEdit={(item) => handleEditNote(item, false)} />
+              <NoteEditor
+                onSave={handleSaveNote}
+                onEdit={(item, autoSave) => handleEditNote(item, false, autoSave)}
+              />
             )}
-            <ul>
-              {filteredAnnotationNotes.map((item, index) => (
-                <BooknoteItem key={`${index}-${item.cfi}`} bookKey={sideBarBookKey} item={item} />
-              ))}
-            </ul>
           </div>
         )}
         <div

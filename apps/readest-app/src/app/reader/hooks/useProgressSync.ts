@@ -5,7 +5,7 @@ import { useSync } from '@/hooks/useSync';
 import { BookConfig, FIXED_LAYOUT_FORMATS } from '@/types/book';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
-import { useBookProgress } from '@/store/readerProgressStore';
+import { getBookProgress, useBookProgress } from '@/store/readerProgressStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { mergeProofreadRules } from '@/utils/proofread';
@@ -22,6 +22,17 @@ import { isMalformedLocationCfi } from '@/utils/cfi';
 // still sync out even if the server keeps timing out (high Android network
 // concurrency, captive portal, transient 5xx). Total window ≈ 15.5s.
 const PULL_RETRY_DELAYS_MS = [1500, 4000, 10000];
+
+// `[current, total]` 1-based page numbers -> a 0..1 reading fraction, or
+// `undefined` when the record carries no usable page count.
+const getConfigFraction = (config: BookConfig): number | undefined => {
+  const [current, total] = config.progress ?? [];
+  if (!current || !total || total <= 0) return undefined;
+  const fraction = current / total;
+  return Number.isFinite(fraction) ? Math.min(fraction, 1) : undefined;
+};
+
+const SIBLING_FORWARD_EPSILON = 0.002;
 
 export const useProgressSync = (bookKey: string) => {
   const _ = useTranslation();
@@ -213,47 +224,81 @@ export const useProgressSync = (bookKey: string) => {
 
     const bookHash = bookKey.split('-')[0]!;
     const metaHash = book.metaHash;
-    let syncedConfig = syncedConfigs.filter(
-      (c) => c.bookHash === bookHash || c.metaHash === metaHash,
-    )[0];
+    const matches = syncedConfigs.filter((c) => c.bookHash === bookHash || c.metaHash === metaHash);
+    let syncedConfig = matches.find((config) => config.bookHash === bookHash) ?? matches[0];
     if (syncedConfig) {
+      const view = getView(bookKey);
+      const localFraction = getBookProgress(bookKey)?.fraction ?? getConfigFraction(config) ?? 0;
+      const exactConfig = syncedConfig.bookHash === bookHash ? syncedConfig : undefined;
+      const exactFraction = exactConfig ? (getConfigFraction(exactConfig) ?? 0) : 0;
+      const siblingFraction = matches
+        .filter((candidate) => candidate.bookHash !== bookHash)
+        .reduce((furthest, candidate) => Math.max(furthest, getConfigFraction(candidate) ?? 0), 0);
+      const isPreview = useReaderStore.getState().getViewState(bookKey)?.previewMode;
+      const siblingWins =
+        !!view &&
+        !isPreview &&
+        siblingFraction > exactFraction &&
+        siblingFraction > localFraction + SIBLING_FORWARD_EPSILON;
+      if (siblingWins) {
+        view.goToFraction(siblingFraction);
+        setHoveredBookKey(null);
+        eventDispatcher.dispatch('hint', { bookKey, message: _('Reading Progress Synced') });
+      }
       // Discard a malformed synced location (an empty-start/end range CFI left by
       // the cfi-inert skip-link bug, e.g. `epubcfi(/6/24!/4,,/20/1:58)`) so it
       // can't move the reader or be persisted — it resolves to a section-spanning
       // range and jumps to the wrong end of the section. A valid xpointer below
       // can still recover the real position.
-      if (syncedConfig.location && isMalformedLocationCfi(syncedConfig.location)) {
+      if (exactConfig?.location && isMalformedLocationCfi(exactConfig.location)) {
         syncedConfig = { ...syncedConfig, location: undefined };
       }
       const configCFI = config?.location;
-      let remoteCFILocation = syncedConfig.location;
-      const xpointer = syncedConfig.xpointer;
+      let remoteCFILocation = exactConfig ? syncedConfig.location : undefined;
+      const xpointer = exactConfig ? syncedConfig.xpointer : undefined;
       const bookData = getBookData(bookKey);
-      const view = getView(bookKey);
+      // The Readest KOReader plugin pushes `progress` + `xpointer` and never a
+      // `location`, so its [page, total] is CREngine's own pagination. That
+      // doubles as the anchor that corrects CREngine<->foliate DocFragment
+      // drift and as the last-resort target when the XPointer won't convert.
+      // A config that carries a CFI came from Readest, whose [page, total] is
+      // foliate's pagination and whose xpointer was derived from that same
+      // CFI — re-anchoring on it would only move the target off (#5109).
+      const remoteFraction =
+        exactConfig && !syncedConfig.location ? getConfigFraction(syncedConfig) : undefined;
+      let xpointerUnresolved = false;
       if (xpointer && view && bookData && bookData.bookDoc) {
         const pContents = view.renderer.getContents();
         const pIdx = view.renderer.primaryIndex;
         const content = pContents.find((x) => x.index === pIdx) ?? pContents[0];
-        const candidateCFI = await getCFIFromXPointer(
-          xpointer,
-          content?.doc,
-          content?.index,
-          bookData.bookDoc,
-        );
-        if (!remoteCFILocation || CFI.compare(remoteCFILocation, candidateCFI) < 0) {
-          remoteCFILocation = candidateCFI;
+        try {
+          const candidateCFI = await getCFIFromXPointer(
+            xpointer,
+            content?.doc,
+            content?.index,
+            bookData.bookDoc,
+          );
+          if (!remoteCFILocation || CFI.compare(remoteCFILocation, candidateCFI) < 0) {
+            remoteCFILocation = candidateCFI;
+          }
+        } catch (error) {
+          // Never let one unconvertible XPointer reject the whole pull — the
+          // proofread merge below still has to run, and swallowing the rest
+          // silently is what let the debounced auto-push overwrite a newer
+          // remote position with the local one (#5625).
+          console.warn('Failed to convert XPointer to CFI', error);
+          xpointerUnresolved = true;
         }
       }
       // Reading progress applies below. Proofread (find/replace) rules merge
       // separately just after; other config fields remain device-local.
       // TODO: general config sync via a more robust profile-based solution.
-      if (remoteCFILocation && configCFI) {
+      if (!siblingWins && remoteCFILocation && configCFI) {
         if (CFI.compare(configCFI, remoteCFILocation) < 0) {
           // While previewing a deep-link target, do NOT yank the view to the
           // remote position — the user came here to look at a specific
           // annotation. The local config still gets updated above; the next
           // open will resolve to the synced position normally.
-          const isPreview = useReaderStore.getState().getViewState(bookKey)?.previewMode;
           if (view && !isPreview) {
             view.goTo(remoteCFILocation);
             setHoveredBookKey(null);
@@ -262,6 +307,20 @@ export const useProgressSync = (bookKey: string) => {
               message: _('Reading Progress Synced'),
             });
           }
+        }
+      } else if (!siblingWins && xpointerUnresolved && remoteFraction !== undefined) {
+        // No CFI anywhere and the XPointer didn't resolve: the reported
+        // fraction is all that's left. CREngine and foliate paginate
+        // differently, so it's approximate — only ever move FORWARD with it,
+        // matching the CFI branch, so an imprecise jump can't lose the reader's
+        // place.
+        if (view && !isPreview && localFraction < remoteFraction) {
+          view.goToFraction(remoteFraction);
+          setHoveredBookKey(null);
+          eventDispatcher.dispatch('hint', {
+            bookKey,
+            message: _('Reading Progress Synced'),
+          });
         }
       }
       // Merge book/selection-scope proofread rules from the remote config by id.

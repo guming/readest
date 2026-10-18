@@ -30,6 +30,12 @@ vi.mock('@/services/sync/file/engine', () => ({
     this['downloadBookFile'] = downloadBookFile;
   }),
 }));
+// jsdom is neither an iOS nor a macOS Tauri app, so the real gate would say
+// false anyway; the mock makes the platform dependency explicit and togglable.
+vi.mock('@/services/sync/providers/icloud/buildICloudProvider', () => ({
+  isICloudSupportedPlatform: vi.fn(() => false),
+  buildICloudProvider: vi.fn(async () => null),
+}));
 
 import {
   runActiveFileBookDownload,

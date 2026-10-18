@@ -15,6 +15,14 @@ export interface ProgressPayload {
 
 export type ProgressHandler = (progress: ProgressPayload) => void;
 
+/** Progress sentinel for a transfer whose total byte count is unknown. */
+export const INDETERMINATE_PROGRESS = -1;
+
+export const toProgressPercent = (progress: ProgressPayload): number =>
+  progress.total > 0
+    ? Math.max(0, Math.min(100, (progress.progress / progress.total) * 100))
+    : INDETERMINATE_PROGRESS;
+
 export interface ProgressThrottle {
   /** Record a progress payload, emitting at most once per interval. */
   push: (progress: ProgressPayload) => void;

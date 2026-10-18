@@ -13,6 +13,9 @@ import ZoomControls from './ZoomControls';
 interface ImageViewerProps {
   gridInsets: Insets;
   src: string | null;
+  // The image's description (its `alt` text), shown over the zoomed image when
+  // the book provides one (#5232).
+  caption?: string;
   onClose: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
@@ -26,6 +29,7 @@ const WHEEL_SENSITIVITY = 0.001;
 
 const ImageViewer: React.FC<ImageViewerProps> = ({
   src,
+  caption,
   onClose,
   onPrevious,
   onNext,
@@ -44,6 +48,9 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isWheelZooming, setIsWheelZooming] = useState(false);
   const [showZoomLabel, setShowZoomLabel] = useState(true);
+  // Unlike the zoom badge the caption does not time out — it is content, not
+  // chrome — so tapping the image is what gets it off the artwork.
+  const [showCaption, setShowCaption] = useState(true);
   const lastTouchDistance = useRef<number>(0);
   const dragStart = useRef({ x: 0, y: 0 });
   const wasDragging = useRef(false);
@@ -448,6 +455,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
     }
 
     setShowZoomLabel((prev) => !prev);
+    setShowCaption((prev) => !prev);
   };
 
   const cursorStyle = scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default';
@@ -528,7 +536,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
           role='none'
           src={decodeURIComponent(src)}
           ref={imageRef}
-          alt={_('Zoomed')}
+          alt={caption || _('Zoomed')}
           className='transform-gpu select-none object-contain'
           draggable={false}
           width={0}
@@ -557,6 +565,20 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
           }}
         />
       </div>
+
+      {/* Sibling of the click-to-close container above, so reading (or
+          scrolling) the description never dismisses the viewer. */}
+      {caption && showCaption && (
+        <div
+          // The description comes from the book, whose language need not match
+          // the UI's, so let the text pick its own direction.
+          dir='auto'
+          className='image-caption eink-bordered not-eink:text-white not-eink:bg-black/50 absolute bottom-4 left-1/2 z-10 max-h-[30%] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 overflow-y-auto rounded-lg px-4 py-2 text-center text-sm'
+          style={{ marginBottom: `${gridInsets.bottom}px` }}
+        >
+          {caption}
+        </div>
+      )}
 
       {showZoomLabel && (
         <div

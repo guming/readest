@@ -27,6 +27,14 @@ export interface UseBackgroundAudioRequest {
   enabled: boolean;
 }
 
+export interface SetTextSelectionSuppressedRequest {
+  suppressed: boolean;
+}
+
+export interface SetMulticastLockRequest {
+  acquire: boolean;
+}
+
 export interface InstallPackageRequest {
   path: string;
 }
@@ -72,6 +80,10 @@ export interface LockScreenRequest {
 export interface GetSystemColorSchemeResponse {
   colorScheme: 'light' | 'dark';
   error?: string;
+}
+
+export async function setMulticastLock(acquire: boolean): Promise<void> {
+  await invoke('plugin:native-bridge|set_multicast_lock', { payload: { acquire } });
 }
 
 export interface GetSafeAreaInsetsResponse {
@@ -136,6 +148,18 @@ export async function saveImageToGallery(
 
 export async function invokeUseBackgroundAudio(request: UseBackgroundAudioRequest): Promise<void> {
   await invoke('plugin:native-bridge|use_background_audio', {
+    payload: request,
+  });
+}
+
+// iOS-only: suppress the system long-press text selection for non-editable
+// web content while the instant-highlight quick action owns the hold gesture.
+// JS-level suppression cannot win that race — WebKit consults selectability
+// before any touch handler runs — so the gate lives in the native plugin.
+export async function setTextSelectionSuppressed(
+  request: SetTextSelectionSuppressedRequest,
+): Promise<void> {
+  await invoke('plugin:native-bridge|set_text_selection_suppressed', {
     payload: request,
   });
 }
@@ -224,6 +248,32 @@ export async function setScreenBrightness(
     },
   );
   return result;
+}
+
+export interface HasAmbientLightSensorResponse {
+  available: boolean;
+  error?: string;
+}
+
+export interface AmbientLightUpdatesResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface AmbientLightPayload {
+  lux: number;
+}
+
+export async function hasAmbientLightSensor(): Promise<HasAmbientLightSensorResponse> {
+  return invoke<HasAmbientLightSensorResponse>('plugin:native-bridge|has_ambient_light_sensor');
+}
+
+export async function startAmbientLightUpdates(): Promise<AmbientLightUpdatesResponse> {
+  return invoke<AmbientLightUpdatesResponse>('plugin:native-bridge|start_ambient_light_updates');
+}
+
+export async function stopAmbientLightUpdates(): Promise<AmbientLightUpdatesResponse> {
+  return invoke<AmbientLightUpdatesResponse>('plugin:native-bridge|stop_ambient_light_updates');
 }
 
 export async function getExternalSDCardPath(): Promise<GetExternalSDCardPathResponse> {
@@ -417,4 +467,30 @@ export async function installNightlyUpdate(
   const channel = new Channel<NightlyProgress>();
   if (onProgress) channel.onmessage = onProgress;
   await invoke<void>('install_nightly_update', { endpoint, channel });
+}
+
+export interface ICloudContainerStatusResponse {
+  available: boolean;
+  documentsPath?: string;
+}
+
+export interface ICloudEnsureDownloadedRequest {
+  path: string;
+  timeoutMs?: number;
+}
+
+export interface ICloudEnsureDownloadedResponse {
+  status: 'ready' | 'notFound' | 'timeout';
+}
+
+export async function getICloudContainerStatus(): Promise<ICloudContainerStatusResponse> {
+  return invoke<ICloudContainerStatusResponse>('plugin:native-bridge|icloud_container_status');
+}
+
+export async function icloudEnsureDownloaded(
+  request: ICloudEnsureDownloadedRequest,
+): Promise<ICloudEnsureDownloadedResponse> {
+  return invoke<ICloudEnsureDownloadedResponse>('plugin:native-bridge|icloud_ensure_downloaded', {
+    payload: request,
+  });
 }

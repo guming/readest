@@ -56,6 +56,12 @@ pub struct UseBackgroundAudioRequest {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct SetTextSelectionSuppressedRequest {
+    pub suppressed: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct InstallPackageRequest {
     pub path: String,
 }
@@ -213,6 +219,20 @@ pub struct SetScreenBrightnessRequest {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SetScreenBrightnessResponse {
+    pub success: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HasAmbientLightSensorResponse {
+    pub available: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AmbientLightUpdatesResponse {
     pub success: bool,
     pub error: Option<String>,
 }
@@ -452,4 +472,70 @@ pub struct CaptureWebviewRegionRequest {
 #[serde(rename_all = "camelCase")]
 pub struct CaptureWebviewRegionResponse {
     pub data: String,
+}
+
+/// iCloud ubiquity-container probe result. `documents_path` is the absolute
+/// path of the container's Documents folder (created on first probe);
+/// `available: false` covers no-iCloud-session, missing entitlement, and
+/// unsupported platforms alike.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ICloudContainerStatusResponse {
+    pub available: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub documents_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ICloudEnsureDownloadedRequest {
+    /// Absolute path inside the ubiquity container.
+    pub path: String,
+    #[serde(default)]
+    pub timeout_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ICloudEnsureDownloadedResponse {
+    /// "ready" | "notFound" | "timeout"
+    pub status: String,
+}
+
+/// Args for the in-app web browser and its import status banner.
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebBrowserRequest {
+    pub url: String,
+    pub download_dir: String,
+    #[serde(default)]
+    pub background: Option<String>,
+    #[serde(default)]
+    pub foreground: Option<String>,
+    #[serde(default)]
+    pub is_eink: Option<bool>,
+    #[serde(default)]
+    pub labels: HashMap<String, String>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebBrowserResponse {
+    #[serde(default)]
+    pub open_book_hash: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebBrowserStatusRequest {
+    pub state: String,
+    pub filename: String,
+    #[serde(default)]
+    pub book_hash: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetMulticastLockRequest {
+    pub acquire: bool,
 }

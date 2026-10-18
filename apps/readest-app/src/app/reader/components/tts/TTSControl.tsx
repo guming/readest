@@ -4,6 +4,8 @@ import { useThemeStore } from '@/store/themeStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useTTSControl } from '@/app/reader/hooks/useTTSControl';
+import { useTTSDownloads } from '@/app/reader/hooks/useTTSDownloads';
+import { useBookProgress } from '@/store/readerProgressStore';
 import { Insets } from '@/types/misc';
 import { eventDispatcher } from '@/utils/event';
 import TTSMiniPlayer from './TTSMiniPlayer';
@@ -28,6 +30,9 @@ const TTSControl: React.FC<TTSControlProps> = ({ bookKey, gridInsets }) => {
     bookKey,
     onRequestHidePanel: () => setShowPlayerSheet(false),
   });
+
+  const downloads = useTTSDownloads(bookKey, tts.getController, showPlayerSheet);
+  const activeSectionIndex = useBookProgress(bookKey)?.index ?? null;
 
   const isEink = getViewSettings(bookKey)?.isEink ?? false;
   const hasTimeline = tts.ttsClientsInited && tts.handleSupportsPlaybackInfo();
@@ -82,7 +87,7 @@ const TTSControl: React.FC<TTSControlProps> = ({ bookKey, gridInsets }) => {
               safeAreaInsets?.top ? 'h-11' : 'h-9',
             )}
           >
-            {_('Back to TTS Location')}
+            {_('Back to Read Aloud')}
           </button>
         </div>
       )}
@@ -93,6 +98,7 @@ const TTSControl: React.FC<TTSControlProps> = ({ bookKey, gridInsets }) => {
           isPlaying={tts.isPlaying}
           isEink={isEink}
           hasTimeline={hasTimeline}
+          buffering={tts.buffering}
           timeoutTimestamp={tts.timeoutTimestamp}
           chapterRemainingSec={tts.chapterRemainingSec}
           gridInsets={gridInsets}
@@ -112,6 +118,8 @@ const TTSControl: React.FC<TTSControlProps> = ({ bookKey, gridInsets }) => {
           isPlaying={tts.isPlaying}
           hasTimeline={hasTimeline}
           hasGapControl={hasGapControl}
+          supportsLyrics={tts.supportsLyrics}
+          buffering={tts.buffering}
           timeoutOption={tts.timeoutOption}
           timeoutTimestamp={tts.timeoutTimestamp}
           chapterRemainingSec={tts.chapterRemainingSec}
@@ -128,6 +136,12 @@ const TTSControl: React.FC<TTSControlProps> = ({ bookKey, gridInsets }) => {
           onSelectTimeout={tts.handleSelectTimeout}
           onSeek={tts.handleSeekTo}
           onGetPlaybackInfo={tts.handleGetPlaybackInfo}
+          onGetLyrics={tts.handleGetLyrics}
+          onGetLyricActiveIndex={tts.handleGetLyricActiveIndex}
+          onGetLyricPage={tts.handleGetLyricPage}
+          onPlayFromLyric={tts.handlePlayFromLyric}
+          downloads={downloads}
+          activeSectionIndex={activeSectionIndex}
         />
       )}
     </>

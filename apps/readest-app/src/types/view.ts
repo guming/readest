@@ -2,9 +2,15 @@ import { BookDoc } from '@/libs/document';
 import { BookNote, BookSearchConfig, BookSearchResult } from '@/types/book';
 import { TTSGranularity } from '@/services/tts';
 import { TTS } from 'foliate-js/tts.js';
+import type { MediaOverlayTTS } from '@/services/tts/mediaOverlay/MediaOverlayTTS';
 import { LocaleWithTextInfo } from './misc';
+import { resolvePDFTextAnchor } from '@/app/reader/utils/pdfAnchor';
+import { getIndexFromCfi } from '@/utils/cfi';
 
 export const NOTE_PREFIX = 'foliate-note:';
+
+// The mark source driving Read Aloud: synthesized speech or recorded narration.
+export type ViewTTS = TTS | MediaOverlayTTS;
 
 type RangeAnchor = (doc: Document) => Range;
 
@@ -69,7 +75,7 @@ export interface FoliateView extends HTMLElement {
   open: (book: BookDoc) => Promise<void>;
   close: () => void;
   init: (options: { lastLocation: string }) => void;
-  goTo: (href: string) => void;
+  goTo: (target: string | number) => void;
   goToFraction: (fraction: number) => void;
   getSectionFractions: () => number[];
   prev: (distance?: number) => void;
@@ -91,7 +97,7 @@ export interface FoliateView extends HTMLElement {
   addAnnotation: (
     note: BookNote & { value?: string },
     remove?: boolean,
-  ) => { index: number; label: string };
+  ) => Promise<{ index: number; label: string } | undefined>;
   search: (config: BookSearchConfig) => AsyncGenerator<BookSearchResult | string, void, void>;
   clearSearch: () => void;
   select: (target: string | number | { fraction: number }) => void;
@@ -102,7 +108,7 @@ export interface FoliateView extends HTMLElement {
     highlight?: (range: Range) => void,
   ) => Promise<void>;
   book: BookDoc;
-  tts: TTS | null;
+  tts: ViewTTS | null;
   // The most recent relocate location, set synchronously by foliate on every
   // relocate — fresher than the rAF-debounced readerStore progress.
   lastLocation?: { cfi?: string; range?: Range | null };
@@ -125,12 +131,39 @@ export interface FoliateView extends HTMLElement {
 
 export const wrappedFoliateView = (originalView: FoliateView): FoliateView => {
   const originalAddAnnotation = originalView.addAnnotation.bind(originalView);
-  originalView.addAnnotation = (note: BookNote, remove = false) => {
+  originalView.addAnnotation = async (note: BookNote, remove = false) => {
     // transform BookNote to foliate annotation
-    const annotation = {
+    let annotation = {
       value: note.cfi,
       ...note,
     };
+    const pdfAnchor =
+      note.pdfAnchor ??
+      (originalView.book?.isPDFReflow && note.text
+        ? { pageIndex: getIndexFromCfi(note.cfi) ?? 0, exact: note.text }
+        : undefined);
+    if (pdfAnchor && originalView.book?.metadata) {
+      const pageIndex = pdfAnchor.pageIndex;
+      const pagesPerSection = originalView.book.reflowSectionPageCount ?? 1;
+      const expectedIndex = originalView.book.isPDFReflow
+        ? Math.floor(pageIndex / pagesPerSection)
+        : pageIndex;
+      const content = originalView.renderer.getContents().find(({ doc, index }) => {
+        if (index !== expectedIndex) return false;
+        return (
+          !originalView.book.isPDFReflow || !!doc.querySelector(`[data-source-page="${pageIndex}"]`)
+        );
+      });
+      if (content?.doc) {
+        const range = resolvePDFTextAnchor(content.doc, pdfAnchor);
+        if (range) {
+          annotation = {
+            ...annotation,
+            value: originalView.getCFI(content.index ?? expectedIndex, range),
+          };
+        }
+      }
+    }
     return originalAddAnnotation(annotation, remove);
   };
 
@@ -139,11 +172,11 @@ export const wrappedFoliateView = (originalView: FoliateView): FoliateView => {
   // Foliate's runtime implementation returns a Promise. Returning a Promise
   // here is compatible with the void return type in TypeScript and lets callers
   // that know about the promise (e.g. tests, async handlers) await completion.
-  originalView.goTo = (href: string): Promise<void> => {
+  originalView.goTo = (target: string | number): Promise<void> => {
     // Cross-section jumps can take seconds (the target section's images block
     // its iframe load); surface start/end so the viewer can show a spinner.
     originalView.dispatchEvent(new CustomEvent('navigate-start'));
-    return Promise.resolve(originalGoTo(href)).finally(() => {
+    return Promise.resolve(originalGoTo(target)).finally(() => {
       originalView.dispatchEvent(new CustomEvent('navigate-end'));
     });
   };

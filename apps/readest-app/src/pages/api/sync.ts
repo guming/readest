@@ -18,6 +18,42 @@ import {
 import { validateUserAndToken } from '@/utils/access';
 import { DBBook, DBBookConfig } from '@/types/records';
 
+const ms = (value?: string | number | null) => (value ? new Date(value).getTime() : 0);
+
+type ChangeStamps = {
+  updated_at?: string | number | null;
+  deleted_at?: string | number | null;
+};
+
+// Preserve the most recently changed duplicate while pulling by meta hash.
+// KOReader keeps the original updated_at on a delete, so deleted_at must take
+// part in the comparison and must win a timestamp tie.
+const dedupeLatest = <T extends ChangeStamps>(records: T[], keys: (keyof T)[]): T[] => {
+  const keyOf = (record: T) =>
+    keys
+      .map((key) => record[key])
+      .filter(Boolean)
+      .join('|');
+  const latest = new Map<string, { record: T; at: number }>();
+  for (const record of records) {
+    const key = keyOf(record);
+    if (!key) continue;
+    const at = Math.max(ms(record.updated_at), ms(record.deleted_at));
+    const current = latest.get(key);
+    if (
+      !current ||
+      at > current.at ||
+      (at === current.at && !!record.deleted_at && !current.record.deleted_at)
+    ) {
+      latest.set(key, { record, at });
+    }
+  }
+  return records.filter((record) => {
+    const key = keyOf(record);
+    return !key || latest.get(key)?.record === record;
+  });
+};
+
 const pageKey = (r: StatPageRecord) => `${r.book_hash}|${r.page}|${r.start_time}`;
 
 /**
@@ -61,7 +97,6 @@ export function resolveReadingStatusMerge(
   client: Pick<DBBook, 'reading_status' | 'reading_status_updated_at'>,
   server: Pick<DBBook, 'reading_status' | 'reading_status_updated_at'>,
 ): Pick<DBBook, 'reading_status' | 'reading_status_updated_at'> {
-  const ms = (s?: string | null) => (s ? new Date(s).getTime() : 0);
   return ms(client.reading_status_updated_at) >= ms(server.reading_status_updated_at)
     ? {
         reading_status: client.reading_status,
@@ -107,7 +142,6 @@ export function resolveCoverMerge(
   client: Pick<DBBook, 'cover_hash' | 'cover_updated_at'>,
   server: Pick<DBBook, 'cover_hash' | 'cover_updated_at'>,
 ): Pick<DBBook, 'cover_hash' | 'cover_updated_at'> {
-  const ms = (s?: string | null) => (s ? new Date(s).getTime() : 0);
   return ms(client.cover_updated_at) >= ms(server.cover_updated_at)
     ? { cover_hash: client.cover_hash, cover_updated_at: client.cover_updated_at }
     : { cover_hash: server.cover_hash, cover_updated_at: server.cover_updated_at };
@@ -214,23 +248,11 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      let records = allRecords;
-      if (dedupeKeys && dedupeKeys.length > 0) {
-        const seen = new Set<string>();
-        records = records.filter((rec) => {
-          const key = dedupeKeys
-            .map((k) => rec[k])
-            .filter(Boolean)
-            .join('|');
-          if (key && seen.has(key)) {
-            return false;
-          } else {
-            seen.add(key);
-            return true;
-          }
-        });
-      }
-      (results as unknown as Record<string, SyncRecord[]>)[DBSyncTypeMap[table]] = records || [];
+      const records =
+        dedupeKeys && dedupeKeys.length > 0
+          ? dedupeLatest(allRecords as (SyncRecord & ChangeStamps)[], dedupeKeys)
+          : allRecords;
+      (results as unknown as Record<string, SyncRecord[]>)[DBSyncTypeMap[table]] = records;
     };
 
     if (!typeParam || typeParam === 'books') {

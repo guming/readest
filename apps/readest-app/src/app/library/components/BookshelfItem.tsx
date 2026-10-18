@@ -105,6 +105,7 @@ interface BookshelfItemProps {
   handleShowDetailsBook: (book: Book) => void;
   handleLibraryNavigation: (targetGroup: string) => void;
   handleUpdateReadingStatus: (book: Book, status: ReadingStatus | undefined) => void;
+  showTimeRemaining: boolean;
 }
 
 const BookshelfItem: React.FC<BookshelfItemProps> = ({
@@ -123,6 +124,7 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
   handleShowDetailsBook,
   handleLibraryNavigation,
   handleUpdateReadingStatus,
+  showTimeRemaining,
 }) => {
   const _ = useTranslation();
   const { appService } = useEnv();
@@ -245,6 +247,12 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
           // Bookshelf.tsx hosts the dialog; we dispatch and let it route
           // unauthenticated users into the login flow first.
           eventDispatcher.dispatch('show-share-dialog', { book });
+        },
+      },
+      sendNearby: {
+        text: _('Send with Nearby BookDrop'),
+        action: async () => {
+          eventDispatcher.dispatch('localsend-send-books', { books: [book] });
         },
       },
       delete: {
@@ -411,6 +419,7 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
               handleBookUpload={handleBookUpload}
               handleBookDownload={handleBookDownload}
               showBookDetailsModal={showBookDetailsModal}
+              showTimeRemaining={showTimeRemaining}
             />
           ) : (
             <GroupItem

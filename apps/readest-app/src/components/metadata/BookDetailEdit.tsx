@@ -14,6 +14,7 @@ import BookCover from '@/components/BookCover';
 interface BookDetailEditProps {
   book: Book;
   metadata: BookMetadata;
+  tags: string[];
   fieldSources: Record<string, string>;
   lockedFields: Record<string, boolean>;
   fieldErrors: Record<string, string>;
@@ -33,6 +34,7 @@ const emptyCoverImageUrl = '_blank';
 const BookDetailEdit: React.FC<BookDetailEditProps> = ({
   book,
   metadata,
+  tags,
   fieldSources,
   lockedFields,
   fieldErrors,
@@ -140,6 +142,12 @@ const BookDetailEdit: React.FC<BookDetailEditProps> = ({
       label: _('Subjects'),
       value: flattenContributors(metadata.subject || []),
       placeholder: _('Fiction, Science, History'),
+    },
+    {
+      field: 'tags',
+      label: _('Tags'),
+      value: tags.join(', '),
+      placeholder: _('Favorites, To Read'),
     },
     {
       field: 'description',

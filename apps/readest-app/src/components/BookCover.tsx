@@ -4,6 +4,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Book } from '@/types/book';
 import { LibraryCoverFitType, LibraryViewModeType } from '@/types/settings';
 import { formatAuthors, formatTitle } from '@/utils/book';
+import { useSettingsStore } from '@/store/settingsStore';
 
 interface BookCoverProps {
   book: Book;
@@ -32,8 +33,10 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
     const coverRef = useRef<HTMLDivElement>(null);
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const hideCovers = useSettingsStore((state) => state.settings.libraryHideCovers);
+    const coverImageUrl = book.metadata?.coverImageUrl || book.coverImageUrl;
 
-    const shouldShowSpine = showSpine && imageLoaded && !imageError;
+    const shouldShowSpine = showSpine && !hideCovers && imageLoaded && !imageError;
 
     const toggleImageVisibility = (showImage: boolean) => {
       if (coverRef.current) {
@@ -66,8 +69,8 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
     };
 
     useEffect(() => {
-      toggleImageVisibility(true);
-    }, [book.metadata?.coverImageUrl, book.coverImageUrl]);
+      toggleImageVisibility(!hideCovers);
+    }, [book.metadata?.coverImageUrl, book.coverImageUrl, hideCovers]);
 
     return (
       <div
@@ -76,16 +79,18 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
       >
         {coverFit === 'crop' ? (
           <>
-            <Image
-              src={book.metadata?.coverImageUrl || book.coverImageUrl!}
-              alt={book.title}
-              fill={true}
-              loading='lazy'
-              draggable={false}
-              className={clsx('cover-image crop-cover-img object-cover', imageClassName)}
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-            />
+            {!hideCovers && coverImageUrl && (
+              <Image
+                src={coverImageUrl}
+                alt={book.title}
+                fill={true}
+                loading='lazy'
+                draggable={false}
+                className={clsx('cover-image crop-cover-img object-cover', imageClassName)}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+              />
+            )}
             <div
               className={`book-spine absolute inset-0 ${shouldShowSpine ? 'visible' : 'invisible'}`}
             />
@@ -98,21 +103,23 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
                 mode === 'grid' ? 'items-end' : 'items-center',
               )}
             >
-              <Image
-                src={book.metadata?.coverImageUrl || book.coverImageUrl!}
-                alt={book.title}
-                width={0}
-                height={0}
-                sizes='100vw'
-                loading='lazy'
-                draggable={false}
-                className={clsx(
-                  'cover-image fit-cover-img h-auto max-h-full w-auto max-w-full shadow-md',
-                  imageClassName,
-                )}
-                onLoad={handleImageLoad}
-                onError={handleImageError}
-              />
+              {!hideCovers && coverImageUrl && (
+                <Image
+                  src={coverImageUrl}
+                  alt={book.title}
+                  width={0}
+                  height={0}
+                  sizes='100vw'
+                  loading='lazy'
+                  draggable={false}
+                  className={clsx(
+                    'cover-image fit-cover-img h-auto max-h-full w-auto max-w-full shadow-md',
+                    imageClassName,
+                  )}
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                />
+              )}
               <div
                 className={`book-spine absolute inset-0 ${shouldShowSpine ? 'visible' : 'invisible'}`}
               />
@@ -122,7 +129,8 @@ const BookCover: React.FC<BookCoverProps> = memo<BookCoverProps>(
 
         <div
           className={clsx(
-            'fallback-cover invisible absolute inset-0 p-2',
+            'fallback-cover absolute inset-0 p-2',
+            !hideCovers && coverImageUrl && !imageError && 'invisible',
             'text-neutral-content text-center font-serif font-medium',
             isPreview ? 'bg-base-200/50' : 'bg-base-100',
             imageClassName,

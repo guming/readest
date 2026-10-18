@@ -38,6 +38,8 @@ export interface CloudSyncProviderFlags {
   s3?: { enabled: boolean; providerSelectedAt?: number };
   /** Optional: absent on payloads from pre-OneDrive windows (treated as unchanged). */
   onedrive?: { enabled: boolean; providerSelectedAt?: number };
+  /** Optional: absent on payloads from pre-iCloud windows (treated as unchanged). */
+  icloud?: { enabled: boolean; providerSelectedAt?: number };
 }
 
 export interface SettingsSyncPayload {
@@ -79,6 +81,9 @@ export const mergeSyncedGlobalSettings = (
     if (payload.cloudSyncProviders.onedrive) {
       merged.onedrive = { ...local.onedrive, ...payload.cloudSyncProviders.onedrive };
     }
+    if (payload.cloudSyncProviders.icloud) {
+      merged.icloud = { ...local.icloud, ...payload.cloudSyncProviders.icloud };
+    }
   }
   return merged;
 };
@@ -116,6 +121,10 @@ export const broadcastGlobalSettings = async (
         onedrive: {
           enabled: !!settings.onedrive?.enabled,
           providerSelectedAt: settings.onedrive?.providerSelectedAt,
+        },
+        icloud: {
+          enabled: !!settings.icloud?.enabled,
+          providerSelectedAt: settings.icloud?.providerSelectedAt,
         },
       };
     }

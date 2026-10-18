@@ -1,3 +1,6 @@
+import AIConnectionEditor from '@/components/settings/AIConnectionEditor';
+import type { AIConnection } from '@/services/ai/types';
+import { DEFAULT_AI_SETTINGS } from '@/services/ai/constants';
 import { googleProvider } from '@/services/translators/providers/google';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { PiArrowClockwise, PiCheck, PiCopy, PiFloppyDisk, PiPlay, PiSpinner } from 'react-icons/pi';
@@ -49,6 +52,7 @@ interface Props {
   chapterTitle?: string;
   sourceLanguage?: string;
   targetLanguageCode?: string;
+  initialConnectionId?: string;
   onDismiss: () => void;
 }
 
@@ -66,6 +70,7 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
   chapterTitle,
   sourceLanguage,
   targetLanguageCode,
+  initialConnectionId,
   onDismiss,
 }) => {
   const _ = useTranslation();
@@ -73,9 +78,16 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
   const { settings, setSettings, saveSettings } = useSettingsStore();
   const { getConfig, setConfig, saveConfig } = useBookDataStore();
   const [selectedProvider, setSelectedProvider] = useState(() =>
-    action === 'translation'
-      ? 'google'
-      : resolveAIConnection(settings.aiSettings, 'notebook')?.id || '',
+    initialConnectionId && initialConnectionId !== '__add__'
+      ? initialConnectionId
+      : action === 'translation'
+        ? (settings.aiSettings?.enabled &&
+            resolveAIConnection(settings.aiSettings, 'translation')?.id) ||
+          'google'
+        : resolveAIConnection(settings.aiSettings, 'notebook')?.id || '',
+  );
+  const [editingConnection, setEditingConnection] = useState<AIConnection | null | undefined>(
+    initialConnectionId === '__add__' ? null : undefined,
   );
   const useGoogle = action === 'translation' && selectedProvider === 'google';
   const [result, setResult] = useState('');
@@ -87,12 +99,18 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollAfterUpdateRef = useRef(false);
   const assistant = resolveNotebookAssistantSettings(settings.notebookAssistant);
+  const capability = action === 'translation' ? 'translation' : 'notebook';
+  const activeAISettings = {
+    ...(settings.aiSettings || DEFAULT_AI_SETTINGS),
+    [capability === 'translation' ? 'translationConnectionId' : 'notebookConnectionId']:
+      selectedProvider,
+  };
   const assistantIdentity = getNotebookAssistantIdentity(
     assistant,
-    settings.aiSettings,
+    activeAISettings,
     action === 'translation' ? 'translation' : 'notebook',
   );
-  const providerOptions = getAIConnections(settings.aiSettings);
+  const providerOptions = getAIConnections(settings.aiSettings || DEFAULT_AI_SETTINGS);
   const targetLanguage =
     action === 'translation'
       ? getAITranslationTargetLanguage(
@@ -118,6 +136,11 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
   );
 
   const selectAssistantConnection = async (connectionId: string) => {
+    if (connectionId === '__add__') {
+      setEditingConnection(null);
+      return;
+    }
+    setEditingConnection(undefined);
     setSelectedProvider(connectionId);
     setResult('');
     setExplanationResult(null);
@@ -130,11 +153,50 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
       ...latest,
       aiSettings: {
         ...latest.aiSettings,
+        enabled: true,
         [connectionIdField]: connectionId,
       },
     };
     setSettings(next);
     await saveSettings(envConfig, next);
+  };
+
+  useEffect(() => {
+    if (initialConnectionId && initialConnectionId !== '__add__') {
+      void selectAssistantConnection(initialConnectionId).catch((err: unknown) => {
+        setError(
+          err instanceof Error ? err.message : _('Unable to save AI service. Please try again.'),
+        );
+      });
+    }
+    // Initial provider comes from the translation menu, not from a settings navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialConnectionId]);
+
+  const saveConnection = async (connection: AIConnection) => {
+    const latest = useSettingsStore.getState().settings;
+    const aiSettings = latest.aiSettings || DEFAULT_AI_SETTINGS;
+    const connections = getAIConnections(aiSettings);
+    const next = {
+      ...latest,
+      aiSettings: {
+        ...aiSettings,
+        enabled: true,
+        connections: connections.some((item) => item.id === connection.id)
+          ? connections.map((item) => (item.id === connection.id ? connection : item))
+          : [...connections, connection],
+        defaultConnectionId: aiSettings.defaultConnectionId || connection.id,
+        [action === 'translation' ? 'translationConnectionId' : 'notebookConnectionId']:
+          connection.id,
+      },
+    };
+    await saveSettings(envConfig, next);
+    setSettings(next);
+    setSelectedProvider(connection.id);
+    setEditingConnection(undefined);
+    setResult('');
+    setExplanationResult(null);
+    setError('');
   };
 
   useEffect(() => {
@@ -149,7 +211,7 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
     useGoogle ||
     isNotebookAssistantConfigured(
       assistant,
-      settings.aiSettings,
+      activeAISettings,
       '',
       action === 'translation' ? 'translation' : 'notebook',
     );
@@ -205,7 +267,7 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
           assistant,
           '',
           undefined,
-          settings.aiSettings,
+          activeAISettings,
         );
         setResult(content);
       } else {
@@ -230,7 +292,7 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
           assistant,
           '',
           undefined,
-          settings.aiSettings,
+          activeAISettings,
         );
         setExplanationResult(content);
         if (options?.followUp) {
@@ -355,7 +417,7 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
               </>
             )}
           </p>
-          {(action === 'translation' || providerOptions.length > 0) && (
+          {
             <label className='mt-2 flex flex-wrap items-center gap-2 text-xs'>
               <span className='text-base-content/60'>
                 {action === 'translation' ? _('Translation Provider') : _('Explanation Provider')}
@@ -363,7 +425,15 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
               <select
                 className='select select-bordered select-xs eink-bordered bg-base-100 min-w-0 max-w-full'
                 value={selectedProvider}
-                onChange={(event) => void selectAssistantConnection(event.target.value)}
+                onChange={(event) =>
+                  void selectAssistantConnection(event.target.value).catch((err: unknown) =>
+                    setError(
+                      err instanceof Error
+                        ? err.message
+                        : _('Unable to save AI service. Please try again.'),
+                    ),
+                  )
+                }
                 disabled={loading}
               >
                 {action === 'translation' && (
@@ -374,9 +444,24 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
                     {option.name} · {option.model}
                   </option>
                 ))}
+                <option value='__add__'>{_('Add AI Service…')}</option>
               </select>
+              {!useGoogle && providerOptions.some((item) => item.id === selectedProvider) && (
+                <button
+                  type='button'
+                  className='btn btn-ghost btn-xs eink-bordered'
+                  disabled={loading}
+                  onClick={() =>
+                    setEditingConnection(
+                      providerOptions.find((item) => item.id === selectedProvider),
+                    )
+                  }
+                >
+                  {_('Edit')}
+                </button>
+              )}
             </label>
-          )}
+          }
         </div>
         {action === 'explanation' && configured && expertProfile && (
           <button
@@ -392,7 +477,16 @@ const SelectedTextAssistantPopup: React.FC<Props> = ({
         )}
       </div>
 
-      {!configured ? (
+      {editingConnection !== undefined ? (
+        <div className='min-h-0 overflow-y-auto px-4 pb-4'>
+          <AIConnectionEditor
+            key={editingConnection?.id || 'new'}
+            connection={editingConnection || undefined}
+            onSave={saveConnection}
+            onCancel={() => setEditingConnection(undefined)}
+          />
+        </div>
+      ) : !configured ? (
         <div className='min-h-0 flex-1 overflow-y-auto px-4 pb-4'>
           <NotebookAssistantPanel compact />
         </div>

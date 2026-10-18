@@ -150,8 +150,16 @@ export const useFileSync = (bookKey: string) => {
       return !!(c?.enabled && c?.endpoint && c?.bucket && c?.accessKeyId && c?.secretAccessKey);
     }
     if (activeKind === 'onedrive') return !!settings.onedrive?.enabled;
+    if (activeKind === 'icloud') return !!settings.icloud?.enabled;
     return false;
-  }, [activeKind, settings.webdav, settings.googleDrive, settings.s3, settings.onedrive]);
+  }, [
+    activeKind,
+    settings.webdav,
+    settings.googleDrive,
+    settings.s3,
+    settings.onedrive,
+    settings.icloud,
+  ]);
 
   const strategy = providerSettings?.strategy ?? 'silent';
   const allowPush = isReady && strategy !== 'receive';
@@ -172,8 +180,16 @@ export const useFileSync = (bookKey: string) => {
       return `s3:${c?.enabled}:${c?.endpoint}:${c?.region}:${c?.bucket}:${c?.accessKeyId}:${c?.secretAccessKey}`;
     }
     if (activeKind === 'onedrive') return `onedrive:${settings.onedrive?.enabled}`;
+    if (activeKind === 'icloud') return `icloud:${settings.icloud?.enabled}`;
     return 'none';
-  }, [activeKind, settings.webdav, settings.googleDrive, settings.s3, settings.onedrive]);
+  }, [
+    activeKind,
+    settings.webdav,
+    settings.googleDrive,
+    settings.s3,
+    settings.onedrive,
+    settings.icloud,
+  ]);
 
   const [engine, setEngine] = useState<FileSyncEngine | null>(null);
   useEffect(() => {

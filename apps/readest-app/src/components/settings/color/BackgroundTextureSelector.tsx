@@ -3,6 +3,7 @@ import { MdRadioButtonChecked, MdClose, MdAdd, MdPlayCircleOutline } from 'react
 import { useTranslation } from '@/hooks/useTranslation';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { BoxedList, SectionTitle, SettingsRow, SettingsSelect } from '../primitives';
+import type { BackgroundTextureScope } from '@/helpers/settings';
 
 interface Texture {
   id: string;
@@ -17,6 +18,9 @@ interface BackgroundTextureSelectorProps {
   customTextures: Texture[];
   /** Section title, scoped to the page the texture applies to (#4743). */
   title: string;
+  scope?: BackgroundTextureScope;
+  onScopeChange?: (scope: BackgroundTextureScope) => void;
+  'data-setting-id'?: string;
   selectedTextureId: string;
   backgroundOpacity: number;
   backgroundSize: string;
@@ -31,6 +35,9 @@ const BackgroundTextureSelector: React.FC<BackgroundTextureSelectorProps> = ({
   predefinedTextures,
   customTextures,
   title,
+  scope,
+  onScopeChange,
+  'data-setting-id': dataSettingId,
   selectedTextureId,
   backgroundOpacity,
   backgroundSize,
@@ -46,8 +53,22 @@ const BackgroundTextureSelector: React.FC<BackgroundTextureSelectorProps> = ({
   const allTextures = [...predefinedTextures, ...customTextures];
 
   return (
-    <div>
+    <div data-setting-id={dataSettingId}>
       <SectionTitle className='mb-2'>{title}</SectionTitle>
+      {scope && onScopeChange && (
+        <div className='mb-3 flex items-center justify-between px-4'>
+          <span className='text-base-content/70 text-sm'>{_('Apply to')}</span>
+          <SettingsSelect
+            value={scope}
+            onChange={(event) => onScopeChange(event.target.value as BackgroundTextureScope)}
+            ariaLabel={_('Background texture scope')}
+            options={[
+              { value: 'library', label: _('Library') },
+              { value: 'reader', label: _('Reader') },
+            ]}
+          />
+        </div>
+      )}
       <div className='mb-4 grid grid-cols-2 gap-4'>
         {allTextures.map((texture) => (
           // The swatch is a div (not a <button>) so the inner Delete

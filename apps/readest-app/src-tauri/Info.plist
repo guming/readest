@@ -2,12 +2,26 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Readest uses the local network to discover nearby devices and transfer books with Nearby BookDrop.</string>
     <key>CFBundleDisplayName</key>
     <string>Lumen</string>
     <key>CFBundleName</key>
     <string>Lumen</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
+    <key>NSUbiquitousContainers</key>
+    <dict>
+      <key>iCloud.com.bilingify.readest</key>
+      <dict>
+        <key>NSUbiquitousContainerIsDocumentScopePublic</key>
+        <true/>
+        <key>NSUbiquitousContainerName</key>
+        <string>Readest</string>
+        <key>NSUbiquitousContainerSupportedFolderLevels</key>
+        <string>Any</string>
+      </dict>
+    </dict>
     <key>NSFaceIDUsageDescription</key>
     <string>Lumen uses Face ID to unlock the app.</string>
     <key>LSSupportsOpeningDocumentsInPlace</key>

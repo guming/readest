@@ -91,7 +91,7 @@ describe('createAudioData', () => {
     const payload = makePayload('concurrent text');
     const p1 = tts.createAudioData(payload);
     const p2 = tts.createAudioData(payload);
-    await Promise.resolve();
+    await vi.waitFor(() => expect(fetchWithAuthMock).toHaveBeenCalledTimes(1));
     release!();
     const [r1, r2] = await Promise.all([p1, p2]);
     expect(fetchWithAuthMock).toHaveBeenCalledTimes(1);
@@ -109,4 +109,48 @@ describe('createAudioData', () => {
     expect(data.byteLength).toBe(4);
     expect(fetchWithAuthMock).toHaveBeenCalledTimes(2);
   });
+});
+
+test('serializes different uncached sentences across Edge instances', async () => {
+  let release!: () => void;
+  fetchWithAuthMock.mockReset();
+  fetchWithAuthMock
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = () => resolve(makeResponse());
+        }),
+    )
+    .mockResolvedValue(makeResponse());
+  const first = new EdgeSpeechTTS('https').createAudioData(makePayload('serialized first'));
+  const second = new EdgeSpeechTTS('https').createAudioData(makePayload('serialized second'));
+  await vi.waitFor(() => expect(fetchWithAuthMock).toHaveBeenCalledTimes(1));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const concurrentCalls = fetchWithAuthMock.mock.calls.length;
+  release();
+  await Promise.all([first, second]);
+  expect(concurrentCalls).toBe(1);
+  expect(fetchWithAuthMock).toHaveBeenCalledTimes(2);
+});
+
+test('shares a 429 cooldown across Edge instances before retrying', async () => {
+  vi.useFakeTimers();
+  try {
+    fetchWithAuthMock.mockReset();
+    fetchWithAuthMock
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      .mockImplementation(async () => makeResponse());
+    const failed = new EdgeSpeechTTS('https').createAudioData(makePayload('limited sentence'));
+    const rejection = expect(failed).rejects.toThrow('429');
+    await vi.advanceTimersByTimeAsync(250);
+    await rejection;
+    const retry = new EdgeSpeechTTS('https').createAudioData(makePayload('after cooldown'));
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(fetchWithAuthMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await retry;
+    expect(fetchWithAuthMock).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
 });

@@ -113,6 +113,14 @@ export const flattenContributors = (
       : formatLanguageMap(contributors?.name);
 };
 
+export const getContributorNames = (
+  contributors: string | string[] | Contributor | Contributor[] | undefined,
+): string[] => {
+  if (!contributors) return [];
+  const values = Array.isArray(contributors) ? contributors : [contributors];
+  return [...new Set(values.map((value) => flattenContributors(value).trim()).filter(Boolean))];
+};
+
 // biome-ignore format: keep the language codes compact on a single line
 const LASTNAME_AUTHOR_SORT_LANGS = [ 'ar', 'bo', 'de', 'en', 'es', 'fr', 'hi', 'it', 'nl', 'pl', 'pt', 'ru', 'th', 'tr', 'uk' ];
 
@@ -190,14 +198,55 @@ export const getPrimaryLanguage = (lang: string | string[] | undefined) => {
   return 'en';
 };
 
+export interface BookGroupFields {
+  groupId?: string;
+  groupName?: string;
+  groupUpdatedAt?: number | null;
+}
+
+/** Resolve group membership independently from the rest of a book row. */
+export const pickFresherGroup = <T extends BookGroupFields>(
+  local: T,
+  remote: T,
+  remoteRowWins: boolean,
+): BookGroupFields => {
+  const localMs = local.groupUpdatedAt ?? 0;
+  const remoteMs = remote.groupUpdatedAt ?? 0;
+  let winner: T;
+  if (localMs !== remoteMs) {
+    winner = remoteMs > localMs ? remote : local;
+  } else {
+    const localHasGroup = !!local.groupId || !!local.groupName;
+    const remoteHasGroup = !!remote.groupId || !!remote.groupName;
+    // An un-stamped ungrouped row can be from an older client. Preserve a
+    // known group on ties; an explicit removal carries a newer timestamp.
+    if (localHasGroup !== remoteHasGroup) winner = localHasGroup ? local : remote;
+    else winner = remoteRowWins ? remote : local;
+  }
+  return {
+    groupId: winner.groupId,
+    groupName: winner.groupName,
+    groupUpdatedAt: winner.groupUpdatedAt,
+  };
+};
+
+export const bookGroupDiffers = (current: BookGroupFields, resolved: BookGroupFields): boolean =>
+  (current.groupId ?? undefined) !== (resolved.groupId ?? undefined) ||
+  (current.groupName ?? undefined) !== (resolved.groupName ?? undefined);
+
 // Immutably apply edited metadata to a book, returning a NEW book object.
 // Callers must not mutate the existing book in place: <BookCover> is memoized
 // and compares fields off the book, so an in-place mutation makes the memo's
 // previous snapshot point to the same object and skips re-rendering the cover.
-export const getBookWithUpdatedMetadata = (book: Book, metadata: BookMetadata): Book => {
+export const getBookWithUpdatedMetadata = (
+  book: Book,
+  metadata: BookMetadata,
+  tags?: string[],
+): Book => {
   const updatedBook: Book = {
     ...book,
     metadata,
+    ...(tags ? { tags: [...tags] } : {}),
     title: formatTitle(metadata.title),
     author: formatAuthors(metadata.author),
     primaryLanguage: getPrimaryLanguage(metadata.language),
@@ -280,6 +329,23 @@ export const getCurrentPage = (book: Book, progress: BookProgress) => {
       ? pageinfo.current + 1
       : 0;
 };
+
+/**
+ * A book is "currently reading" iff it has real reading progress and has not
+ * been parked. Importing a book sets timestamps but never `progress` (only
+ * opening it does), so the progress gate drops freshly-added-but-unopened
+ * books; the status gate drops finished, abandoned (on hold) and
+ * manually-marked-unread books. A book actively being read has `readingStatus`
+ * either `undefined` (cleared from 'unread' on first open) or `'reading'`, both
+ * of which pass. Shared by the library's recently-read shelf and the
+ * home-screen reading widget so the two surfaces stay in sync.
+ */
+export const isCurrentlyReadingBook = (book: Book): boolean =>
+  !book.deletedAt &&
+  book.progress != null &&
+  book.readingStatus !== 'finished' &&
+  book.readingStatus !== 'abandoned' &&
+  book.readingStatus !== 'unread';
 
 export const getBookDirFromWritingMode = (writingMode: WritingMode) => {
   switch (writingMode) {

@@ -8,6 +8,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.provider.MediaStore
 import android.util.Log
 import android.os.Build
@@ -22,6 +23,10 @@ import android.view.WindowInsetsController
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
@@ -50,11 +55,17 @@ import app.tauri.plugin.Plugin
 import app.tauri.plugin.Invoke
 import org.json.JSONArray
 import java.io.*
+import kotlin.math.abs
 import kotlinx.coroutines.*
 
 @InvokeArg
 class AuthRequestArgs {
     var authUrl: String? = null
+}
+
+@InvokeArg
+class SetMulticastLockArgs {
+    var acquire: Boolean? = null
 }
 
 @InvokeArg
@@ -190,6 +201,9 @@ interface KeyDownInterceptor {
 class NativeBridgePlugin(private val activity: Activity): Plugin(activity) {
     private val implementation = NativeBridge()
     private var redirectScheme = "readest"
+    private var activeWebBrowser: WebBrowserController? = null
+    private var multicastLock: WifiManager.MulticastLock? = null
+
     private var redirectHost = "auth-callback"
     private var webViewRef: WebView? = null
     private val billingManager by lazy {
@@ -201,7 +215,32 @@ class NativeBridgePlugin(private val activity: Activity): Plugin(activity) {
     // a dead Activity.
     private val pluginScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    private var sensorManager: SensorManager? = null
+    private var ambientLightListening = false
+    private var lastEmittedLux: Float = Float.NaN
+    private val ambientLightListener = object : SensorEventListener {
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+        override fun onSensorChanged(event: SensorEvent?) {
+            val lux = event?.values?.getOrNull(0) ?: return
+            // Skip tiny noise so JS hysteresis is not flooded (~SENSOR_DELAY_NORMAL).
+            if (!lastEmittedLux.isNaN() && abs(lux - lastEmittedLux) < 0.5f) return
+            lastEmittedLux = lux
+            val payload = JSObject()
+            payload.put("lux", lux.toDouble())
+            // Deliberately NOT emitOrQueue: that queue is for one-shot events
+            // like shared-intent that must survive until JS registers. This is
+            // a continuous stream, so a sample nobody is listening for is
+            // worthless and queueing it would grow without bound whenever the
+            // sensor outlives the listener (e.g. the WebView renderer dies).
+            triggerEvent("ambient-light", payload)
+        }
+    }
+
     override fun onDestroy() {
+        stopAmbientLightUpdatesInternal()
+        multicastLock?.let { if (it.isHeld) it.release() }
+        multicastLock = null
         pluginScope.cancel()
         instance = null
     }
@@ -823,6 +862,73 @@ class NativeBridgePlugin(private val activity: Activity): Plugin(activity) {
     }
 
     @Command
+    fun has_ambient_light_sensor(invoke: Invoke) {
+        val ret = JSObject()
+        try {
+            val sm = activity.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            val sensor = sm.getDefaultSensor(Sensor.TYPE_LIGHT)
+            ret.put("available", sensor != null)
+        } catch (e: Exception) {
+            ret.put("available", false)
+            ret.put("error", e.message)
+        }
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun start_ambient_light_updates(invoke: Invoke) {
+        val ret = JSObject()
+        try {
+            if (ambientLightListening) {
+                ret.put("success", true)
+                invoke.resolve(ret)
+                return
+            }
+            val sm = activity.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            val sensor = sm.getDefaultSensor(Sensor.TYPE_LIGHT)
+            if (sensor == null) {
+                ret.put("success", false)
+                ret.put("error", "No ambient light sensor")
+                invoke.resolve(ret)
+                return
+            }
+            sensorManager = sm
+            lastEmittedLux = Float.NaN
+            sm.registerListener(ambientLightListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            ambientLightListening = true
+            ret.put("success", true)
+        } catch (e: Exception) {
+            ret.put("success", false)
+            ret.put("error", e.message)
+        }
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun stop_ambient_light_updates(invoke: Invoke) {
+        val ret = JSObject()
+        try {
+            stopAmbientLightUpdatesInternal()
+            ret.put("success", true)
+        } catch (e: Exception) {
+            ret.put("success", false)
+            ret.put("error", e.message)
+        }
+        invoke.resolve(ret)
+    }
+
+    private fun stopAmbientLightUpdatesInternal() {
+        if (!ambientLightListening) return
+        try {
+            sensorManager?.unregisterListener(ambientLightListener)
+        } catch (_: Exception) {
+        }
+        ambientLightListening = false
+        sensorManager = null
+        lastEmittedLux = Float.NaN
+    }
+
+    @Command
     fun iap_is_available(invoke: Invoke) {
         val isAvailable = billingManager.isBillingAvailable()
         val result = JSObject()
@@ -1106,7 +1212,15 @@ class NativeBridgePlugin(private val activity: Activity): Plugin(activity) {
             withContext(Dispatchers.IO) {
                 val books = org.json.JSONArray()
                 for (book in args.books) {
-                    ReadingWidgetStore.writeThumbnail(activity, book.hash, book.coverPath, book.percent)
+                    // A thumbnail failure must never escape pluginScope: an
+                    // uncaught exception here kills the process, and the
+                    // snapshot is republished on every library load, so one
+                    // bad cover would crash the app on every launch.
+                    try {
+                        ReadingWidgetStore.writeThumbnail(activity, book.hash, book.coverPath, book.percent)
+                    } catch (e: Exception) {
+                        Log.w("NativeBridgePlugin", "widget thumbnail failed for ${book.hash}", e)
+                    }
                     books.put(
                         org.json.JSONObject()
                             .put("hash", book.hash)
@@ -1504,13 +1618,79 @@ class NativeBridgePlugin(private val activity: Activity): Plugin(activity) {
         controller.show()
     }
 
+    @Command
+    fun set_multicast_lock(invoke: Invoke) {
+        val args = try {
+            invoke.parseArgs(SetMulticastLockArgs::class.java)
+        } catch (e: Exception) {
+            invoke.reject(e.message ?: "Invalid set_multicast_lock args")
+            return
+        }
+        try {
+            val manager = activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val lock = multicastLock ?: manager.createMulticastLock("readest-localsend").apply {
+                setReferenceCounted(false)
+            }.also { multicastLock = it }
+            if (args.acquire == true && !lock.isHeld) lock.acquire()
+            if (args.acquire != true && lock.isHeld) lock.release()
+            invoke.resolve()
+        } catch (e: Exception) {
+            invoke.reject(e.message ?: "Unable to change multicast lock")
+        }
+    }
+
     /**
-     * Trigger a deep e-ink full screen refresh (GC16 waveform) to clear
-     * ghosting. Driven by the page-turner "Refresh Page" action on e-ink
-     * Android devices. Runs on the UI thread against the window's decor view;
-     * [EinkRefreshController] probes each vendor mechanism and resolves
-     * `success: false` (not an error) when none is available.
+     * Present the in-app browser (#5775). Resolves `{ openBookHash? }` when
+     * the user closes it; downloads are emitted as `web-browser-download`
+     * plugin events while it is open (queued if JS has not registered yet).
      */
+    @Command
+    fun open_web_browser(invoke: Invoke) {
+        val args = try {
+            invoke.parseArgs(WebBrowserArgs::class.java)
+        } catch (e: Exception) {
+            invoke.reject(e.message ?: "Invalid open_web_browser args")
+            return
+        }
+        val controller = WebBrowserController(
+            activity,
+            args,
+            onDownload = { event ->
+                val payload = JSObject()
+                payload.put("url", event.url)
+                payload.put("path", event.path)
+                payload.put("filename", event.filename)
+                payload.put("success", event.success)
+                event.error?.let { payload.put("error", it) }
+                emitOrQueue("web-browser-download", payload)
+            },
+            completion = { hash ->
+                activeWebBrowser = null
+                val ret = JSObject()
+                if (hash != null) ret.put("openBookHash", hash)
+                invoke.resolve(ret)
+            },
+        )
+        activeWebBrowser = controller
+        controller.show()
+    }
+
+    /** Push an import status into the open browser's banner. */
+    @Command
+    fun set_web_browser_status(invoke: Invoke) {
+        val args = try {
+            invoke.parseArgs(WebBrowserStatusArgs::class.java)
+        } catch (e: Exception) {
+            invoke.reject(e.message ?: "Invalid set_web_browser_status args")
+            return
+        }
+        activity.runOnUiThread {
+            activeWebBrowser?.setStatus(args.state ?: "", args.filename ?: "", args.bookHash)
+        }
+        invoke.resolve()
+    }
+
+
     @Command
     fun refresh_eink_screen(invoke: Invoke) {
         activity.runOnUiThread {

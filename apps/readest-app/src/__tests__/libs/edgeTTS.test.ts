@@ -113,7 +113,9 @@ describe('EdgeSpeechTTS on Cloudflare Workers', () => {
     const call = fetchSpy.mock.calls[0]!;
     const calledUrl = call[0] as string | URL;
     const calledInit = call[1] as RequestInit;
-    expect(String(calledUrl)).toContain('https://speech.platform.bing.com/');
+    expect(String(calledUrl)).toContain(
+      'https://api.msedgeservices.com/tts/cognitiveservices/websocket/v1',
+    );
     expect(String(calledUrl)).not.toContain('wss://');
     const headers = calledInit.headers as Record<string, string>;
     expect(headers['Upgrade']).toBe('websocket');
@@ -323,5 +325,20 @@ describe('parseAudioMetadataBody', () => {
     expect(
       parseAudioMetadataBody(JSON.stringify({ Metadata: [{ Type: 'WordBoundary' }] })),
     ).toEqual([]);
+  });
+});
+
+describe('Edge v2 handshake signature', () => {
+  test('matches the captured v2 token for a fixed time window', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1791888000 * 1000);
+    try {
+      const { generateSecMsGec } = await import('@/libs/edgeTTS');
+      expect(await generateSecMsGec()).toBe(
+        '492D7694A183A45E-56E821F95D4579C5B7C7E33DC7303FF379EC36D510213555BBBB9EB17EF15876',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

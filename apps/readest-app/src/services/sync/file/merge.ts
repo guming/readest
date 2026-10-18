@@ -1,4 +1,5 @@
 import { Book, BookConfig, BookNote, NotebookCard } from '@/types/book';
+import { bookGroupDiffers, pickFresherGroup } from '@/utils/book';
 import { RemoteBookConfig } from './wire';
 
 /**
@@ -148,8 +149,6 @@ export const mergeBookMetadata = (local: Book, remote: Book): Book => {
         author: remote.author,
         metadata: remote.metadata ?? local.metadata,
         primaryLanguage: remote.primaryLanguage ?? local.primaryLanguage,
-        groupId: remote.groupId,
-        groupName: remote.groupName,
         tags: remote.tags,
         progress: remote.progress ?? local.progress,
         updatedAt: remote.updatedAt,
@@ -159,6 +158,10 @@ export const mergeBookMetadata = (local: Book, remote: Book): Book => {
     merged.readingStatus = remote.readingStatus;
     merged.readingStatusUpdatedAt = remote.readingStatusUpdatedAt;
   }
+  const group = pickFresherGroup(local, remote, remoteMetaNewer);
+  merged.groupId = group.groupId;
+  merged.groupName = group.groupName;
+  merged.groupUpdatedAt = group.groupUpdatedAt;
   return merged;
 };
 
@@ -182,4 +185,8 @@ export const shouldApplyRemoteBookMetadata = (local: Book, remote: Book): boolea
   !remote.deletedAt &&
   !local.deletedAt &&
   ((remote.updatedAt ?? 0) > (local.updatedAt ?? 0) ||
-    (remote.readingStatusUpdatedAt ?? 0) > (local.readingStatusUpdatedAt ?? 0));
+    (remote.readingStatusUpdatedAt ?? 0) > (local.readingStatusUpdatedAt ?? 0) ||
+    bookGroupDiffers(
+      local,
+      pickFresherGroup(local, remote, (remote.updatedAt ?? 0) > (local.updatedAt ?? 0)),
+    ));

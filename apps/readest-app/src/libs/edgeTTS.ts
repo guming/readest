@@ -29,8 +29,9 @@ interface AcceptableWebSocket {
 
 type UpgradeResponse = Response & { webSocket?: AcceptableWebSocket };
 
-const EDGE_SPEECH_URL =
-  'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1';
+// The legacy speech.platform.bing.com endpoint increasingly rejects the
+// WebSocket handshake with 403. Edge Read Aloud now uses this endpoint.
+const EDGE_SPEECH_URL = 'wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1';
 const EDGE_API_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
 const CHROMIUM_FULL_VERSION = '143.0.3650.75';
 const CHROMIUM_MAJOR_VERSION = CHROMIUM_FULL_VERSION.split('.')[0];
@@ -216,36 +217,95 @@ const EDGE_TTS_VOICES = {
   'zu-ZA': ['zu-ZA-ThandoNeural', 'zu-ZA-ThembaNeural'],
 };
 
-/**
- * Generates the Sec-MS-GEC token value.
- * This function generates a token value based on the current time in Windows file time format
- * adjusted for clock skew, and rounded down to the nearest 5 minutes. The token is then hashed
- * using SHA256 and returned as an uppercased hex digest.
- *
- * @returns The generated Sec-MS-GEC token value.
- * @see https://github.com/rany2/edge-tts/issues/290#issuecomment-2464956570
- */
 const WIN_EPOCH_OFFSET = 11644473600; // Windows epoch offset in seconds (1601 to 1970)
 const S_TO_NS = 1000000000; // Seconds to nanoseconds conversion
-const generateSecMsGec = async () => {
-  let ticks = Math.floor(Date.now() / 1000);
+const GEC_PREFIX_WORDS = [
+  0x79706f43, 0x68676972, 0x43282074, 0x694d2029, 0x736f7263, 0x2074666f, 0x70726f43, 0x7461726f,
+  0x2e6e6f69, 0x6c6c4120, 0x67697220, 0x20737468, 0x65736572, 0x64657672, 0x0000002e,
+];
+const GEC_PREFIX_LENGTH = 57;
+
+const toHex = (bytes: Uint8Array) =>
+  Array.from(bytes, (b) => b.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
+
+const rol16 = (x: number) => ((x << 16) | (x >>> 16)) >>> 0;
+
+// Little-endian 32-bit words, zero-padded to an even word count.
+const toWords = (bytes: Uint8Array) => {
+  const padded = new Uint8Array(Math.ceil(bytes.length / 8) * 8);
+  padded.set(bytes);
+  const view = new DataView(padded.buffer);
+  return Array.from({ length: padded.length / 4 }, (_, i) => view.getUint32(i * 4, true));
+};
+
+// The two CS64 chains Edge xors into the first half of a v2 token.
+const cs64WordSwap = (words: number[], a: number, b: number) => {
+  let acc = 0;
+  let last = 0;
+  for (let i = 0; i < words.length; i += 2) {
+    const x = words[i]!;
+    const y = words[i + 1]!;
+    let t = rol16((Math.imul(rol16(x), 0xef0569fb) + Math.imul(x, a)) >>> 0);
+    let q = Math.imul(t, 0x76f50f34) >>> 0;
+    acc = (acc + Math.imul(rol16(q), 0xc3efea97) + q) >>> 0;
+    t = rol16((Math.imul(rol16(y), 0xc31713db) + Math.imul(y, b)) >>> 0);
+    q = Math.imul(t, 0x1881ce3c) >>> 0;
+    last = (Math.imul(rol16(q), 0x35bd1ec9) + q) >>> 0;
+    acc = (acc + last) >>> 0;
+  }
+  return [last, acc];
+};
+
+const cs64Reversible = (words: number[], a: number, b: number) => {
+  let state = 0;
+  let acc = 0;
+  for (let i = 0; i < words.length; i += 2) {
+    state = Math.imul(state + words[i]!, a) >>> 0;
+    for (const c of [0xcf98b111, 0x87085b9f, 0x12ceb96d, 0x257e1d83]) {
+      state = Math.imul(rol16(state), c) >>> 0;
+    }
+    let t = Math.imul(words[i + 1]! + state, b) >>> 0;
+    t = Math.imul(rol16(t), 0xa27416f5) >>> 0;
+    t = rol16(Math.imul(rol16(t), 0xd38396ff) >>> 0);
+    acc = (acc + state) >>> 0;
+    state = Math.imul(rol16(Math.imul(t, 0x7c932b89) >>> 0), 0xbfa49f69) >>> 0;
+    acc = (acc + state) >>> 0;
+  }
+  return [state, acc];
+};
+
+/**
+ * Generates a v2 Sec-MS-GEC token: `<CS64 hex>-<SHA256 hex>` over the prefix words followed
+ * by the Windows file time (rounded down to 5 minutes) and the trusted client token.
+ *
+ * @see https://github.com/rany2/edge-tts/pull/492
+ */
+export const generateSecMsGec = async (now = Date.now()) => {
+  let ticks = Math.floor(now / 1000);
   // Switch to Windows file time epoch (1601-01-01 00:00:00 UTC)
   ticks += WIN_EPOCH_OFFSET;
   // Round down to the nearest 5 minutes (300 seconds)
   ticks -= ticks % 300;
   // Convert the ticks to 100-nanosecond intervals (Windows file time format)
   ticks *= S_TO_NS / 100;
-  // Create the string to hash by concatenating the ticks and the trusted client token
-  const strToHash = `${ticks.toFixed(0)}${EDGE_API_TOKEN}`;
-  // Compute the SHA256 hash and return the uppercased hex digest
-  const encoder = new TextEncoder();
-  const data = encoder.encode(strToHash);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-    .toUpperCase();
+  const suffix = new TextEncoder().encode(`${ticks.toFixed(0)}${EDGE_API_TOKEN}`);
+  const data = new Uint8Array(GEC_PREFIX_LENGTH + suffix.length);
+  const view = new DataView(data.buffer);
+  GEC_PREFIX_WORDS.forEach((word, i) => view.setUint32(i * 4, word, true));
+  data.set(suffix, GEC_PREFIX_LENGTH);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+  const words = toWords(data);
+  const [key0, key1] = toWords(digest);
+  const a = (key0! | 1) >>> 0;
+  const b = (key1! | 1) >>> 0;
+  const [s0, s1] = cs64WordSwap(words, a, b);
+  const [r0, r1] = cs64Reversible(words, a, b);
+  const cs64 = new DataView(new ArrayBuffer(8));
+  cs64.setUint32(0, s0! ^ r0!, true);
+  cs64.setUint32(4, s1! ^ r1!, true);
+  return `${toHex(new Uint8Array(cs64.buffer))}-${toHex(digest)}`;
 };
 
 const generateMuid = () => {
@@ -362,6 +422,9 @@ export class EdgeSpeechTTS {
     string,
     Promise<{ blob: Blob; boundaries: TTSWordBoundary[] }>
   >();
+  private static requestTail: Promise<void> = Promise.resolve();
+  private static retryAfter = 0;
+  private static rateLimitFailures = 0;
   private protocol: EDGE_TTS_PROTOCOL = 'wss';
 
   constructor(protocol?: EDGE_TTS_PROTOCOL) {
@@ -397,9 +460,9 @@ export class EdgeSpeechTTS {
     const connectId = randomMd5();
     const params = new URLSearchParams({
       ConnectionId: connectId,
-      TrustedClientToken: EDGE_API_TOKEN,
+      'Ocp-Apim-Subscription-Key': EDGE_API_TOKEN,
       'Sec-MS-GEC': await generateSecMsGec(),
-      'Sec-MS-GEC-Version': `1-${CHROMIUM_FULL_VERSION}`,
+      'Sec-MS-GEC-Version': `2-${CHROMIUM_FULL_VERSION}`,
     });
     const url = `${EDGE_SPEECH_URL}?${params.toString()}`;
     const date = new Date().toString();
@@ -720,16 +783,38 @@ export class EdgeSpeechTTS {
   }
 
   async #fetchEdgeSpeech(payload: EdgeTTSPayload): Promise<EdgeSpeechAudio> {
-    if (this.protocol === 'https') {
-      // The HTTPS proxy streams the audio body and carries word boundaries in
-      // the WORD_BOUNDARIES_HEADER response header (see /api/tts/edge route).
-      const response = await this.#fetchEdgeSpeechHttp(payload);
-      return {
-        response,
-        boundaries: parseWordBoundariesHeader(response.headers.get(WORD_BOUNDARIES_HEADER)),
-      };
-    } else {
-      return this.#fetchEdgeSpeechWs(payload);
+    // Playback, preloading and pronunciation share one connection budget.
+    const previous = EdgeSpeechTTS.requestTail;
+    let release!: () => void;
+    EdgeSpeechTTS.requestTail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      const waitMs = EdgeSpeechTTS.retryAfter - Date.now();
+      if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
+      let result: EdgeSpeechAudio;
+      if (this.protocol === 'https') {
+        const response = await this.#fetchEdgeSpeechHttp(payload);
+        result = {
+          response,
+          boundaries: parseWordBoundariesHeader(response.headers.get(WORD_BOUNDARIES_HEADER)),
+        };
+      } else {
+        result = await this.#fetchEdgeSpeechWs(payload);
+      }
+      EdgeSpeechTTS.rateLimitFailures = 0;
+      EdgeSpeechTTS.retryAfter = Date.now() + 250;
+      return result;
+    } catch (error) {
+      if (error instanceof Error && /\b429\b/.test(error.message)) {
+        EdgeSpeechTTS.rateLimitFailures++;
+        EdgeSpeechTTS.retryAfter =
+          Date.now() + Math.min(60_000, 5_000 * 2 ** (EdgeSpeechTTS.rateLimitFailures - 1));
+      }
+      throw error;
+    } finally {
+      release();
     }
   }
 

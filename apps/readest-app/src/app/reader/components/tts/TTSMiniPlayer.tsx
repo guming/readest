@@ -16,6 +16,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { formatPlaybackTime } from '@/utils/time';
 import { TTSPlaybackInfo, usePlaybackInfo } from './usePlaybackInfo';
 import { useCountdownLabel } from './useCountdownLabel';
+import BufferingRing from './BufferingRing';
 
 // Reader text reserves this much bottom clearance while a session is active
 // (card height + bottom gap); FoliateViewer consumes it via applyMarginAndGap.
@@ -26,6 +27,7 @@ type TTSMiniPlayerProps = {
   isPlaying: boolean;
   isEink: boolean;
   hasTimeline: boolean;
+  buffering?: boolean;
   timeoutTimestamp: number;
   chapterRemainingSec: number | null;
   gridInsets: Insets;
@@ -45,6 +47,7 @@ const TTSMiniPlayer = ({
   isPlaying,
   isEink,
   hasTimeline,
+  buffering = false,
   timeoutTimestamp,
   chapterRemainingSec,
   gridInsets,
@@ -162,10 +165,12 @@ const TTSMiniPlayer = ({
             </button>
             <button
               type='button'
-              className='shrink-0 rounded-full p-0.5'
+              className='relative shrink-0 rounded-full p-0.5'
               aria-label={isPlaying ? _('Pause') : _('Play')}
+              aria-busy={buffering}
               onClick={onTogglePlay}
             >
+              {buffering && <BufferingRing size={36} isEink={isEink} />}
               {isPlaying ? (
                 <MdPauseCircleFilled size={iconSize40} />
               ) : (

@@ -76,6 +76,20 @@ export interface BookNav {
   sections: Record<string, BookNavSection>;
 }
 
+/** Check whether a persisted navigation artifact matches the current schema. */
+export const isBookNavCacheCurrent = (value: unknown): value is BookNav => {
+  if (!value || typeof value !== 'object') return false;
+
+  const nav = value as Partial<BookNav>;
+  return (
+    nav.version === BOOK_NAV_VERSION &&
+    Array.isArray(nav.toc) &&
+    !!nav.sections &&
+    typeof nav.sections === 'object' &&
+    !Array.isArray(nav.sections)
+  );
+};
+
 const convertTocLabels = (items: TOCItem[], convertChineseVariant: ConvertChineseVariant) => {
   items.forEach((item) => {
     if (item.label) {

@@ -125,8 +125,9 @@ const Popup = ({
     setAdjustedPosition(newPosition);
   }, [position, trianglePosition, popupPadding, childrenHeight]);
 
-  const outerTriangleStyles = getTriangleStyles(trianglePosition, 7, 0);
-  const innerTriangleStyles = getTriangleStyles(trianglePosition, 7, -1);
+  const triangleSize = 7;
+  const outerTriangleStyles = getTriangleStyles(trianglePosition, triangleSize, 0);
+  const innerTriangleStyles = getTriangleStyles(trianglePosition, triangleSize, -1);
 
   const popupHeight = height ?? childrenHeight;
   const triangleHidden = !!(
@@ -141,18 +142,27 @@ const Popup = ({
   );
 
   return (
+    // No `filter` (drop-shadow) on this wrapper: it would become the containing
+    // block and stacking context for the absolutely positioned popup below,
+    // re-anchoring it off the viewport and demoting its z-50 under later reader
+    // chrome. The triangle shadow lives on the triangle itself.
     <div>
       <div
-        className={clsx('popup-triangle-outer text-base-300 absolute z-50', triangleClassName)}
+        className={clsx(
+          'popup-triangle-outer text-base-content/20 not-eink:drop-shadow-xl absolute z-50',
+          triangleHidden ? 'invisible' : 'visible',
+        )}
         style={outerTriangleStyles}
       />
       <div
         id='popup-container'
         ref={containerRef}
+        aria-hidden={!isOpen}
+        data-capture-blocking-overlay={isOpen ? 'true' : undefined}
         className={clsx(
-          'popup-container bg-base-300 absolute z-50 rounded-lg font-sans',
-          'eink:border eink:border-base-content',
-          trianglePosition?.dir !== 'up' && 'not-eink:shadow-xl',
+          'popup-container text-base-content absolute z-50 rounded-lg border font-sans',
+          'not-eink:border-base-content/20 not-eink:shadow-2xl',
+          'bg-base-300 theme-dark:bg-base-100',
           className,
         )}
         style={{
@@ -169,9 +179,9 @@ const Popup = ({
       </div>
       <div
         className={clsx(
-          'popup-triangle-inner text-base-300 absolute',
-          triangleHidden ? 'z-10' : 'z-50',
+          'popup-triangle-inner text-base-300 theme-dark:text-base-100 absolute z-50',
           triangleClassName,
+          triangleHidden ? 'invisible' : 'visible',
         )}
         style={innerTriangleStyles}
       />

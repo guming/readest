@@ -168,6 +168,16 @@ foliate-fxl {
   border-radius: 14px;
 }
 
+/* Menu labels wrap (no nowrap), so the anchor-positioned shrink-to-fit box
+   would collapse toward its longest word; keep the natural content width but
+   cap it to the viewport so long translations wrap instead of overflowing the
+   screen (#5259 — Dropdown shifts the box back inside). Zero specificity so
+   explicit utility widths (w-44, max-w-[90vw]) still win. */
+:where(.dropdown-content) {
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+
 .dropdown-content::before,
 .dropdown-content::after {
   content: '';
@@ -526,7 +536,7 @@ input[type='range'].slider-input {
   color: theme('colors.base-content') !important;
 }
 
-[data-eink='true'] [class*='bg-base-content'] {
+[data-eink='true'] [class*='bg-base-content']:not([class*=':bg-base-content']) {
   background-color: theme('colors.base-content') !important;
 }
 
@@ -542,6 +552,18 @@ input[type='range'].slider-input {
 }
 
 [data-eink='true'] [class*='text-bold-in-eink'] {
+  font-weight: bold;
+}
+
+/* Emphasized query term inside search result excerpts — shared by the library
+   results and the reader sidebar so custom CSS can restyle both at once. */
+.search-term-highlight {
+  color: theme('colors.red.500');
+  font-weight: 600;
+}
+
+[data-eink='true'] .search-term-highlight {
+  color: theme('colors.base-content') !important;
   font-weight: bold;
 }
 
@@ -606,7 +628,8 @@ input[type='range'].slider-input {
 
 [data-eink='true'] .btn-primary,
 [data-eink='true'] .btn-outline,
-[data-eink='true'] .btn-contrast {
+[data-eink='true'] .btn-contrast,
+[data-eink='true'] .eink-contrast {
   background-color: theme('colors.base-content') !important;
   border: 1px solid theme('colors.base-content') !important;
   color: theme('colors.base-100') !important;

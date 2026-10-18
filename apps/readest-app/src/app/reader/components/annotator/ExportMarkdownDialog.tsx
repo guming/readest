@@ -5,7 +5,15 @@ import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useReaderStore } from '@/store/readerStore';
 import { useSettingsStore } from '@/store/settingsStore';
-import { BooknoteGroup, HighlightColor, HighlightStyle, NoteExportConfig } from '@/types/book';
+import {
+  BookFormat,
+  BooknoteGroup,
+  HighlightColor,
+  HighlightStyle,
+  NoteExportConfig,
+  NoteExportFormat,
+} from '@/types/book';
+import { buildAnnotationExport } from '@/services/annotation/providers/readest';
 import { DEFAULT_NOTE_EXPORT_CONFIG } from '@/services/constants';
 import { saveViewSettings } from '@/helpers/settings';
 import {
@@ -27,13 +35,17 @@ interface ExportMarkdownDialogProps {
   bookKey: string;
   isOpen: boolean;
   bookHash: string;
+  bookMetaHash?: string;
   bookTitle: string;
   bookAuthor: string;
+  bookFormat: BookFormat;
+  progress?: [number, number];
+  location?: string;
   booknoteGroups: { [href: string]: BooknoteGroup };
   onCancel: () => void;
   onExport: (
     markdown: string,
-    isPlainText: boolean,
+    format: NoteExportFormat,
     sharePosition?: { x: number; y: number; preferredEdge?: 'top' | 'bottom' | 'left' | 'right' },
   ) => void;
 }
@@ -42,8 +54,12 @@ const ExportMarkdownDialog: React.FC<ExportMarkdownDialogProps> = ({
   bookKey,
   isOpen,
   bookHash,
+  bookMetaHash,
   bookTitle,
   bookAuthor,
+  bookFormat,
+  progress,
+  location,
   booknoteGroups,
   onCancel,
   onExport,
@@ -118,6 +134,9 @@ const ExportMarkdownDialog: React.FC<ExportMarkdownDialogProps> = ({
     const newExportConfig = {
       ...exportConfig,
       customTemplate: customTemplate === defaultTemplate ? '' : customTemplate,
+      // Mirror the format back onto the legacy flag so a downgrade still
+      // lands on markdown or plain text rather than an unknown value.
+      exportAsPlainText: exportConfig.exportFormat === 'text',
     };
     saveViewSettings(envConfig, bookKey, 'noteExportConfig', newExportConfig, false, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -196,6 +215,26 @@ const ExportMarkdownDialog: React.FC<ExportMarkdownDialogProps> = ({
   // Generate markdown preview based on current format settings
   const markdownPreview = useMemo(() => {
     let output = '';
+
+    if (exportConfig.exportFormat === 'json') {
+      return JSON.stringify(
+        buildAnnotationExport({
+          book: {
+            title: bookTitle,
+            author: bookAuthor,
+            hash: bookHash,
+            metaHash: bookMetaHash,
+            format: bookFormat,
+          },
+          groups: filteredGroups,
+          progress,
+          location,
+          exportedAt: Date.now(),
+        }),
+        null,
+        2,
+      );
+    }
 
     if (exportConfig.useCustomTemplate) {
       // Prepare data for template rendering
@@ -352,7 +391,7 @@ const ExportMarkdownDialog: React.FC<ExportMarkdownDialogProps> = ({
       y: rect.top,
       preferredEdge: 'bottom' as const,
     };
-    onExport(markdownPreview, !!exportConfig.exportAsPlainText, sharePosition);
+    onExport(markdownPreview, exportConfig.exportFormat, sharePosition);
   };
 
   return (

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { MdChevronRight } from 'react-icons/md';
 import {
   RiBookOpenLine,
+  RiPlanetLine,
   RiRssLine,
   RiBookReadLine,
   RiBook3Line,
@@ -11,25 +12,35 @@ import {
   RiDatabase2Line,
   RiGoogleLine,
   RiMicrosoftLine,
+  RiAppleLine,
+  RiHeadphoneLine,
+  RiWifiLine,
 } from 'react-icons/ri';
 import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useKeyDownActions } from '@/hooks/useKeyDownActions';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useCustomOPDSStore } from '@/store/customOPDSStore';
+import { useABSServerStore } from '@/store/absServerStore';
 import { useFileSyncStore } from '@/store/fileSyncStore';
 import { CatalogManager } from '@/app/opds/components/CatalogManager';
 import { saveSysSettings } from '@/helpers/settings';
 import { isWebAppPlatform } from '@/services/environment';
+import { isTauriAppPlatform } from '@/services/environment';
+import { isLocalSendEnabled } from '@/services/localsend/devicePrefs';
 import { getGoogleWebClientId } from '@/services/sync/providers/gdrive/buildGoogleDriveProvider';
 import { getMicrosoftClientId } from '@/services/sync/providers/onedrive/buildOneDriveProvider';
+import BookOrbitForm from './integrations/BookOrbitForm';
 import KOSyncForm from './integrations/KOSyncForm';
 import ReadwiseForm from './integrations/ReadwiseForm';
 import HardcoverForm from './integrations/HardcoverForm';
 import WebDAVForm from './integrations/WebDAVForm';
 import GoogleDriveForm from './integrations/GoogleDriveForm';
 import OneDriveForm from './integrations/OneDriveForm';
+import ICloudForm from './integrations/ICloudForm';
 import S3Form from './integrations/S3Form';
+import ABSForm from './integrations/ABSForm';
+import LocalSendForm from './integrations/LocalSendForm';
 import { persistActiveCloudProvider } from './integrations/cloudSync';
 import { getThirdPartyRowStatus } from './integrations/cloudSyncStatus';
 import { getCloudSyncProvider, resolveCloudSyncGate } from '@/services/sync/cloudSyncProvider';
@@ -39,13 +50,17 @@ import { SectionTitle, SettingLabel, Tips } from './primitives';
 
 type SubPage =
   | 'kosync'
+  | 'bookorbit'
   | 'webdav'
   | 'gdrive'
   | 's3'
   | 'onedrive'
+  | 'icloud'
   | 'readwise'
   | 'hardcover'
   | 'opds'
+  | 'audiobookshelf'
+  | 'localsend'
   | null;
 
 /**
@@ -66,6 +81,8 @@ const IntegrationsPanel: React.FC = () => {
   const { settings, requestedSubPage, setRequestedSubPage } = useSettingsStore();
   const opdsCatalogs = useCustomOPDSStore((s) => s.catalogs);
   const opdsCount = opdsCatalogs.filter((c) => !c.deletedAt).length;
+  const absServers = useABSServerStore((s) => s.servers);
+  const absCount = absServers.filter((s) => !s.deletedAt).length;
   // Surface a library-wide WebDAV sync that's mid-flight in the row's
   // status line. Keeps the user from feeling like the run was lost
   // when they back out of the WebDAV sub-page or close the dialog.
@@ -79,6 +96,10 @@ const IntegrationsPanel: React.FC = () => {
   const onedriveLastError = useFileSyncStore((s) => s.lastErrorByKind.onedrive);
 
   const [subPage, setSubPage] = useState<SubPage>(null);
+
+  useEffect(() => {
+    void useABSServerStore.getState().loadABSServers(envConfig);
+  }, [envConfig]);
 
   // Android Back / Esc: when any integrations sub-page (KOSync, WebDAV,
   // Readwise, Hardcover, OPDS, Send-to-Lumen) is open, intercept and
@@ -107,13 +128,17 @@ const IntegrationsPanel: React.FC = () => {
     if (!requestedSubPage) return;
     if (
       requestedSubPage === 'kosync' ||
+      requestedSubPage === 'bookorbit' ||
       requestedSubPage === 'webdav' ||
       requestedSubPage === 'gdrive' ||
       requestedSubPage === 's3' ||
       requestedSubPage === 'onedrive' ||
+      requestedSubPage === 'icloud' ||
       requestedSubPage === 'readwise' ||
       requestedSubPage === 'hardcover' ||
-      requestedSubPage === 'opds'
+      requestedSubPage === 'opds' ||
+      requestedSubPage === 'audiobookshelf' ||
+      requestedSubPage === 'localsend'
     ) {
       setSubPage(requestedSubPage);
     } else if (requestedSubPage === 'cloudsync') {
@@ -131,6 +156,12 @@ const IntegrationsPanel: React.FC = () => {
     return (
       <div className='my-4 w-full'>
         <KOSyncForm onBack={() => setSubPage(null)} />
+      </div>
+    );
+  if (subPage === 'bookorbit')
+    return (
+      <div className='my-4 w-full'>
+        <BookOrbitForm onBack={() => setSubPage(null)} />
       </div>
     );
   if (subPage === 'webdav')
@@ -285,6 +316,18 @@ const IntegrationsPanel: React.FC = () => {
         )}
       </div>
     );
+  if (subPage === 'icloud')
+    return (
+      <div className='my-4 w-full'>
+        <SubPageHeader
+          parentLabel={_('Integrations')}
+          currentLabel={_('iCloud')}
+          description={_('Sync your library with iCloud Drive.')}
+          onBack={() => setSubPage(null)}
+        />
+        <ICloudForm />
+      </div>
+    );
   if (subPage === 'readwise')
     return (
       <div className='my-4 w-full'>
@@ -309,9 +352,27 @@ const IntegrationsPanel: React.FC = () => {
         <CatalogManager inSubPage />
       </div>
     );
+  if (subPage === 'audiobookshelf')
+    return (
+      <div className='my-4 w-full'>
+        <ABSForm onBack={() => setSubPage(null)} />
+      </div>
+    );
+  if (subPage === 'localsend')
+    return (
+      <div className='my-4 w-full'>
+        <LocalSendForm onBack={() => setSubPage(null)} />
+      </div>
+    );
   const koSyncStatus = settings.kosync?.enabled
     ? settings.kosync.username
       ? _('Connected as {{user}}', { user: settings.kosync.username })
+      : _('Connected')
+    : _('Not connected');
+
+  const bookOrbitStatus = settings.bookorbit?.enabled
+    ? settings.bookorbit.username
+      ? _('Connected as {{user}}', { user: settings.bookorbit.username })
       : _('Connected')
     : _('Not connected');
 
@@ -366,12 +427,21 @@ const IntegrationsPanel: React.FC = () => {
     lastError: onedriveLastError,
     syncBooks: settings.onedrive?.syncBooks ?? false,
   });
+  const icloudStatus = getThirdPartyRowStatus(_, {
+    enabled: !!settings.icloud?.enabled,
+    configured: true,
+    syncing: false,
+    paused: false,
+    lastError: null,
+    syncBooks: settings.icloud?.syncBooks ?? false,
+  });
   const activateCloudProvider = async (kind: FileSyncBackendKind) => {
     await persistActiveCloudProvider(envConfig, kind);
   };
 
   const opdsStatus =
     opdsCount > 0 ? _('{{count}} catalog', { count: opdsCount }) : _('No catalogs');
+  const absStatus = absCount > 0 ? _('{{count}} server', { count: absCount }) : _('No servers');
 
   return (
     <div className='my-4 w-full space-y-6'>
@@ -391,6 +461,12 @@ const IntegrationsPanel: React.FC = () => {
               title={_('KOReader')}
               status={koSyncStatus}
               onClick={() => setSubPage('kosync')}
+            />
+            <IntegrationRow
+              icon={RiPlanetLine}
+              title={_('BookOrbit')}
+              status={bookOrbitStatus}
+              onClick={() => setSubPage('bookorbit')}
             />
             <IntegrationRow
               icon={RiBookReadLine}
@@ -468,6 +544,18 @@ const IntegrationsPanel: React.FC = () => {
                 activateLabel={_('Use OneDrive')}
               />
             )}
+            {(appService?.isIOSApp || appService?.isMacOSApp) && (
+              <CloudProviderRow
+                icon={RiAppleLine}
+                title={_('iCloud')}
+                status={icloudStatus}
+                isActive={activeCloudKind === 'icloud'}
+                canActivate
+                onActivate={() => activateCloudProvider('icloud')}
+                onOpen={() => setSubPage('icloud')}
+                activateLabel={_('Use iCloud')}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -482,6 +570,20 @@ const IntegrationsPanel: React.FC = () => {
               status={opdsStatus}
               onClick={() => setSubPage('opds')}
             />
+            <IntegrationRow
+              icon={RiHeadphoneLine}
+              title={_('Audiobookshelf')}
+              status={absStatus}
+              onClick={() => setSubPage('audiobookshelf')}
+            />
+            {isTauriAppPlatform() && (
+              <IntegrationRow
+                icon={RiWifiLine}
+                title={_('Nearby BookDrop')}
+                status={isLocalSendEnabled() ? _('On') : _('Off')}
+                onClick={() => setSubPage('localsend')}
+              />
+            )}
           </div>
         </div>
       </div>

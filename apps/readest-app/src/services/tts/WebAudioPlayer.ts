@@ -26,6 +26,8 @@
 // drives MPNowPlayingInfoCenter/MPRemoteCommandCenter natively via the
 // native-tts plugin (getMediaSession -> TauriMediaSession).
 
+import type { TTSAudioPlayer } from './TTSAudioPlayer';
+
 export interface TTSAudioBuffer {
   readonly sampleRate: number;
   readonly length: number;
@@ -61,8 +63,14 @@ export interface ChunkTiming {
   trimStartSec: number;
   // originalTrimmedDuration / outputDuration (≈ playback rate).
   mediaScale: number;
-  // Silence scheduled after this chunk; the caller rate-scales it.
+  // Silence scheduled after this chunk in wall-clock seconds.
   gapSec: number;
+}
+
+export interface SessionOptions {
+  // Silence between a naturally ended session and this session's first sample.
+  // Paragraph synthesis happens inside this time rather than after it.
+  startAfterPreviousSec?: number;
 }
 
 export type WebAudioPlayerEvent =
@@ -123,13 +131,14 @@ export const ensureSharedAudioContext = async (): Promise<void> => {
   }
 };
 
-export class WebAudioPlayer {
+export class WebAudioPlayer implements TTSAudioPlayer {
   #createContext: () => TTSAudioContext;
   #usesSharedContext: boolean;
   #ctx: TTSAudioContext | null = null;
   #generation = 0;
   #session: PlayerSession | null = null;
   #userPaused = false;
+  #carryOverEndTime = 0;
 
   constructor(createContext?: () => TTSAudioContext) {
     this.#createContext = createContext ?? getSharedContext;
@@ -159,14 +168,16 @@ export class WebAudioPlayer {
     return buffer;
   }
 
-  startSession(onEvent: (event: WebAudioPlayerEvent) => void): number {
+  startSession(onEvent: (event: WebAudioPlayerEvent) => void, opts?: SessionOptions): number {
     this.abortSession();
     const generation = ++this.#generation;
+    const carryOver = this.#carryOverEndTime;
+    this.#carryOverEndTime = 0;
     this.#session = {
       generation,
       onEvent,
       chunks: [],
-      nextStartTime: 0,
+      nextStartTime: carryOver > 0 ? carryOver + Math.max(0, opts?.startAfterPreviousSec ?? 0) : 0,
       ended: false,
       endedEmitted: false,
       waiters: [],
@@ -217,6 +228,7 @@ export class WebAudioPlayer {
     const session = this.#session;
     if (!session) return;
     this.#session = null;
+    if (!session.endedEmitted) this.#carryOverEndTime = 0;
     for (const chunk of session.chunks) {
       chunk.source.onended = null;
       try {
@@ -332,6 +344,8 @@ export class WebAudioPlayer {
     if (!session.ended || session.endedEmitted) return;
     if (session.chunks.some((c) => !c.ended)) return;
     session.endedEmitted = true;
+    const last = session.chunks[session.chunks.length - 1];
+    this.#carryOverEndTime = last ? last.startTime + last.duration : 0;
     session.onEvent({ type: 'session-end' });
   }
 

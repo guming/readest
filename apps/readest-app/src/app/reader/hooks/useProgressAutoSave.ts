@@ -23,25 +23,30 @@ export const useProgressAutoSave = (bookKey: string) => {
   const lastSavedLocationRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
 
+  const persistProgress = useCallback(async () => {
+    if (useReaderStore.getState().getViewState(bookKey)?.previewMode) return;
+    const config = getConfig(bookKey);
+    if (!config) return;
+    const currentLocation = config.location ?? null;
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      lastSavedLocationRef.current = currentLocation;
+      return;
+    }
+    if (currentLocation === lastSavedLocationRef.current) return;
+    const settings = useSettingsStore.getState().settings;
+    await saveConfig(envConfig, bookKey, config, settings);
+    lastSavedLocationRef.current = currentLocation;
+  }, [bookKey, envConfig, getConfig, saveConfig]);
+
+  const persistProgressRef = useRef(persistProgress);
+  persistProgressRef.current = persistProgress;
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const saveBookConfig = useCallback(
     debounce(() => {
-      setTimeout(async () => {
-        // Skip while previewing a deep-link target — the user's actual
-        // last-read position should not be overwritten by a transient view.
-        if (useReaderStore.getState().getViewState(bookKey)?.previewMode) return;
-        const config = getConfig(bookKey);
-        if (!config) return;
-        const currentLocation = config.location ?? null;
-        if (!initializedRef.current) {
-          initializedRef.current = true;
-          lastSavedLocationRef.current = currentLocation;
-          return;
-        }
-        if (currentLocation === lastSavedLocationRef.current) return;
-        const settings = useSettingsStore.getState().settings;
-        await saveConfig(envConfig, bookKey, config, settings);
-        lastSavedLocationRef.current = currentLocation;
+      setTimeout(() => {
+        void persistProgressRef.current();
       }, 500);
     }, 1000),
     [],
@@ -64,6 +69,19 @@ export const useProgressAutoSave = (bookKey: string) => {
     saveBookConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, bookKey]);
+
+  useEffect(() => {
+    const flush = () => void persistProgressRef.current();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, []);
 
   // On unmount (book closed / navigated away), flush any pending throttled
   // library.json write so the shelf reflects this session's last read

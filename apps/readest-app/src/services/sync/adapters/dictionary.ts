@@ -14,6 +14,7 @@ export interface DictionarySyncedFields {
   addedAt: number;
   unsupported?: boolean;
   unsupportedReason?: string;
+  plugin?: ImportedDictionary['plugin'];
 }
 
 export const primaryDictionaryFile = (d: ImportedDictionary): string | null => {
@@ -26,6 +27,8 @@ export const primaryDictionaryFile = (d: ImportedDictionary): string | null => {
       return d.files.dict ?? null;
     case 'slob':
       return d.files.slob ?? null;
+    case 'plugin':
+      return d.files.pluginSource ?? null;
     default:
       return null;
   }
@@ -62,6 +65,9 @@ export const enumerateDictionaryFiles = (
     case 'slob':
       push(d.files.slob);
       break;
+    case 'plugin':
+      push(d.files.pluginSource);
+      break;
   }
   return out;
 };
@@ -88,6 +94,7 @@ export const dictionaryAdapter: ReplicaAdapter<ImportedDictionary> = {
     if (d.lang !== undefined) fields['lang'] = d.lang;
     if (d.unsupported) fields['unsupported'] = true;
     if (d.unsupportedReason) fields['unsupportedReason'] = d.unsupportedReason;
+    if (d.plugin) fields['plugin'] = d.plugin;
     return fields;
   },
 
@@ -103,6 +110,7 @@ export const dictionaryAdapter: ReplicaAdapter<ImportedDictionary> = {
       unsupported: fields['unsupported'] === true ? true : undefined,
       unsupportedReason:
         fields['unsupportedReason'] !== undefined ? String(fields['unsupportedReason']) : undefined,
+      plugin: fields['plugin'] as ImportedDictionary['plugin'],
     };
   },
 

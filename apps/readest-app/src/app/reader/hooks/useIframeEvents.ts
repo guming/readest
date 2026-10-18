@@ -372,7 +372,17 @@ export const useTouchEvent = (bookKey: string) => {
 
   const handleTouch = (msg: MessageEvent) => {
     if (msg.data && msg.data.bookKey === bookKey) {
-      if (msg.data.type === 'iframe-touchstart') {
+      if (msg.data.type === 'iframe-touch-reset') {
+        touchStartRef.current = null;
+        touchEndRef.current = null;
+        touchStartTimeRef.current = null;
+        touchEndTimeRef.current = null;
+        touchConsumedRef.current = false;
+        pinchPendingRef.current = false;
+        isPinchingRef.current = false;
+        initialTouch0Ref.current = null;
+        initialTouch1Ref.current = null;
+      } else if (msg.data.type === 'iframe-touchstart') {
         onTouchStart(msg.data);
       } else if (msg.data.type === 'iframe-touchmove') {
         onTouchMove(msg.data);

@@ -1,3 +1,4 @@
+import { Overlayer } from 'foliate-js/overlayer.js';
 import { HIGHLIGHT_COLOR_HEX } from '@/services/constants';
 import {
   BookNote,
@@ -5,6 +6,7 @@ import {
   DEFAULT_HIGHLIGHT_COLORS,
   HighlightColor,
   HighlightStyle,
+  ViewSettings,
 } from '@/types/book';
 import { uniqueId } from '@/utils/misc';
 import { SystemSettings } from '@/types/settings';
@@ -80,20 +82,9 @@ export function filterExportGroups(
   groups: BooknoteGroup[],
   { excludedColors, excludedStyles }: ExportFilter,
 ): FilteredExportGroups {
-  const colorsSeen = new Set<HighlightColor>();
-  const stylesSeen = new Set<HighlightStyle>();
-  for (const group of groups) {
-    for (const note of group.booknotes) {
-      if (note.color) colorsSeen.add(note.color);
-      if (note.style) stylesSeen.add(note.style);
-    }
-  }
-
-  const distinctColors = [
-    ...DEFAULT_HIGHLIGHT_COLORS.filter((color) => colorsSeen.has(color)),
-    ...[...colorsSeen].filter((color) => !isDefaultHighlightColor(color)),
-  ];
-  const distinctStyles = ALL_HIGHLIGHT_STYLES.filter((style) => stylesSeen.has(style));
+  const { colors: distinctColors, styles: distinctStyles } = collectAnnotationFacets(
+    groups.flatMap((group) => group.booknotes),
+  );
 
   const applyColorFilter = distinctColors.length >= 2;
   const applyStyleFilter = distinctStyles.length >= 2;
@@ -310,6 +301,7 @@ export function buildTTSSentenceHighlight(
     style: HighlightStyle;
     color: HighlightColor;
     page?: number;
+    pdfAnchor?: BookNote['pdfAnchor'];
   },
   now: number,
 ): BookNote | null {
@@ -329,6 +321,20 @@ export function buildTTSSentenceHighlight(
 
 export type AnnotationDrawKind = 'bubble' | 'highlight' | 'underline' | 'squiggly' | 'none';
 
+export type OverlayStyle = HighlightStyle | 'strikethrough' | 'outline';
+
+// Difference-blended e-ink highlights need a fixed white mask. Theme-colored
+// fills can become black and then leave the underlying page unchanged.
+export function getAnnotationOverlayColor<T extends string | undefined>(
+  style: OverlayStyle,
+  hexColor: T,
+  { isBwEink, isDarkMode }: { isBwEink: boolean; isDarkMode: boolean },
+): T | string {
+  if (!isBwEink) return hexColor;
+  if (style === 'highlight') return '#ffffff';
+  return isDarkMode ? '#ffffff' : '#000000';
+}
+
 /**
  * Decide what an overlay should draw for an annotation. The bubble vs.
  * highlight choice keys off the overlay's `value` prefix — NOT `annotation.note`
@@ -343,6 +349,52 @@ export function decideAnnotationDraw(
   if (style === 'highlight') return 'highlight';
   if (style === 'underline' || style === 'squiggly') return style;
   return 'none';
+}
+
+/** Draw one annotation in the requested view, including the extracted footnote view. */
+export function drawAnnotationOverlay(
+  detail: {
+    draw: (func: unknown, opts?: Record<string, unknown>) => void;
+    annotation: BookNote & { value?: string };
+    doc: Document;
+    range: Range;
+  },
+  ctx: {
+    settings: SystemSettings;
+    viewSettings: ViewSettings;
+    isDarkMode: boolean;
+    isMobile: boolean;
+  },
+): void {
+  const { draw, annotation, doc, range } = detail;
+  const { settings, viewSettings, isDarkMode, isMobile } = ctx;
+  const isBwEink = viewSettings.isEink && !viewSettings.isColorEink;
+  const hexColor = getHighlightColorHex(settings, annotation.color);
+  const kind = decideAnnotationDraw(annotation.value, annotation.style);
+  const node = range.startContainer;
+  const element = node.nodeType === 1 ? (node as Element) : node.parentElement;
+  if (!element) return;
+  const computed = doc.defaultView?.getComputedStyle(element);
+  if (kind === 'bubble') {
+    if (computed) draw(Overlayer.bubble, { writingMode: computed.writingMode });
+  } else if (kind === 'highlight') {
+    draw(Overlayer.highlight, {
+      color: getAnnotationOverlayColor('highlight', hexColor, { isBwEink, isDarkMode }),
+      vertical: viewSettings.vertical,
+    });
+  } else if (kind === 'underline' || kind === 'squiggly') {
+    if (!computed) return;
+    const fontSize = parseFloat(computed.fontSize) || viewSettings.defaultFontSize;
+    const lineHeight = parseFloat(computed.lineHeight) || viewSettings.lineHeight * fontSize;
+    const compensation = viewSettings.vertical
+      ? lineHeight - fontSize - 2 + (isMobile ? 0 : -1)
+      : lineHeight - fontSize - 2 + (isMobile ? -1 : 0);
+    draw(Overlayer[kind], {
+      writingMode: computed.writingMode,
+      color: getAnnotationOverlayColor(kind, hexColor, { isBwEink, isDarkMode }),
+      padding: compensation / 2,
+    });
+  }
 }
 
 /**
@@ -372,4 +424,100 @@ export function mergeRestyledAnnotation(existing: BookNote, restyled: BookNote):
     text: existing.text ?? restyled.text,
     global: existing.global || restyled.global,
   };
+}
+
+export type AnnotationFilterKind = 'all' | 'highlights' | 'notes';
+
+export interface BooknoteFilter {
+  kind: AnnotationFilterKind;
+  query: string;
+  excludedColors?: HighlightColor[];
+  excludedStyles?: HighlightStyle[];
+}
+
+/**
+ * Filter booknotes for the annotations hub and the Notebook search.
+ *
+ * Tombstones are always excluded. `kind` partitions on the note body:
+ * a unified annotation is a "note" when `note` is non-empty and a plain
+ * "highlight" otherwise (#5398's All/Highlights/Notes chips). An empty or
+ * whitespace query matches everything; otherwise the query is matched
+ * case-insensitively against the highlighted text and the note body
+ * (same semantics the Notebook SearchBar has always used). Excluded
+ * colors/styles drop matching notes; a note without the attribute always
+ * passes (the same keep rule as filterExportGroups).
+ */
+export function filterBooknotes(notes: BookNote[], filter: BooknoteFilter): BookNote[] {
+  const { kind, excludedColors, excludedStyles } = filter;
+  const lowercaseQuery = filter.query.trim().toLowerCase();
+  return notes.filter((note) => {
+    if (note.deletedAt) return false;
+    if (kind === 'notes' && !note.note) return false;
+    if (kind === 'highlights' && note.note) return false;
+    if (note.color && excludedColors?.includes(note.color)) return false;
+    if (note.style && excludedStyles?.includes(note.style)) return false;
+    if (!lowercaseQuery) return true;
+    const textMatch = note.text?.toLowerCase().includes(lowercaseQuery) || false;
+    const noteMatch = note.note?.toLowerCase().includes(lowercaseQuery) || false;
+    return textMatch || noteMatch;
+  });
+}
+
+export interface AnnotationFacets {
+  colors: HighlightColor[];
+  styles: HighlightStyle[];
+}
+
+/**
+ * Distinct colors and styles present among live notes: default palette
+ * colors first (palette order), then custom colors in first-seen order;
+ * styles in canonical highlight/underline/squiggly order. Drives the hub
+ * toolbar's facet row and filterExportGroups' filter UI.
+ */
+export function collectAnnotationFacets(notes: BookNote[]): AnnotationFacets {
+  const colorsSeen = new Set<HighlightColor>();
+  const stylesSeen = new Set<HighlightStyle>();
+  for (const note of notes) {
+    if (note.deletedAt) continue;
+    if (note.color) colorsSeen.add(note.color);
+    if (note.style) stylesSeen.add(note.style);
+  }
+  const colors = [
+    ...DEFAULT_HIGHLIGHT_COLORS.filter((color) => colorsSeen.has(color)),
+    ...[...colorsSeen].filter((color) => !isDefaultHighlightColor(color)),
+  ];
+  const styles = ALL_HIGHLIGHT_STYLES.filter((style) => stylesSeen.has(style));
+  return { colors, styles };
+}
+
+export type NoteBubbleTransition = 'add' | 'remove' | 'none';
+
+/**
+ * Decide how an inline note edit changes the note-bubble overlay. The bubble
+ * exists iff the note body is non-empty (trim-based, matching
+ * removeBookNoteOverlays): appearing text adds it, cleared text removes it
+ * (the highlight itself stays, per the unified-annotation rule), and a pure
+ * content change needs no redraw because the bubble renders no text.
+ */
+export function decideNoteBubbleTransition(before: string, after: string): NoteBubbleTransition {
+  const had = before.trim().length > 0;
+  const has = after.trim().length > 0;
+  if (!had && has) return 'add';
+  if (had && !has) return 'remove';
+  return 'none';
+}
+
+/**
+ * Apply a note-bubble transition to every rendered view of the book,
+ * mirroring the overlay calls in Notebook.handleSaveNote.
+ */
+export function applyNoteBubbleTransition(
+  views: FoliateView[],
+  note: BookNote,
+  transition: NoteBubbleTransition,
+): void {
+  if (transition === 'none') return;
+  for (const view of views) {
+    view.addAnnotation({ ...note, value: `${NOTE_PREFIX}${note.cfi}` }, transition === 'remove');
+  }
 }

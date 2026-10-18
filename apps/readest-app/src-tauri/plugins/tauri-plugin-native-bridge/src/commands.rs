@@ -47,6 +47,14 @@ pub(crate) async fn use_background_audio<R: Runtime>(
 }
 
 #[command]
+pub(crate) async fn set_text_selection_suppressed<R: Runtime>(
+    app: AppHandle<R>,
+    payload: SetTextSelectionSuppressedRequest,
+) -> Result<()> {
+    app.native_bridge().set_text_selection_suppressed(payload)
+}
+
+#[command]
 pub(crate) async fn install_package<R: Runtime>(
     app: AppHandle<R>,
     payload: InstallPackageRequest,
@@ -157,6 +165,27 @@ pub(crate) async fn set_screen_brightness<R: Runtime>(
     payload: SetScreenBrightnessRequest,
 ) -> Result<SetScreenBrightnessResponse> {
     app.native_bridge().set_screen_brightness(payload)
+}
+
+#[command]
+pub(crate) async fn has_ambient_light_sensor<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<HasAmbientLightSensorResponse> {
+    app.native_bridge().has_ambient_light_sensor()
+}
+
+#[command]
+pub(crate) async fn start_ambient_light_updates<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<AmbientLightUpdatesResponse> {
+    app.native_bridge().start_ambient_light_updates()
+}
+
+#[command]
+pub(crate) async fn stop_ambient_light_updates<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<AmbientLightUpdatesResponse> {
+    app.native_bridge().stop_ambient_light_updates()
 }
 
 #[command]
@@ -303,4 +332,19 @@ pub(crate) async fn capture_webview_region<R: Runtime>(
         .native_bridge()
         .capture_webview_region(&window, payload)?;
     Ok(tauri::ipc::Response::new(png))
+}
+
+#[command]
+pub(crate) async fn icloud_container_status<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<ICloudContainerStatusResponse> {
+    app.native_bridge().icloud_container_status()
+}
+
+#[command]
+pub(crate) async fn icloud_ensure_downloaded<R: Runtime>(
+    app: AppHandle<R>,
+    payload: ICloudEnsureDownloadedRequest,
+) -> Result<ICloudEnsureDownloadedResponse> {
+    app.native_bridge().icloud_ensure_downloaded(payload)
 }

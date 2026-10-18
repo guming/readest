@@ -1,3 +1,5 @@
+import type { FoliateView } from '@/types/view';
+
 // Heuristically classify a link as a possible footnote marker based on its
 // text content. The bare numeric pattern matches things like `1`, `12`, `a1`,
 // `[1`, which are common when a book formats footnotes as plain digits.
@@ -37,4 +39,28 @@ export const shouldCheckAsFootnote = (anchor: HTMLAnchorElement): boolean => {
     container = container.parentElement;
   }
   return true;
+};
+/** Avoid treating references into a hidden, non-rendered spine item as footnotes. */
+export const isLinkTargetVisible = (view: FoliateView, href: string): boolean => {
+  try {
+    const { index, anchor } = view.resolveNavigation(href);
+    const doc = view.renderer.getContents().find((content) => content.index === index)?.doc;
+    if (!doc || !anchor) return true;
+    const resolved = anchor(doc) as unknown;
+    if (!resolved || typeof resolved === 'number') return true;
+    const node =
+      typeof resolved === 'object' && 'startContainer' in resolved
+        ? (resolved as Range).startContainer
+        : (resolved as Node);
+    let element = node.nodeType === 1 ? (node as Element) : node.parentElement;
+    const window = doc.defaultView;
+    while (element && window) {
+      const { display, visibility } = window.getComputedStyle(element);
+      if (display === 'none' || visibility === 'hidden') return false;
+      element = element.parentElement;
+    }
+    return true;
+  } catch {
+    return true;
+  }
 };

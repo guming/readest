@@ -11,6 +11,29 @@ import { BookConfig, BookNote, Book } from '@/types/book';
 import { DBBookConfig, DBBookNote } from '@/types/records';
 
 describe('transformBookNoteToDB with xpointer fields', () => {
+  it('round-trips a PDF text anchor', () => {
+    const note: BookNote = {
+      bookHash: 'pdf-book',
+      id: 'pdf-note',
+      type: 'annotation',
+      cfi: 'epubcfi(/6/4!/4/2/1:0)',
+      text: 'selected words',
+      note: '',
+      pdfAnchor: {
+        pageIndex: 3,
+        exact: 'selected words',
+        prefix: 'before ',
+        suffix: ' after',
+      },
+      createdAt: 100,
+      updatedAt: 100,
+    };
+
+    const db = transformBookNoteToDB(note, 'user-1');
+    expect(db.pdf_anchor).toEqual(note.pdfAnchor);
+    expect(transformBookNoteFromDB(db).pdfAnchor).toEqual(note.pdfAnchor);
+  });
+
   it('round-trips native reference metadata', () => {
     const note: BookNote = {
       id: 'reference-1',

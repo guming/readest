@@ -1,21 +1,21 @@
 import clsx from 'clsx';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { md5 } from 'js-md5';
 import { FaSearch, FaChevronDown } from 'react-icons/fa';
 import { IoMdCloseCircle } from 'react-icons/io';
 import { MdDeleteOutline } from 'react-icons/md';
 
-import { md5 } from 'js-md5';
 import { useEnv } from '@/context/EnvContext';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { BookSearchConfig, BookSearchMatch, BookSearchResult } from '@/types/book';
+import type { BookSearchConfig, BookSearchMatch, BookSearchResult } from '@/types/book';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { debounce } from '@/utils/debounce';
-import { isCJKStr } from '@/utils/lang';
 import { createRejectFilter } from '@/utils/node';
+import { isCJKStr } from '@/utils/lang';
 import Dropdown from '@/components/Dropdown';
 import SearchOptions from './SearchOptions';
 
@@ -157,7 +157,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isVisible, bookKey, onHideSearchB
   const view = getView(bookKey)!;
   const config = getConfig(bookKey)!;
   const bookData = getBookData(bookKey)!;
-  const progress = getProgress(bookKey)!;
+  const progress = getProgress(bookKey);
   const primaryLang = bookData.book?.primaryLanguage || 'en';
   const searchMode = (config.searchConfig as BookSearchConfig).mode;
 
@@ -249,8 +249,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ isVisible, bookKey, onHideSearchB
       setSearchStatus(bookKey, 'searching');
       setSearchError(bookKey, null);
 
-      const { section } = progress;
-      const index = searchConfig.scope === 'section' ? section.current : undefined;
+      // progress is null until the book emits its first relocate event, so a
+      // search fired right after opening has no current section to scope to.
+      // Fall back to searching the whole book rather than throwing.
+      const index = searchConfig.scope === 'section' ? progress?.section.current : undefined;
       const generator = await view.search({
         ...searchConfig,
         index,

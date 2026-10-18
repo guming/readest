@@ -4,6 +4,7 @@ import { MdCheckCircle, MdCheckCircleOutline } from 'react-icons/md';
 import {
   LiaCloudUploadAltSolid,
   LiaCloudDownloadAltSolid,
+  LiaHeadphonesSolid,
   LiaInfoCircleSolid,
 } from 'react-icons/lia';
 
@@ -13,6 +14,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { LibraryCoverFitType, LibraryViewModeType } from '@/types/settings';
+import { INDETERMINATE_PROGRESS } from '@/utils/transfer';
 import { isReadestCloudStorageActive } from '@/services/sync/cloudSyncProvider';
 import { formatAuthors, formatDescription, formatSeries } from '@/utils/book';
 import ReadingProgress from './ReadingProgress';
@@ -28,6 +30,7 @@ interface BookItemProps {
   handleBookUpload: (book: Book) => void;
   handleBookDownload: (book: Book, options?: { redownload?: boolean; queued?: boolean }) => void;
   showBookDetailsModal: (book: Book) => void;
+  showTimeRemaining: boolean;
 }
 
 const BookItem: React.FC<BookItemProps> = ({
@@ -40,6 +43,7 @@ const BookItem: React.FC<BookItemProps> = ({
   handleBookUpload,
   handleBookDownload,
   showBookDetailsModal,
+  showTimeRemaining,
 }) => {
   const _ = useTranslation();
   const { appService } = useEnv();
@@ -94,6 +98,26 @@ const BookItem: React.FC<BookItemProps> = ({
           imageClassName='rounded shadow-md'
           onAspectRatioChange={setCoverAspect}
         />
+        {transferProgress !== null && (
+          <div
+            className='absolute inset-0 z-10 flex items-center justify-center rounded bg-black/40 eink:border eink:border-base-content eink:bg-base-100'
+            role='progressbar'
+            aria-label={_('Downloading {{title}}', { title: book.title })}
+            aria-valuenow={
+              transferProgress === INDETERMINATE_PROGRESS ? undefined : Math.round(transferProgress)
+            }
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            {transferProgress === INDETERMINATE_PROGRESS ? (
+              <span className='loading loading-spinner loading-sm text-white eink:text-base-content' />
+            ) : (
+              <span className='eink:text-base-content text-sm font-semibold text-white not-eink:drop-shadow-xs'>
+                {Math.round(transferProgress)}%
+              </span>
+            )}
+          </div>
+        )}
         {bookSelected && (
           <div className='absolute inset-0 bg-black opacity-30 transition-opacity duration-300'></div>
         )}
@@ -148,8 +172,10 @@ const BookItem: React.FC<BookItemProps> = ({
             minHeight: `${iconSize15}px`,
           }}
         >
-          {(book.progress || book.readingStatus) && <ReadingProgress book={book} />}
-          <div className='flex items-center justify-center gap-x-2'>
+          {(book.progress || book.readingStatus) && (
+            <ReadingProgress book={book} showTimeRemaining={showTimeRemaining} />
+          )}
+          <div className='flex shrink-0 items-center justify-center gap-x-2'>
             {!appService?.isMobile && (
               <button
                 aria-label={_('Show Book Details')}
@@ -163,6 +189,15 @@ const BookItem: React.FC<BookItemProps> = ({
                   <LiaInfoCircleSolid size={iconSize15} />
                 </div>
               </button>
+            )}
+            {book.hasNarration && (
+              <div
+                className='pt-[2px] sm:pt-[1px]'
+                title={_('Includes narration')}
+                aria-label={_('Includes narration')}
+              >
+                <LiaHeadphonesSolid size={iconSize15} />
+              </div>
             )}
             {transferProgress !== null ? (
               transferProgress === 100 ? null : (

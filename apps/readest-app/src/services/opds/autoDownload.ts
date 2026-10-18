@@ -13,7 +13,7 @@ import {
   saveSubscriptionState,
   pruneKnownEntryIds,
 } from './subscriptionState';
-import { upsertOPDSSourceMapping } from './sourceMap';
+import { findBookByOPDSSources, upsertOPDSSourceMapping } from './sourceMap';
 import { isRetryEligible, DOWNLOAD_CONCURRENCY, MAX_RETRY_ATTEMPTS } from './types';
 import type { PendingItem, SyncResult, OPDSSubscriptionState, FailedEntry } from './types';
 import { runWithConcurrency } from '@/utils/concurrency';
@@ -29,6 +29,15 @@ async function downloadAndImport(
   books: Book[],
 ): Promise<Book> {
   const url = resolveURL(item.acquisitionHref, item.baseURL);
+  const catalogIds = [...new Set([catalog.contentId, catalog.id].filter(Boolean) as string[])];
+  for (const catalogId of catalogIds) {
+    const existing = await findBookByOPDSSources(appService, {
+      catalogId,
+      sourceUrls: [url],
+      library: books,
+    });
+    if (existing) return existing;
+  }
   const username = catalog.username ?? '';
   const password = catalog.password ?? '';
   const customHeaders = normalizeOPDSCustomHeaders(catalog.customHeaders);

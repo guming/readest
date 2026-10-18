@@ -7,6 +7,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useAppRouter } from '@/hooks/useAppRouter';
 import { eventDispatcher } from '@/utils/event';
 import { navigateToReader, showReaderWindow } from '@/utils/nav';
+import { isAudiobook } from '@/utils/audiobook';
 
 interface UseOpenBookOptions {
   setLoading: Dispatch<SetStateAction<boolean>>;
@@ -59,7 +60,7 @@ export const useOpenBook = ({ setLoading, handleBookDownload }: UseOpenBookOptio
   );
 
   const openBook = useCallback(
-    async (book: Book) => {
+    async (book: Book, cfi?: string, options?: { highlightSearchResult?: boolean }) => {
       // In-place books point at a file outside Books/<hash>/ that the user (or
       // another app) may have moved, renamed, or deleted between sessions. Probe
       // the source before navigating: if it's gone, drop the stale record
@@ -81,11 +82,19 @@ export const useOpenBook = ({ setLoading, handleBookDownload }: UseOpenBookOptio
       }
       const available = await makeBookAvailable(book);
       if (!available) return;
+      if (isAudiobook(book)) {
+        router.push(`/player?id=${encodeURIComponent(book.hash)}`);
+        return;
+      }
+      const params = new URLSearchParams();
+      if (cfi) params.set('cfi', cfi);
+      if (cfi && options?.highlightSearchResult) params.set('highlight', 'search');
+      const queryParams = params.size ? params.toString() : undefined;
       if (appService?.hasWindow && settings.openBookInNewWindow) {
-        showReaderWindow(appService, [book.hash]);
+        showReaderWindow(appService, [book.hash], queryParams);
       } else {
         setTimeout(() => {
-          navigateToReader(router, [book.hash]);
+          navigateToReader(router, [book.hash], queryParams);
         }, 0);
       }
     },

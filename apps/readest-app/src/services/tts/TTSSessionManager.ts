@@ -14,14 +14,21 @@ import { useBookDataStore } from '@/store/bookDataStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { eventDispatcher } from '@/utils/event';
 import { releaseUnblockAudio, ttsMediaBridge, TTSMediaBridgeMeta } from './ttsMediaBridge';
-import type { TTSController } from './TTSController';
+import type { PlaybackSource } from '@/services/playback/playbackSource';
 
 export type TTSSessionMeta = TTSMediaBridgeMeta;
+
+// Sentinel passed to setSleepTimer()'s call sites / used as the TTSPlayerSheet
+// timeout option value to mean "stop when the current chapter ends" instead
+// of a fixed duration. Kept alongside the real (positive) second counts so
+// the existing timeout-option picker can carry this mode without a parallel
+// UI element.
+export const TTS_STOP_AT_CHAPTER_END = -1;
 
 export interface TTSSession {
   bookHash: string;
   bookKey: string;
-  controller: TTSController;
+  controller: PlaybackSource;
 }
 
 export type TTSSessionStopReason =
@@ -49,11 +56,21 @@ export class TTSSessionManager extends EventTarget {
   #sleepTimer: ReturnType<typeof setTimeout> | null = null;
   #sleepTimeoutSec = 0;
   #sleepFiresAt = 0;
+  // "Stop at end of chapter" mode - mutually exclusive with the numeric
+  // sleep timer above. A STANDING preference (unlike the numeric timer,
+  // which self-clears once it fires): it keeps stopping at every chapter
+  // boundary, across repeated play/stop cycles, until the user explicitly
+  // switches the sleep timer to something else. Propagated onto whichever
+  // TTSController is currently claimed (and onto every controller claimed
+  // afterwards, including the fresh one created each time playback restarts
+  // after a stop) so it survives both book switches and this stop/resume
+  // cycle.
+  #stopAtChapterEnd = false;
   #lastPersistAt = 0;
   #pendingLocation: string | null = null;
   #stopping = false;
 
-  claim(bookKey: string, controller: TTSController, meta: TTSSessionMeta): void {
+  claim(bookKey: string, controller: PlaybackSource, meta: TTSSessionMeta): void {
     const bookHash = getBookHashFromKey(bookKey);
     const existing = this.#session;
     if (existing && existing.bookHash !== bookHash) {
@@ -69,6 +86,7 @@ export class TTSSessionManager extends EventTarget {
     this.#session = { bookHash, bookKey, controller };
     this.#meta = meta;
     this.#lastRelayedState = null;
+    controller.stopAtChapterEnd = this.#stopAtChapterEnd;
     this.#subscribe(controller);
     void ttsMediaBridge.bind(controller, meta);
     this.#emitSessionChanged('claimed');
@@ -175,6 +193,7 @@ export class TTSSessionManager extends EventTarget {
   setSleepTimer(seconds: number): void {
     this.#clearSleepTimer();
     if (seconds > 0) {
+      this.#setStopAtChapterEnd(false);
       this.#sleepTimeoutSec = seconds;
       this.#sleepFiresAt = Date.now() + seconds * 1000;
       this.#sleepTimer = setTimeout(() => {
@@ -190,6 +209,27 @@ export class TTSSessionManager extends EventTarget {
       : null;
   }
 
+  // "Stop at end of chapter" mode: the currently-playing chapter/section is
+  // allowed to finish, then playback stops instead of continuing into the
+  // next one - same terminal behaviour as the duration timer above, just
+  // triggered by a chapter boundary instead of a clock. Mutually exclusive
+  // with the numeric timer (enabling one clears the other).
+  setStopAtChapterEnd(enabled: boolean): void {
+    if (enabled) this.#clearSleepTimer();
+    this.#setStopAtChapterEnd(enabled);
+  }
+
+  getStopAtChapterEnd(): boolean {
+    return this.#stopAtChapterEnd;
+  }
+
+  #setStopAtChapterEnd(enabled: boolean): void {
+    this.#stopAtChapterEnd = enabled;
+    if (this.#session) {
+      this.#session.controller.stopAtChapterEnd = enabled;
+    }
+  }
+
   #clearSleepTimer(): void {
     if (this.#sleepTimer) {
       clearTimeout(this.#sleepTimer);
@@ -199,7 +239,7 @@ export class TTSSessionManager extends EventTarget {
     this.#sleepFiresAt = 0;
   }
 
-  #subscribe(controller: TTSController): void {
+  #subscribe(controller: PlaybackSource): void {
     this.#onStateChange = (e: Event) => {
       const { state } = (e as CustomEvent<{ state: string }>).detail;
       const session = this.#session;
@@ -227,7 +267,7 @@ export class TTSSessionManager extends EventTarget {
     controller.addEventListener('tts-highlight-mark', this.#onHighlightMark);
   }
 
-  #unsubscribe(controller: TTSController): void {
+  #unsubscribe(controller: PlaybackSource): void {
     if (this.#onStateChange) {
       controller.removeEventListener('tts-state-change', this.#onStateChange);
     }

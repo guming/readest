@@ -131,6 +131,7 @@ const GroupingModal: React.FC<GroupingModalProps> = ({
           book.groupId = undefined;
           book.groupName = undefined;
           book.updatedAt = Date.now();
+          book.groupUpdatedAt = book.updatedAt;
         }
       }
     });
@@ -152,10 +153,12 @@ const GroupingModal: React.FC<GroupingModalProps> = ({
             book.groupName = groupName;
             book.groupId = getGroupId(book.groupName);
             book.updatedAt = Date.now();
+            book.groupUpdatedAt = book.updatedAt;
           } else if (book.groupName?.startsWith(oldGroupName + '/')) {
             book.groupName = book.groupName.replace(oldGroupName, groupName);
             book.groupId = getGroupId(book.groupName);
             book.updatedAt = Date.now();
+            book.groupUpdatedAt = book.updatedAt;
           }
         });
 
@@ -208,6 +211,7 @@ const GroupingModal: React.FC<GroupingModalProps> = ({
           book.groupId = selectedGroup.id;
           book.groupName = selectedGroup.name;
           book.updatedAt = Date.now();
+          book.groupUpdatedAt = book.updatedAt;
         }
       }
     });

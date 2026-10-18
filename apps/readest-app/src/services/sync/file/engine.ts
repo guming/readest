@@ -1,4 +1,5 @@
 import { Book, BookConfig, BookNote } from '@/types/book';
+import type { ProgressHandler } from '@/utils/transfer';
 import { FileHead, FileSyncError, FileSyncProvider } from './provider';
 import { LocalStore } from './localStore';
 import {
@@ -20,6 +21,7 @@ import {
   RemoteLibraryIndex,
 } from './wire';
 import { mergeBookConfig, mergeBookMetadata, shouldApplyRemoteBookMetadata } from './merge';
+import { pickFresherGroup } from '@/utils/book';
 
 export type SyncStrategy = 'silent' | 'send' | 'receive';
 
@@ -429,7 +431,7 @@ export class FileSyncEngine {
    * Returns false when the remote holds no book file. syncLibrary's discovery
    * loop covers the library-wide variant of this.
    */
-  async downloadBookFile(book: Book): Promise<boolean> {
+  async downloadBookFile(book: Book, onProgress?: ProgressHandler): Promise<boolean> {
     const dirPath = buildBookDirPath(this.provider.rootPath, book.hash);
     const entries = await this.provider.list(dirPath);
     const fileEntry = entries.find(
@@ -440,10 +442,11 @@ export class FileSyncEngine {
     let written = false;
     if (this.provider.downloadStream) {
       const dst = await this.store.prepareLocalBookPath(book);
-      written = await this.provider.downloadStream(fileEntry.path, dst);
+      written = await this.provider.downloadStream(fileEntry.path, dst, onProgress);
     } else {
       const bytes = await this.provider.readBinary(fileEntry.path);
       if (bytes) {
+        onProgress?.({ progress: bytes.byteLength, total: bytes.byteLength, transferSpeed: 0 });
         await this.store.saveBookFile(book, bytes);
         written = true;
       }
@@ -715,6 +718,7 @@ export class FileSyncEngine {
         const deleted: Book = {
           ...local,
           deletedAt: rb.deletedAt,
+          fileSyncDeletionRequestedAt: rb.fileSyncDeletionRequestedAt,
           downloadedAt: null,
           coverDownloadedAt: null,
           updatedAt: Math.max(local.updatedAt ?? 0, rb.updatedAt ?? 0),
@@ -1051,18 +1055,24 @@ export class FileSyncEngine {
       const indexByHash = new Map(allBooksMap);
       if (remoteIndex?.books) {
         for (const rb of remoteIndex.books) {
-          if (!indexByHash.has(rb.hash)) indexByHash.set(rb.hash, rb);
+          const local = indexByHash.get(rb.hash);
+          if (!local) {
+            indexByHash.set(rb.hash, rb);
+            continue;
+          }
+          // Do not publish a stale ungrouped local row over a group a peer
+          // already carries. This is in-memory and does not alter local state.
+          const group = pickFresherGroup(local, rb, (rb.updatedAt ?? 0) > (local.updatedAt ?? 0));
+          indexByHash.set(rb.hash, { ...local, ...group });
         }
       }
 
-      // GC the remote per-hash directory of every tombstoned book whose files
-      // still linger on the server (#4860). Scoped to dirs the discovery scan
-      // actually saw, so a dir removed on a previous sync is never re-DELETEd
-      // and 'send' mode (which never lists) is a safe no-op. This is what makes
-      // a deletion reclaim server space instead of leaving orphaned book files.
-      const dirsToGc = Array.from(remoteHashDirs).filter(
-        (hash) => indexByHash.get(hash)?.deletedAt,
-      );
+      // A tombstone can come from a local-only or legacy cleanup path. Remove
+      // provider bytes only when this exact tombstone explicitly authorized it.
+      const dirsToGc = Array.from(remoteHashDirs).filter((hash) => {
+        const book = indexByHash.get(hash);
+        return !!book?.deletedAt && book.fileSyncDeletionRequestedAt === book.deletedAt;
+      });
       await runPool(dirsToGc, concurrency, async (hash) => {
         try {
           await deleteRemoteBookDir(this.provider, hash);
@@ -1104,6 +1114,8 @@ export class FileSyncEngine {
           const r = remoteAllByHash.get(b.hash);
           if (!r) return true;
           if (!!r.deletedAt !== !!b.deletedAt) return true;
+          if ((r.fileSyncDeletionRequestedAt ?? 0) !== (b.fileSyncDeletionRequestedAt ?? 0))
+            return true;
           return (b.updatedAt ?? 0) > (r.updatedAt ?? 0);
         });
 

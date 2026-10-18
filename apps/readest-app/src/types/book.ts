@@ -21,8 +21,17 @@ export type BookFormat =
   | 'FB2'
   | 'FBZ'
   | 'TXT'
-  | 'MD';
+  | 'MD'
+  | 'ABS';
 export type BookNoteType = 'bookmark' | 'annotation' | 'excerpt' | 'reference';
+
+export interface PDFTextAnchor {
+  /** Zero-based source PDF page. */
+  pageIndex: number;
+  exact: string;
+  prefix?: string;
+  suffix?: string;
+}
 
 export interface BookReferenceData {
   kind: 'external' | 'footnote' | 'internal';
@@ -112,6 +121,9 @@ export interface Book {
   group?: string; // deprecated in favor of groupId and groupName
   groupId?: string;
   groupName?: string;
+  // Group edits have their own clock: uploads and reading progress also bump
+  // `updatedAt`, and must never erase a group assigned on another device.
+  groupUpdatedAt?: number | null;
   tags?: string[];
   coverImageUrl?: string | null;
   // Partial MD5 of the local cover.png. Content-addressed cover-change signal:
@@ -122,6 +134,8 @@ export interface Book {
   createdAt: number;
   updatedAt: number;
   deletedAt?: number | null;
+  /** Explicit authorization to remove provider bytes for this exact tombstone. */
+  fileSyncDeletionRequestedAt?: number | null;
 
   uploadedAt?: number | null;
   downloadedAt?: number | null;
@@ -136,6 +150,17 @@ export interface Book {
   readingStatus?: ReadingStatus;
   readingStatusUpdatedAt?: number; // ms; bumped only when readingStatus changes
   primaryLanguage?: string;
+  // The book carries its own recorded narration (EPUB 3 Media Overlays), so the
+  // library can badge it without opening the file. Derived from the file on
+  // every import, like `format` — not user data, so it needs no LWW timestamp.
+  hasNarration?: boolean;
+  /** Duration in seconds for a streamed Audiobookshelf book. */
+  duration?: number;
+  /** Present when this Audiobookshelf entry represents a podcast show. */
+  absMediaType?: 'podcast';
+  /** Number of episodes in an Audiobookshelf podcast show. */
+  episodeCount?: number;
+  metadataUpdatedAt?: number | null;
 
   metadata?: BookMetadata;
 }
@@ -165,6 +190,7 @@ export interface BookNote {
   cfi: string; // Canonicalized CFI for the note location
   xpointer0?: string; // Start XPointer for the note location
   xpointer1?: string; // End XPointer for the note location
+  pdfAnchor?: PDFTextAnchor; // Stable fallback across fixed and reflowed PDF DOMs
   page?: number;
   text?: string;
   style?: HighlightStyle;
@@ -241,6 +267,7 @@ export interface BookLayout {
   compactMarginPx?: number; // deprecated
   gapPercent: number;
   scrolled: boolean;
+  scrolledDirection: 'vertical' | 'horizontal';
   webtoonMode: boolean;
   noContinuousScroll: boolean;
   disableClick: boolean;
@@ -292,6 +319,7 @@ export interface BookStyle {
   keepCoverSpread: boolean;
   invertImgColorInDark: boolean;
   applyThemeToPDF: boolean;
+  pdfReflow: boolean;
   contrast: number;
 }
 
@@ -366,6 +394,12 @@ export interface TTSConfig {
   ttsSentenceGap: number;
   ttsParagraphGap: number;
   ttsVoice: string;
+  // Prefer the book's own recorded narration (EPUB 3 Media Overlays) over
+  // synthesized speech. Defaults on, so a read-along book is read by its
+  // narrator; picking a synthetic voice while that book is open clears it.
+  // Distinct from ttsVoice because ttsVoice inherits the global default and so
+  // cannot tell "never chose" from "chose a synthetic voice for this book".
+  ttsUseNarration: boolean;
   ttsLocation: string;
   ttsHighlightOptions: TTSHighlightOptions;
   ttsHighlightGranularity: TTSHighlightGranularity;
@@ -379,6 +413,10 @@ export interface TranslatorConfig {
   showTranslateSource: boolean;
   ttsReadAloudText: string;
 }
+
+// Markdown and plain text render the note template; JSON emits the
+// machine-readable file that Readest itself can import back (#5400).
+export type NoteExportFormat = 'markdown' | 'text' | 'json';
 
 export interface NoteExportConfig {
   includeTitle: boolean;
@@ -394,7 +432,10 @@ export interface NoteExportConfig {
   noteSeparator: string;
   useCustomTemplate: boolean;
   customTemplate: string;
+  // Superseded by `exportFormat`; kept so configs written before the JSON
+  // option existed still pick the right format on load.
   exportAsPlainText: boolean;
+  exportFormat: NoteExportFormat;
   // Highlight colors/styles to omit from the export. Empty arrays export
   // everything; storing exclusions keeps colors/styles added later included
   // by default (#4801).
@@ -507,6 +548,12 @@ export interface BookSearchConfig {
   results?: BookSearchResult[] | BookSearchMatch[] | null;
 }
 
+export type LibrarySearchConfig = Omit<BookSearchConfig, 'mode'> & {
+  mode: SearchMode | 'fuzzy';
+};
+
+export type LibrarySearchTarget = 'books' | 'text';
+
 export interface SearchExcerpt {
   pre: string;
   match: string;
@@ -520,6 +567,28 @@ export interface BookSearchMatch {
   // nearby-words: per-word CFIs to highlight (>= 2); absent for single-span matches
   cfis?: string[];
   excerpt: SearchExcerpt;
+}
+
+// Text-offset locator into a section's extracted text. Library search results
+// carry locators instead of CFIs; the CFI is resolved lazily on click so
+// searching never needs live DOM Ranges (see librarySearchService).
+export interface SearchResultLocator {
+  section: number;
+  start: number;
+  end: number;
+  // fuzzy/nearby: matched sub-spans within [start, end)
+  runs?: { start: number; end: number }[];
+}
+
+export interface LibrarySearchMatch {
+  locator: SearchResultLocator;
+  excerpt: SearchExcerpt;
+}
+
+export interface LibrarySearchSectionResult {
+  index: number;
+  label: string;
+  subitems: LibrarySearchMatch[];
 }
 
 export interface BookSearchResult {
@@ -551,8 +620,53 @@ export interface BookConfig {
   lastPushedAtConfig?: number;
   lastPushedAtNotes?: number;
   foliateImportedAt?: number;
+  /** Device-local audio pairing; not included in cloud config sync. */
+  audiobook?: PairedAudiobook;
 
   updatedAt: number;
+}
+
+export interface AudiobookFile {
+  id: string;
+  name: string;
+  path: string;
+  duration: number;
+}
+
+export interface AudiobookChapter {
+  id: string;
+  fileId: string;
+  label: string;
+  start: number;
+  end: number;
+}
+
+export interface AudiobookChapterMapping {
+  ebookChapterId: string;
+  audioChapterId: string;
+}
+
+export interface PairedAudiobookAbsSource {
+  kind: 'audiobookshelf';
+  serverId: string;
+  itemId: string;
+  tracks: {
+    index: number;
+    startOffset: number;
+    duration: number;
+    contentUrl: string;
+  }[];
+}
+
+export interface PairedAudiobook {
+  version: 1;
+  title?: string;
+  narrator?: string;
+  files: AudiobookFile[];
+  chapters: AudiobookChapter[];
+  mappings: AudiobookChapterMapping[];
+  createdAt: number;
+  source?: PairedAudiobookAbsSource;
 }
 
 export interface BookDataRecord {

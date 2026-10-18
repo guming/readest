@@ -7,37 +7,58 @@ import {
   MdFastForward,
   MdFastRewind,
   MdOutlinePause,
+  MdOutlineFileDownload,
+  MdChevronRight,
   MdPlayArrow,
   MdSegment,
   MdSkipNext,
   MdSkipPrevious,
 } from 'react-icons/md';
 import { RiVoiceAiFill } from 'react-icons/ri';
+import { useRouter } from 'next/navigation';
 import { TTSVoicesGroup } from '@/services/tts';
+import { MEDIA_OVERLAY_VOICE_ID } from '@/services/tts/mediaOverlay';
 import { DEFAULT_SENTENCE_GAP_SEC } from '@/services/tts/EdgeTTSClient';
 import { DEFAULT_PARAGRAPH_GAP_SEC } from '@/services/tts/TTSController';
 import { useEnv } from '@/context/EnvContext';
+import { useAuth } from '@/context/AuthContext';
 import { useReaderStore } from '@/store/readerStore';
 import { useBookProgress } from '@/store/readerProgressStore';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { TranslationFunc, useTranslation } from '@/hooks/useTranslation';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
+import { useQuotaStats } from '@/hooks/useQuotaStats';
+import { isTTSCacheAllowed } from '@/utils/access';
+import { navigateToLogin, navigateToProfile } from '@/utils/nav';
 import { getLanguageName } from '@/utils/lang';
 import { formatPlaybackTime } from '@/utils/time';
 import Dialog from '@/components/Dialog';
+import type { PageInfo } from '@/types/book';
 import { TTSPlaybackInfo } from './usePlaybackInfo';
 import { useCountdownLabel } from './useCountdownLabel';
 import TTSScrubber from './TTSScrubber';
 import SpeedChips, { formatRate } from './SpeedChips';
 import GapChips, { formatGap } from './GapChips';
 import ParagraphGapChips from './ParagraphGapChips';
+import TTSChaptersView from './TTSChaptersView';
+import TTSLyricsView from './TTSLyricsView';
+import BufferingRing from './BufferingRing';
+import { TTSLyrics, useTTSLyrics } from './useTTSLyrics';
+import { TTS_STOP_AT_CHAPTER_END } from '@/services/tts/TTSSessionManager';
+import type { UseTTSDownloadsResult } from '@/app/reader/hooks/useTTSDownloads';
 
-type SheetView = 'main' | 'speed' | 'voice' | 'timer' | 'paragraphGap';
+type SheetView = 'main' | 'speed' | 'voice' | 'timer' | 'paragraphGap' | 'chapters';
 
-const getTTSTimeoutOptions = (_: TranslationFunc) => {
+const EMPTY_LYRICS = async () => null;
+const NO_ACTIVE_LYRIC = () => -1;
+const NO_LYRIC_PAGE = async () => null;
+const NO_LYRIC_PLAY = async () => {};
+
+export const getTTSTimeoutOptions = (_: TranslationFunc) => {
   return [
     { label: _('No Timeout'), value: 0 },
+    { label: _('End of Chapter'), value: TTS_STOP_AT_CHAPTER_END },
     { label: _('{{value}} minute', { value: 1 }), value: 60 },
     { label: _('{{value}} minutes', { value: 3 }), value: 180 },
     { label: _('{{value}} minutes', { value: 5 }), value: 300 },
@@ -61,6 +82,8 @@ type TTSPlayerSheetProps = {
   isPlaying: boolean;
   hasTimeline: boolean;
   hasGapControl: boolean;
+  supportsLyrics?: boolean;
+  buffering?: boolean;
   timeoutOption: number;
   timeoutTimestamp: number;
   chapterRemainingSec: number | null;
@@ -77,6 +100,12 @@ type TTSPlayerSheetProps = {
   onSelectTimeout: (bookKey: string, value: number) => void;
   onSeek: (seconds: number) => Promise<void>;
   onGetPlaybackInfo: () => TTSPlaybackInfo | null;
+  onGetLyrics?: () => Promise<TTSLyrics | null>;
+  onGetLyricActiveIndex?: () => number;
+  onGetLyricPage?: (index: number) => Promise<PageInfo | null>;
+  onPlayFromLyric?: (index: number) => Promise<void>;
+  downloads: UseTTSDownloadsResult;
+  activeSectionIndex: number | null;
 };
 
 // Full player sheet: cover, chapter, scrubber, transport, and one compact
@@ -89,6 +118,8 @@ const TTSPlayerSheet = ({
   isPlaying,
   hasTimeline,
   hasGapControl,
+  supportsLyrics = false,
+  buffering = false,
   timeoutOption,
   timeoutTimestamp,
   chapterRemainingSec,
@@ -105,13 +136,33 @@ const TTSPlayerSheet = ({
   onSelectTimeout,
   onSeek,
   onGetPlaybackInfo,
+  onGetLyrics = EMPTY_LYRICS,
+  onGetLyricActiveIndex = NO_ACTIVE_LYRIC,
+  onGetLyricPage = NO_LYRIC_PAGE,
+  onPlayFromLyric = NO_LYRIC_PLAY,
+  downloads,
+  activeSectionIndex,
 }: TTSPlayerSheetProps) => {
   const _ = useTranslation();
+  const router = useRouter();
   const { envConfig } = useEnv();
+  const { user } = useAuth();
   const { getViewSettings, setViewSettings } = useReaderStore();
   const { getBookData } = useBookDataStore();
   const progress = useBookProgress(bookKey);
   const viewSettings = getViewSettings(bookKey);
+
+  // Offline audio (pre-downloading Read Aloud audio per chapter) is a premium
+  // feature: any paid plan can use it; free / signed-out users see the row with
+  // a Premium badge that routes to the upgrade page instead of the per-chapter
+  // download controls. Mirrors the cloud-sync paywall in IntegrationsPanel.
+  const { userProfilePlan } = useQuotaStats();
+  const isDownloadPremium = isTTSCacheAllowed(userProfilePlan ?? 'free');
+  // Only badge users who can't use it yet: signed out (known at once), or a
+  // resolved plan without the feature. Suppress it while a signed-in user's
+  // plan is still loading so it never flashes at an entitled user.
+  const premiumBadge =
+    !user || (userProfilePlan !== undefined && !isDownloadPremium) ? _('Premium') : undefined;
 
   const [view, setView] = useState<SheetView>('main');
   const [voiceGroups, setVoiceGroups] = useState<TTSVoicesGroup[]>([]);
@@ -129,6 +180,20 @@ const TTSPlayerSheet = ({
   const book = getBookData(bookKey)?.book;
   const sectionLabel = progress?.sectionLabel;
   const isEink = viewSettings?.isEink ?? false;
+  const lyrics = useTTSLyrics({
+    bookKey,
+    enabled: supportsLyrics && isOpen,
+    onGetLyrics,
+    onGetActiveIndex: onGetLyricActiveIndex,
+  });
+  const showLyrics = supportsLyrics && !lyrics.unavailable;
+
+  // Books with recorded narration expose it as a voice; while it is playing
+  // there is nothing to pre-download, since the audio ships with the book.
+  const hasNarrationVoice = voiceGroups.some((group) =>
+    group.voices.some((voice) => voice.id === MEDIA_OVERLAY_VOICE_ID),
+  );
+  const isNarrating = selectedVoice === MEDIA_OVERLAY_VOICE_ID;
 
   // Fresh open: land on the main view with current rate/voice.
   useEffect(() => {
@@ -209,6 +274,12 @@ const TTSPlayerSheet = ({
     setSelectedVoice(voice);
     const vs = getViewSettings(bookKey)!;
     vs.ttsVoice = voice;
+    // Remember per book whether the reader wants its own narrator or a
+    // synthetic voice; ttsVoice alone can't say, since it inherits the global
+    // default. Only written for books that offer narration at all.
+    if (hasNarrationVoice) {
+      vs.ttsUseNarration = voice === MEDIA_OVERLAY_VOICE_ID;
+    }
     setViewSettings(bookKey, vs);
     setView('main');
   };
@@ -218,13 +289,35 @@ const TTSPlayerSheet = ({
     setView('main');
   };
 
+  // Entitled users drill into the per-chapter download view; everyone else is
+  // routed to the upgrade page (or sign-in), the sheet closing first so the
+  // navigation isn't hidden behind it.
+  const handleOpenDownloads = () => {
+    if (isDownloadPremium) {
+      setView('chapters');
+    } else if (user) {
+      onClose();
+      navigateToProfile(router);
+    } else {
+      onClose();
+      navigateToLogin(router);
+    }
+  };
+
   const timeoutOptions = getTTSTimeoutOptions(_);
   const currentVoiceName = voiceGroups
     .flatMap((group) => group.voices)
     .find((voice) => voice.id === selectedVoice)?.name;
-  // Armed timer shows its live countdown on the button; otherwise the button
-  // just names itself (the alarm icon already carries the affordance).
-  const timerCaption = timeoutOption > 0 && timerLabel ? timerLabel : _('Sleep Timer');
+  // Armed timer shows its live countdown on the button; the chapter-end mode
+  // has no countdown so it just names itself; otherwise the button falls
+  // back to naming the feature (the alarm icon already carries the
+  // affordance).
+  const timerCaption =
+    timeoutOption === TTS_STOP_AT_CHAPTER_END
+      ? _('End of Chapter')
+      : timeoutOption > 0 && timerLabel
+        ? timerLabel
+        : _('Sleep Timer');
 
   // The main view carries no header label (the content speaks for itself and
   // vertical space is tight); sub-views keep the back button and their title.
@@ -249,7 +342,9 @@ const TTSPlayerSheet = ({
                 ? _('Select Voice')
                 : view === 'paragraphGap'
                   ? _('Paragraph Gap')
-                  : _('Set Timeout')}
+                  : view === 'chapters'
+                    ? _('Offline Audio')
+                    : _('Set Timeout')}
           </span>
         </div>
       </div>
@@ -259,7 +354,7 @@ const TTSPlayerSheet = ({
     <Dialog
       id='tts_player_sheet'
       isOpen={isOpen}
-      snapHeight={0.65}
+      snapHeight={showLyrics ? 0.8 : 0.65}
       title={_('Read Aloud')}
       header={header}
       boxClassName='sm:!h-auto sm:!max-h-[85%] sm:!w-[420px] sm:!min-w-0'
@@ -282,6 +377,16 @@ const TTSPlayerSheet = ({
               <span className='text-base-content/70 line-clamp-1 text-sm'>{sectionLabel}</span>
             )}
           </div>
+          {showLyrics && (
+            <TTSLyricsView
+              lines={lyrics.lines}
+              activeIndex={lyrics.activeIndex}
+              buffering={buffering}
+              isEink={isEink}
+              onGetLyricPage={onGetLyricPage}
+              onPlayFrom={onPlayFromLyric}
+            />
+          )}
           {hasTimeline ? (
             <TTSScrubber
               bookKey={bookKey}
@@ -317,11 +422,13 @@ const TTSPlayerSheet = ({
             </button>
             <button
               type='button'
-              className='btn btn-primary btn-circle mx-2 h-14 min-h-14 w-14'
+              className='btn btn-primary btn-circle relative mx-2 h-14 min-h-14 w-14'
               aria-label={isPlaying ? _('Pause') : _('Play')}
+              aria-busy={buffering}
               onClick={onTogglePlay}
             >
               {isPlaying ? <MdOutlinePause size={iconSize32} /> : <MdPlayArrow size={iconSize32} />}
+              {buffering && <BufferingRing size={50} isEink={isEink} />}
             </button>
             <button
               type='button'
@@ -360,7 +467,7 @@ const TTSPlayerSheet = ({
             >
               <RiVoiceAiFill size={iconSize18} />
               <span className='text-base-content/60 max-w-full truncate px-1 text-xs'>
-                {currentVoiceName ?? _('Voice')}
+                {currentVoiceName ? _(currentVoiceName) : _('Voice')}
               </span>
             </button>
             <button
@@ -386,7 +493,40 @@ const TTSPlayerSheet = ({
               </span>
             </button>
           </div>
+          {!isNarrating && downloads.supported && downloads.chapters.length > 0 && (
+            <button
+              type='button'
+              aria-label={_('Offline Audio')}
+              onClick={handleOpenDownloads}
+              className='not-eink:bg-base-200 eink-bordered flex w-full items-center gap-3 rounded-xl px-3 py-2.5'
+            >
+              <MdOutlineFileDownload size={iconSize24} className='shrink-0' />
+              <div className='flex min-w-0 flex-1 flex-col items-start'>
+                <span className='text-sm font-semibold'>{_('Offline Audio')}</span>
+                <span className='text-base-content/60 line-clamp-1 text-start text-xs'>
+                  {premiumBadge
+                    ? _('Download chapters for offline playback')
+                    : _('{{done}} of {{total}} downloaded', {
+                        done: downloads.chapters.filter((c) => downloads.statusOf(c) === 'complete')
+                          .length,
+                        total: downloads.chapters.length,
+                      })}
+                </span>
+              </div>
+              {premiumBadge && (
+                <span className='badge badge-sm badge-ghost shrink-0'>{premiumBadge}</span>
+              )}
+              <MdChevronRight size={iconSize24} className='shrink-0 rtl:rotate-180' />
+            </button>
+          )}
         </div>
+      )}
+      {view === 'chapters' && (
+        <TTSChaptersView
+          downloads={downloads}
+          activeSectionIndex={activeSectionIndex}
+          isEink={isEink}
+        />
       )}
       {view === 'speed' && (
         <div className='flex w-full flex-col items-center pb-4 pt-2'>
@@ -411,10 +551,14 @@ const TTSPlayerSheet = ({
           {voiceGroups.map((voiceGroup) => (
             <div key={voiceGroup.id}>
               <div className='text-base-content/60 px-2 py-1 text-sm sm:text-xs'>
-                {_('{{engine}}: {{count}} voices', {
-                  engine: _(voiceGroup.name),
-                  count: voiceGroup.voices.length,
-                })}
+                {/* A single-voice group (a book's own narrator) would otherwise
+                    read "Narration: 1 voices". */}
+                {voiceGroup.voices.length === 1
+                  ? _(voiceGroup.name)
+                  : _('{{engine}}: {{count}} voices', {
+                      engine: _(voiceGroup.name),
+                      count: voiceGroup.voices.length,
+                    })}
               </div>
               {voiceGroup.voices.map((voice) => (
                 <button

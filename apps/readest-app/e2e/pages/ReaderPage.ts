@@ -23,9 +23,13 @@ export class ReaderPage extends BasePage {
   readonly annotationPopup: Locator;
   readonly noteEditor: Locator;
   readonly annotationItems: Locator;
+  readonly pageJumpInput: Locator;
 
   constructor(page: Page) {
     super(page);
+    // Both the desktop footer bar and the mobile navigation panel render a
+    // page-jump input; pick whichever one the current layout displays.
+    this.pageJumpInput = page.locator('input[aria-label="Go to Page"]:visible').first();
     this.viewer = page.locator('.foliate-viewer').first();
     this.foliateView = page.locator('foliate-view').first();
     this.headerBar = page.locator('.header-bar').first();
@@ -75,18 +79,23 @@ export class ReaderPage extends BasePage {
   }
 
   /**
-   * Current reading position as a number parsed from the footer's
-   * "Reading Progress" label. The label is in the DOM regardless of whether
-   * the footer is visually revealed, so no reveal is needed.
+   * Current reading position as a number parsed from the footer's page-jump
+   * label ("94 / 251" with the default fraction progress style). The label is
+   * in the DOM regardless of whether the footer is visually revealed, so no
+   * reveal is needed.
    */
   async readingProgress(): Promise<number> {
-    const label =
-      (await this.page
-        .locator('span[title="Reading Progress"]')
-        .first()
-        .getAttribute('aria-label')) ?? '';
-    const match = label.match(/(\d+(?:\.\d+)?)/);
+    const value = await this.pageJumpInput.inputValue();
+    const match = value.match(/(\d+(?:\.\d+)?)/);
     return match ? Number(match[1]) : Number.NaN;
+  }
+
+  /** Jump to a page by typing into the footer's page-jump input. */
+  async goToPage(page: number): Promise<void> {
+    await this.revealFooter();
+    await this.pageJumpInput.click();
+    await this.pageJumpInput.fill(String(page));
+    await this.pageJumpInput.press('Enter');
   }
 
   // --- sidebar / table of contents ---
@@ -137,6 +146,19 @@ export class ReaderPage extends BasePage {
 
     await this.page.keyboard.press('Escape');
     return { before, after };
+  }
+
+  /**
+   * Add an annotation tool to the selection toolbar via
+   * Settings -> Behavior -> Customize Toolbar, by its chip label.
+   */
+  async enableAnnotationTool(name: string): Promise<void> {
+    await this.revealHeader();
+    await this.headerBar.locator('button[aria-label="Font & Layout"]').click();
+    await this.page.locator('[data-tab="Control"]').click();
+    await this.page.locator('[data-setting-id="settings.control.customizeToolbar"]').click();
+    await this.page.getByRole('button', { name, exact: true }).click();
+    await this.page.keyboard.press('Escape');
   }
 
   // --- bookmarks ---
@@ -263,6 +285,11 @@ export class ReaderPage extends BasePage {
     await this.notebook.getByRole('button', { name: 'Save' }).click();
   }
 
+  /** Read the system clipboard (the context must grant `clipboard-read`). */
+  async readClipboard(): Promise<string> {
+    return this.page.evaluate(() => navigator.clipboard.readText());
+  }
+
   /** Dismiss the annotation popup if it is open. */
   async dismissPopup(): Promise<void> {
     if (await this.annotationPopup.isVisible().catch(() => false)) {
@@ -272,11 +299,27 @@ export class ReaderPage extends BasePage {
   }
 
   /**
+   * Close the notebook pane if it is open. An unpinned notebook renders a
+   * full-screen capture overlay that would swallow clicks aimed at the
+   * sidebar, so tests must close it before driving other panels.
+   */
+  async closeNotebook(): Promise<void> {
+    if (await this.notebook.isVisible().catch(() => false)) {
+      await this.page
+        .locator('.overlay[data-capture-blocking-overlay]')
+        .last()
+        .click({ position: { x: 8, y: 200 } });
+      await this.notebook.waitFor({ state: 'hidden' }).catch(() => {});
+    }
+  }
+
+  /**
    * Open the sidebar's "Annotate" tab, which lists the book's annotations
    * (assert against {@link annotationItems} afterwards).
    */
   async openAnnotationsTab(): Promise<void> {
     await this.dismissPopup();
+    await this.closeNotebook();
     await this.openSidebar();
     await this.sidebar.locator('[aria-label="Annotate"]').click();
   }

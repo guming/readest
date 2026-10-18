@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Book } from '@/types/book';
 import type { EnvConfigType } from '@/services/environment';
 import type { TranslationFunc } from '@/hooks/useTranslation';
+import type { ProgressHandler } from '@/utils/transfer';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useFileSyncStore } from '@/store/fileSyncStore';
@@ -144,11 +145,12 @@ export const runActiveFileBookUpload = async (
 export const runActiveFileBookDownload = async (
   envConfig: EnvConfigType,
   book: Book,
+  onProgress?: ProgressHandler,
 ): Promise<boolean> => {
   try {
     const engine = await buildActiveEngine(envConfig);
     if (!engine) return false;
-    const ok = await engine.downloadBookFile(book);
+    const ok = await engine.downloadBookFile(book, onProgress);
     if (!ok) return false;
     book.downloadedAt = Date.now();
     if (!book.coverDownloadedAt) book.coverDownloadedAt = Date.now();

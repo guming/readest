@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <!-- Make dictionary / text-processing apps (Eudic, 欧路词典, GoldenDict,
          Pleco, etc.) visible to queryIntentActivities under Android 11+
          package-visibility filtering. Without this declaration only the

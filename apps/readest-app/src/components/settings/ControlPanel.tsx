@@ -27,11 +27,12 @@ import AnnotationToolbarCustomizer from './AnnotationToolbarCustomizer';
 import { DEFAULT_ANNOTATION_TOOLBAR_ITEMS } from '@/utils/annotationToolbar';
 import { canShareText } from '@/utils/share';
 import { optInTelemetry, optOutTelemetry } from '@/utils/telemetry';
+import KeyboardShortcutsSettings from './KeyboardShortcutsSettings';
 
 const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }) => {
   const _ = useTranslation();
   const { envConfig, appService } = useEnv();
-  const { getView, getViewSettings, recreateViewer } = useReaderStore();
+  const { getView, getViews, getViewSettings, recreateViewer } = useReaderStore();
   const { getBookData } = useBookDataStore();
   const { settings } = useSettingsStore();
   const { applyEinkMode } = useEinkMode();
@@ -58,6 +59,7 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
   );
   const [copyToNotebook, setCopyToNotebook] = useState(viewSettings.copyToNotebook);
   const [showToolbarCustomizer, setShowToolbarCustomizer] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [animated, setAnimated] = useState(viewSettings.animated);
   const [pageTurnStyle, setPageTurnStyle] = useState(viewSettings.pageTurnStyle || 'push');
   const [isEink, setIsEink] = useState(viewSettings.isEink);
@@ -67,6 +69,7 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
     settings.swipeBrightnessGesture,
   );
   const [screenWakeLock, setScreenWakeLock] = useState(settings.screenWakeLock);
+  const [autohideCursor, setAutohideCursor] = useState(settings.autohideCursor);
   const [allowScript, setAllowScript] = useState(viewSettings.allowScript);
   const [isAutoCheckUpdates, setIsAutoCheckUpdates] = useState(settings.autoCheckUpdates);
   const [isNightlyChannel, setIsNightlyChannel] = useState(settings.updateChannel === 'nightly');
@@ -259,6 +262,13 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
   }, [screenWakeLock]);
 
   useEffect(() => {
+    if (autohideCursor === settings.autohideCursor) return;
+    saveSysSettings(envConfig, 'autohideCursor', autohideCursor);
+    getViews().forEach((view) => view?.toggleAttribute('autohide-cursor', autohideCursor));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autohideCursor]);
+
+  useEffect(() => {
     if (viewSettings.allowScript === allowScript) return;
     saveViewSettings(envConfig, bookKey, 'allowScript', allowScript, true, false).then(() => {
       recreateViewer(envConfig, bookKey);
@@ -334,6 +344,9 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
         onBack={() => setShowToolbarCustomizer(false)}
       />
     );
+  }
+  if (showKeyboardShortcuts) {
+    return <KeyboardShortcutsSettings onBack={() => setShowKeyboardShortcuts(false)} />;
   }
 
   return (
@@ -417,6 +430,14 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
           pageTurnerResetRef.current = fn;
         }}
       />
+
+      <BoxedList title={_('Shortcuts')} data-setting-id='settings.control.keyboardShortcuts'>
+        <NavigationRow
+          title={_('Keyboard Shortcuts')}
+          status={_('Customize keyboard and mouse controls')}
+          onClick={() => setShowKeyboardShortcuts(true)}
+        />
+      </BoxedList>
 
       <BoxedList
         title={_('Annotation Tools')}
@@ -510,6 +531,15 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
           onChange={() => setScreenWakeLock(!screenWakeLock)}
           data-setting-id='settings.control.screenWakeLock'
         />
+        {!appService?.isMobile && (
+          <SettingsSwitchRow
+            label={_('Auto-hide Cursor')}
+            description={_('After a moment of inactivity')}
+            checked={autohideCursor}
+            onChange={() => setAutohideCursor(!autohideCursor)}
+            data-setting-id='settings.control.autohideCursor'
+          />
+        )}
       </BoxedList>
 
       {appService?.hasUpdater && (

@@ -5,6 +5,7 @@ import { useBookDataStore } from '@/store/bookDataStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { BookNote } from '@/types/book';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
+import { filterBooknotes } from '@/app/reader/utils/annotatorUtil';
 
 interface SearchBarProps {
   isVisible: boolean;
@@ -81,22 +82,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
     }
   };
 
-  const filterNotes = (notes: BookNote[], query: string): BookNote[] => {
-    if (!query.trim()) return [];
-
-    const lowercaseQuery = query.toLowerCase();
-    return notes.filter((note) => {
-      const textMatch = note.text?.toLowerCase().includes(lowercaseQuery) || false;
-      const noteMatch = note.note?.toLowerCase().includes(lowercaseQuery) || false;
-      const referenceMatch = [
-        note.referenceData?.url,
-        note.referenceData?.description,
-        note.referenceData?.href,
-      ].some((value) => value?.toLowerCase().includes(lowercaseQuery));
-      return textMatch || noteMatch || referenceMatch;
-    });
-  };
-
   const handleSearchTermChange = (term: string) => {
     if (term.trim().length >= 1) {
       handleSearch(term);
@@ -113,9 +98,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
     }
 
     const { booknotes: allNotes = [] } = config;
-    const validNotes = allNotes.filter((note) => !note.deletedAt);
-
-    const results = filterNotes(validNotes, term);
+    const results = filterBooknotes(allNotes, { kind: 'all', query: term });
     onSearchResultChange(results);
   };
 
@@ -136,7 +119,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           value={searchTerm}
           spellCheck={false}
           onChange={handleInputChange}
-          placeholder={_('Search notes and excerpts...')}
+          placeholder={_('Search excerpts...')}
           className='w-full bg-transparent p-2 font-sans text-sm font-light focus:outline-none'
         />
 

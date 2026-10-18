@@ -21,6 +21,9 @@ permissions = [
   "allow-get-safe-area-insets",
   "allow-get-screen-brightness",
   "allow-set-screen-brightness",
+  "allow-has-ambient-light-sensor",
+  "allow-start-ambient-light-updates",
+  "allow-stop-ambient-light-updates",
   "allow-get-external-sdcard-path",
   "allow-open-external-url",
   "allow-show-lookup-popover",
@@ -45,4 +48,7 @@ permissions = [
   "allow-refresh-eink-screen",
   "allow-update-reading-widget",
   "allow-capture-webview-region",
+  "allow-set-text-selection-suppressed",
+  "allow-icloud-container-status",
+  "allow-icloud-ensure-downloaded",
 ]

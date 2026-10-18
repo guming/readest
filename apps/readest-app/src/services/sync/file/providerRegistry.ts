@@ -15,9 +15,10 @@ import type { S3Settings, WebDAVSettings } from '@/types/settings';
 import { createWebDAVProvider } from '@/services/sync/providers/webdav/WebDAVProvider';
 import { buildGoogleDriveProvider } from '@/services/sync/providers/gdrive/buildGoogleDriveProvider';
 import { buildOneDriveProvider } from '@/services/sync/providers/onedrive/buildOneDriveProvider';
+import { buildICloudProvider } from '@/services/sync/providers/icloud/buildICloudProvider';
 import { createS3Provider } from '@/services/sync/providers/s3/S3Provider';
 
-export type FileSyncBackendKind = 'webdav' | 'gdrive' | 's3' | 'onedrive';
+export type FileSyncBackendKind = 'webdav' | 'gdrive' | 's3' | 'onedrive' | 'icloud';
 
 /** Minimal settings the registry reads to pick + build backends. */
 export interface FileSyncBackendsSettings {
@@ -25,6 +26,7 @@ export interface FileSyncBackendsSettings {
   googleDrive?: { enabled?: boolean };
   s3?: S3Settings;
   onedrive?: { enabled?: boolean };
+  icloud?: { enabled?: boolean };
 }
 
 /** The backends the user has switched on, in a stable order. */
@@ -36,6 +38,7 @@ export const getEnabledFileSyncBackends = (
   if (settings.googleDrive?.enabled) enabled.push('gdrive');
   if (settings.s3?.enabled) enabled.push('s3');
   if (settings.onedrive?.enabled) enabled.push('onedrive');
+  if (settings.icloud?.enabled) enabled.push('icloud');
   return enabled;
 };
 
@@ -66,6 +69,7 @@ const providerCacheKey = (
     return `s3:${c?.enabled}:${c?.endpoint}:${c?.region}:${c?.bucket}:${c?.accessKeyId}:${c?.secretAccessKey}`;
   }
   if (kind === 'onedrive') return 'onedrive';
+  if (kind === 'icloud') return 'icloud';
   return 'gdrive';
 };
 
@@ -95,7 +99,9 @@ export const createFileSyncProvider = async (
           : null
         : kind === 'onedrive'
           ? await buildOneDriveProvider()
-          : await buildGoogleDriveProvider();
+          : kind === 'icloud'
+            ? await buildICloudProvider()
+            : await buildGoogleDriveProvider();
   if (provider) cachedProvider = { key, provider };
   return provider;
 };

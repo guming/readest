@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { BaseDir } from '@/types/system';
+import { INDETERMINATE_PROGRESS } from '@/utils/transfer';
 
 export type TransferType = 'upload' | 'download' | 'delete';
 export type TransferStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
@@ -46,6 +47,23 @@ export interface TransferItem {
   priority: number; // Lower = higher priority
   isBackground: boolean;
 }
+
+/** Progress overlays for active/pending book downloads on the bookshelf. */
+export const selectActiveBookDownloadProgress = (
+  transfers: Record<string, TransferItem>,
+): Record<string, number> => {
+  const progress: Record<string, number> = {};
+  for (const transfer of Object.values(transfers)) {
+    if (transfer.kind !== 'book' || transfer.type !== 'download') continue;
+    if (transfer.status === 'in_progress') {
+      progress[transfer.bookHash] =
+        transfer.totalBytes > 0 ? transfer.progress : INDETERMINATE_PROGRESS;
+    } else if (transfer.status === 'pending' && progress[transfer.bookHash] === undefined) {
+      progress[transfer.bookHash] = INDETERMINATE_PROGRESS;
+    }
+  }
+  return progress;
+};
 
 interface TransferState {
   transfers: Record<string, TransferItem>;

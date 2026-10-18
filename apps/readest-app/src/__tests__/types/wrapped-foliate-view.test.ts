@@ -33,4 +33,41 @@ describe('wrappedFoliateView goTo events', () => {
     await expect(wrapped.goTo('5')).rejects.toThrow('nav failed');
     expect(order).toEqual(['start', 'end']);
   });
+
+  it('reanchors a PDF annotation into the currently rendered reflow section', async () => {
+    const view = makeFakeView(() => Promise.resolve());
+    const originalAddAnnotation = vi.fn().mockResolvedValue({ index: 0, label: '' });
+    const doc = document.implementation.createHTMLDocument('reflow');
+    doc.body.innerHTML =
+      '<article data-source-page="4"><span>Before </span><strong>selected words</strong></article>';
+    view.addAnnotation = originalAddAnnotation;
+    view.book = {
+      metadata: { title: 'PDF' },
+      sections: [],
+      isPDFReflow: true,
+      reflowSectionPageCount: 6,
+    } as unknown as FoliateView['book'];
+    view.renderer = {
+      getContents: () => [{ doc, index: 0 }],
+    } as unknown as FoliateView['renderer'];
+    view.getCFI = vi.fn().mockReturnValue('epubcfi(/6/2!/4/2:0)');
+
+    const wrapped = wrappedFoliateView(view);
+    await wrapped.addAnnotation({
+      id: 'pdf-note',
+      type: 'annotation',
+      cfi: 'epubcfi(/6/10!/4/2:0)',
+      text: 'selected words',
+      note: '',
+      pdfAnchor: { pageIndex: 4, exact: 'selected words', prefix: 'Before ' },
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+    expect(view.getCFI).toHaveBeenCalledWith(0, expect.any(Range));
+    expect(originalAddAnnotation).toHaveBeenCalledWith(
+      expect.objectContaining({ value: 'epubcfi(/6/2!/4/2:0)' }),
+      false,
+    );
+  });
 });

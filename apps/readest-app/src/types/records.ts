@@ -54,6 +54,7 @@ export interface DBBookNote {
   note: string;
   global?: boolean;
   reference_data?: import('./book').BookReferenceData;
+  pdf_anchor?: import('./book').PDFTextAnchor;
 
   created_at?: string;
   updated_at?: string;

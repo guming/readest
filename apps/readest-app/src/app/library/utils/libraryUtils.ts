@@ -4,8 +4,15 @@ import {
   LibrarySecondarySortByType,
   LibrarySortByType,
 } from '@/types/settings';
-import { formatAuthors, formatTitle } from '@/utils/book';
+import {
+  formatAuthors,
+  formatTitle,
+  getContributorNames,
+  isCurrentlyReadingBook,
+} from '@/utils/book';
 import { md5Fingerprint } from '@/utils/md5';
+import { SIZE_PER_LOC, SIZE_PER_TIME_UNIT } from '@/services/constants';
+import { isFeedBookUrl } from '@/services/rss/feedBookUrl';
 
 /** Valid sort types for the library */
 const VALID_SORT_TYPES: LibrarySortByType[] = Object.values(LibrarySortByType);
@@ -148,11 +155,47 @@ export const expandBookshelfSelection = (ids: string[], items: (Book | BooksGrou
   return [...hashes];
 };
 
+/**
+ * The books a bulk Download should actually fetch (#5244): the selection
+ * expanded through {@link expandBookshelfSelection}, narrowed to the books that
+ * live in the cloud but not on this device. The predicate matches the per-book
+ * "Download Book" affordance — a feed book has no file to fetch (#5307), and a
+ * book that was never uploaded or is already local has nothing to pull down.
+ */
+export const selectDownloadableBooks = (
+  ids: string[],
+  items: (Book | BooksGroup)[],
+  books: Book[],
+): Book[] => {
+  const hashes = new Set(expandBookshelfSelection(ids, items));
+  return books.filter(
+    (book) =>
+      hashes.has(book.hash) &&
+      !book.deletedAt &&
+      !(book.url && isFeedBookUrl(book.url)) &&
+      !!book.uploadedAt &&
+      !book.downloadedAt,
+  );
+};
+
 // Calibre custom column names and values, flattened for searching (#4811).
 const getCalibreColumnsText = (item: Book) =>
   (item.metadata?.calibreColumns ?? [])
     .map(({ name, value }) => `${name} ${Array.isArray(value) ? value.join(' ') : value}`)
     .join(' ');
+
+const normalizeValues = (values: string[]): string[] => [
+  ...new Set(values.map((value) => value.trim()).filter(Boolean)),
+];
+
+export const getBookSubjects = (book: Book): string[] => {
+  return getContributorNames(book.metadata?.subject);
+};
+
+const getBookTags = (book: Book): string[] => normalizeValues(book.tags ?? []);
+
+const getBookValuesText = (book: Book): string =>
+  [...getBookTags(book), ...getBookSubjects(book)].join(' ');
 
 export const createBookFilter = (queryTerm: string | null) => (item: Book) => {
   if (!queryTerm) return true;
@@ -172,6 +215,7 @@ export const createBookFilter = (queryTerm: string | null) => (item: Book) => {
       (item.groupName && item.groupName.toLowerCase().includes(lowerQuery)) ||
       (item.metadata?.description &&
         item.metadata.description.toLowerCase().includes(lowerQuery)) ||
+      getBookValuesText(item).toLowerCase().includes(lowerQuery) ||
       getCalibreColumnsText(item).toLowerCase().includes(lowerQuery)
     );
   }
@@ -183,6 +227,7 @@ export const createBookFilter = (queryTerm: string | null) => (item: Book) => {
     searchTerm.test(item.format) ||
     (item.groupName && searchTerm.test(item.groupName)) ||
     (item.metadata?.description && searchTerm.test(item.metadata?.description)) ||
+    searchTerm.test(getBookValuesText(item)) ||
     searchTerm.test(getCalibreColumnsText(item))
   );
 };
@@ -197,6 +242,50 @@ const getBookReadRatio = (book: Book): number => {
   if (!current || !total || total <= 0) return 0;
   return current / total;
 };
+
+export const getTimeRemainingMinutes = (book: Book): number | undefined => {
+  const pagesLeft = book.progress ? book.progress[1] - book.progress[0] : undefined;
+  return pagesLeft ? Math.round((pagesLeft * SIZE_PER_LOC) / SIZE_PER_TIME_UNIT) : undefined;
+};
+
+/**
+ * Minutes a book still needs, or `undefined` when its tile shows no time at all.
+ * Finished, on-hold and unread books render a status badge instead of a time (see
+ * `ReadingProgress`), even when they still have pages left — so they have no time
+ * to sort by. Sorting and the label must agree on this, hence the shared helper.
+ */
+export const getDisplayedTimeRemaining = (book: Book): number | undefined => {
+  const { readingStatus } = book;
+  if (readingStatus === 'finished' || readingStatus === 'abandoned' || readingStatus === 'unread') {
+    return undefined;
+  }
+  return getTimeRemainingMinutes(book);
+};
+
+/**
+ * Remaining minutes for a shelf item, or `undefined` when its tile can show no
+ * time at all — that includes every group, since a group tile renders no progress.
+ */
+const getShelfItemTimeRemaining = (item: Book | BooksGroup): number | undefined =>
+  'books' in item ? undefined : getDisplayedTimeRemaining(item);
+
+/**
+ * Wrap a comparator that has *already* had the sort direction applied, so items
+ * with no remaining time always land after the ones that have it — ascending and
+ * descending alike. "No time" is a bucket, not a value: it must sit outside the
+ * sort-order multiplier, otherwise descending would float those items to the top.
+ */
+export const withTimeRemainingLast =
+  <T extends Book | BooksGroup>(sortBy: LibrarySortByType, compare: (a: T, b: T) => number) =>
+  (a: T, b: T): number => {
+    if (sortBy !== LibrarySortByType.TimeRemaining) return compare(a, b);
+    const aTime = getShelfItemTimeRemaining(a);
+    const bTime = getShelfItemTimeRemaining(b);
+    if (aTime === undefined && bTime === undefined) return 0;
+    if (aTime === undefined) return 1;
+    if (bTime === undefined) return -1;
+    return compare(a, b);
+  };
 
 const compareBookByKey = (a: Book, b: Book, sortBy: string, uiLanguage: string): number => {
   switch (sortBy) {
@@ -250,6 +339,16 @@ const compareBookByKey = (a: Book, b: Book, sortBy: string, uiLanguage: string):
 
       return aDate - bDate;
     }
+    case LibrarySortByType.TimeRemaining: {
+      const aTime = getDisplayedTimeRemaining(a);
+      const bTime = getDisplayedTimeRemaining(b);
+      // Never subtract two Infinities here: NaN makes the comparator inconsistent
+      // and Array.sort then scatters the no-time books through the shelf.
+      if (aTime === undefined && bTime === undefined) return 0;
+      if (aTime === undefined) return 1;
+      if (bTime === undefined) return -1;
+      return aTime - bTime;
+    }
     default:
       return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
   }
@@ -269,23 +368,18 @@ export const createBookSorter =
   };
 
 /**
- * A book counts as "read" once it has reading progress. Importing a book sets
- * timestamps but never `progress`; only opening it does. Gating on this keeps
- * freshly-added-but-unopened books off the shelf.
- */
-const hasBeenRead = (book: Book): boolean => book.progress != null;
-
-/**
  * Pick the books for the recently-read shelf: most-recently-read first, capped
- * at `count`. Recency uses `updatedAt` (the library's "Updated" sort key) so the
- * row matches the app's existing sort convention. NB: `updatedAt` is last-modified
- * (also bumped by status/metadata edits and sync), not strictly last-read.
- * Independent of the main shelf's sort/grouping — always a flat, recency slice.
+ * at `count`. Only currently-reading books qualify (see `isCurrentlyReadingBook`):
+ * finished, abandoned and freshly-imported books are left off. Recency uses
+ * `updatedAt` (the library's "Updated" sort key) so the row matches the app's
+ * existing sort convention. NB: `updatedAt` is last-modified (also bumped by
+ * status/metadata edits and sync), not strictly last-read. Independent of the
+ * main shelf's sort/grouping — always a flat, recency slice.
  */
 export const selectRecentShelfBooks = (books: Book[], count: number): Book[] => {
   const byRecency = createBookSorter(LibrarySortByType.Updated, '');
   return books
-    .filter((book) => !book.deletedAt && hasBeenRead(book))
+    .filter(isCurrentlyReadingBook)
     .sort((a, b) => -byRecency(a, b))
     .slice(0, count);
 };
@@ -361,6 +455,14 @@ export const createBookGroups = (
 
   if (groupBy === LibraryGroupByType.Author) {
     return createAuthorGroups(activeBooks);
+  }
+
+  if (groupBy === LibraryGroupByType.Tag) {
+    return createValueGroups(activeBooks, 'tag', getBookTags);
+  }
+
+  if (groupBy === LibraryGroupByType.Subject) {
+    return createValueGroups(activeBooks, 'subject', getBookSubjects);
   }
 
   // 'group' mode is handled separately by generateBookshelfItems
@@ -447,6 +549,58 @@ const createAuthorGroups = (books: Book[]): (Book | BooksGroup)[] => {
   return [...groups, ...ungroupedBooks];
 };
 
+const createValueGroups = (
+  books: Book[],
+  namespace: 'tag' | 'subject',
+  getValues: (book: Book) => string[],
+): (Book | BooksGroup)[] => {
+  const valueMap = new Map<string, Book[]>();
+  const ungroupedBooks: Book[] = [];
+  for (const book of books) {
+    const values = getValues(book);
+    if (!values.length) {
+      ungroupedBooks.push(book);
+      continue;
+    }
+    for (const value of values) {
+      const existing = valueMap.get(value);
+      if (existing) existing.push(book);
+      else valueMap.set(value, [book]);
+    }
+  }
+
+  const groups = Array.from(
+    valueMap,
+    ([name, groupBooks]): BooksGroup => ({
+      id: md5Fingerprint(`${namespace}:${name}`),
+      name,
+      displayName: name,
+      books: groupBooks,
+      updatedAt: Math.max(...groupBooks.map(({ updatedAt }) => updatedAt)),
+    }),
+  );
+  return [...groups, ...ungroupedBooks];
+};
+
+export const resolveCurrentShelfBooks = (
+  books: Book[],
+  groupBy: LibraryGroupByType,
+  groupId = '',
+  manualGroupName?: string,
+): Book[] => {
+  const activeBooks = books.filter((book) => !book.deletedAt);
+  if (!groupId) return activeBooks;
+  if (groupBy === LibraryGroupByType.None) return [];
+  if (groupBy === LibraryGroupByType.Group) {
+    if (!manualGroupName) return [];
+    const descendantPrefix = `${manualGroupName}/`;
+    return activeBooks.filter(
+      ({ groupName }) => groupName === manualGroupName || groupName?.startsWith(descendantPrefix),
+    );
+  }
+  return findGroupById(createBookGroups(activeBooks, groupBy), groupId)?.books ?? [];
+};
+
 /**
  * Create a sorter for books within a group.
  * For series groups: sort by seriesIndex first (always ascending), then by global sort for items without index.
@@ -528,6 +682,10 @@ export const getBookSortValue = (book: Book, sortBy: LibrarySortByType): number 
       return isNaN(publishedTime) ? 0 : publishedTime;
     }
 
+    case LibrarySortByType.TimeRemaining:
+      // Return Infinity if a book does not have time remaining (ie. if the book is unread or finished) so it is sorted after books with time remaining
+      return getTimeRemainingMinutes(book) ?? Infinity;
+
     default:
       return book.updatedAt;
   }
@@ -595,6 +753,10 @@ export const getGroupSortValue = (
       return publishedDates.length > 0 ? Math.max(...publishedDates) : 0;
     }
 
+    case LibrarySortByType.TimeRemaining:
+      // Return book with least amount of time remaining
+      return Math.min(...books.map((b) => getTimeRemainingMinutes(b) ?? Infinity));
+
     default:
       return Math.max(...books.map((b) => b.updatedAt));
   }
@@ -656,6 +818,7 @@ export type BookContextMenuItemId =
   | 'download'
   | 'upload'
   | 'share'
+  | 'sendNearby'
   | 'delete';
 
 /**
@@ -756,6 +919,7 @@ export const getBookContextMenuItemIds = (book: Book): BookContextMenuItemId[] =
   // Share is offered for any local-or-uploaded book; the dialog uploads first
   // if the book hasn't been pushed yet.
   if (book.downloadedAt || book.uploadedAt) ids.push('share');
+  if (book.downloadedAt) ids.push('sendNearby');
   ids.push('delete');
   return ids;
 };

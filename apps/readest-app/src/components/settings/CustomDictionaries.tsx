@@ -63,7 +63,7 @@ interface CustomDictionariesProps {
 interface ProviderRow {
   id: string;
   label: string;
-  kind: 'builtin' | 'stardict' | 'mdict' | 'dict' | 'slob' | 'web';
+  kind: 'builtin' | 'stardict' | 'mdict' | 'dict' | 'slob' | 'bgl' | 'plugin' | 'web';
   badge: string;
   imported?: ImportedDictionary;
   /** Set on `kind: 'web'` rows. The shape distinguishes deletable custom
@@ -479,7 +479,11 @@ const CustomDictionaries: React.FC<CustomDictionariesProps> = ({ onBack }) => {
               ? _('DICT')
               : dict.kind === 'slob'
                 ? _('Slob')
-                : _('StarDict'),
+                : dict.kind === 'bgl'
+                  ? _('BGL')
+                  : dict.kind === 'plugin'
+                    ? _('Yomitan')
+                    : _('StarDict'),
         imported: dict,
         disabled,
         reason,
@@ -601,7 +605,23 @@ const CustomDictionaries: React.FC<CustomDictionariesProps> = ({ onBack }) => {
           timeout: 4000,
         });
       }
-      if (added === 0 && replaced === 0 && importResult.orphanFiles.length === 0) {
+      if (importResult.importErrors?.length) {
+        const firstError = importResult.importErrors[0]!;
+        eventDispatcher.dispatch('toast', {
+          type: 'warning',
+          message: _('Could not import {{name}}: {{message}}', {
+            name: firstError.name,
+            message: firstError.message,
+          }),
+          timeout: 5000,
+        });
+      }
+      if (
+        added === 0 &&
+        replaced === 0 &&
+        importResult.orphanFiles.length === 0 &&
+        !importResult.importErrors?.length
+      ) {
         eventDispatcher.dispatch('toast', {
           type: 'info',
           message: _('No new dictionaries were imported'),

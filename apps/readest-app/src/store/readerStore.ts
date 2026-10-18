@@ -183,6 +183,7 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
         );
         throw new Error('Book not found');
       }
+      const config = await appService.loadBookConfig(book, settings);
       const isPseStream = !!book.url && isPseStreamFileName(book.url);
       const isFeed = !!book.url && isFeedBookUrl(book.url);
       let bookDoc = bookData?.bookDoc;
@@ -211,11 +212,12 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
           }
           const doc = await new DocumentLoader(file, {
             nativeFilePath: nativeFilePath ?? undefined,
+            pdfReflow:
+              config.viewSettings?.pdfReflow ?? settings.globalViewSettings.pdfReflow ?? false,
           }).open();
           bookDoc = doc.book;
         }
       }
-      const config = await appService.loadBookConfig(book, settings);
       // Import annotations from third-party readers on first open
       if (bookDoc.metadata.identifier) {
         const { getAnnotationProviders } = await import('@/services/annotation');
@@ -287,7 +289,8 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
       book.metaHash = getMetadataHash(bookDoc.metadata);
 
       const isFixedLayout =
-        bookDoc.rendition?.layout === 'pre-paginated' || FIXED_LAYOUT_FORMATS.has(book.format);
+        bookDoc.rendition?.layout === 'pre-paginated' ||
+        (bookDoc.rendition?.layout !== 'reflowable' && FIXED_LAYOUT_FORMATS.has(book.format));
       const newBookData: BookData = { id, book, file, config, bookDoc, isFixedLayout };
       useBookDataStore.setState((state) => ({
         booksData: {

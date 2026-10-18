@@ -18,6 +18,11 @@ export interface TimelineSentence {
   markName: string;
   range: Range;
   text: string;
+  // Known-exact duration (seconds at rate 1.0), set only when the source
+  // carries real timings — recorded narration read from EPUB Media Overlays.
+  // It outranks the measured/estimated tiers and is not text-keyed, so two
+  // identical sentences keep their own durations.
+  duration?: number;
 }
 
 export class SectionTimeline {
@@ -41,6 +46,10 @@ export class SectionTimeline {
     return this.#sentences.length;
   }
 
+  sentenceAt(index: number): TimelineSentence | null {
+    return this.#sentences[index] ?? null;
+  }
+
   setVoice(voiceId: string): void {
     if (voiceId === this.#voiceId) return;
     this.#voiceId = voiceId;
@@ -61,7 +70,7 @@ export class SectionTimeline {
     let sum = 0;
     for (let i = 0; i < n; i++) {
       const sentence = this.#sentences[i]!;
-      const measured = getMeasuredDuration(this.#voiceId, sentence.text);
+      const measured = sentence.duration ?? getMeasuredDuration(this.#voiceId, sentence.text);
       const duration =
         measured ?? estimateSentenceSeconds(sentence.text, this.#lang, this.#voiceId);
       this.#durations[i] = duration;

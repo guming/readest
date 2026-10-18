@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { toParentViewportPoint } from '../utils/annotatorUtil';
 import { uniqueId } from '@/utils/misc';
+import { createPDFTextAnchor } from '../utils/pdfAnchor';
 
 interface UseInstantAnnotationProps {
   bookKey: string;
@@ -25,7 +26,7 @@ export const useInstantAnnotation = ({
 }: UseInstantAnnotationProps) => {
   const { envConfig } = useEnv();
   const { settings } = useSettingsStore();
-  const { getConfig, saveConfig, updateBooknotes } = useBookDataStore();
+  const { getConfig, saveConfig, updateBooknotes, getBookData } = useBookDataStore();
   const { getView, getViewsById, getViewSettings, getProgress } = useReaderStore();
 
   const startPointRef = useRef<Point | null>(null);
@@ -352,6 +353,9 @@ export const useInstantAnnotation = ({
 
       clearInstantAnnotationState();
       const annotation = createAnnotation(cfi, text);
+      if (getBookData(bookKey)?.book?.format === 'PDF') {
+        annotation.pdfAnchor = createPDFTextAnchor(newRange, index);
+      }
       const views = getViewsById(bookKey.split('-')[0]!);
       views.forEach((v) => v?.addAnnotation(annotation));
 

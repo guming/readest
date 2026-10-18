@@ -8,8 +8,13 @@ vi.mock('@/services/sync/providers/onedrive/buildOneDriveProvider', () => ({
   buildOneDriveProvider: vi.fn(),
 }));
 
+vi.mock('@/services/sync/providers/icloud/buildICloudProvider', () => ({
+  buildICloudProvider: vi.fn(),
+}));
+
 import { buildGoogleDriveProvider } from '@/services/sync/providers/gdrive/buildGoogleDriveProvider';
 import { buildOneDriveProvider } from '@/services/sync/providers/onedrive/buildOneDriveProvider';
+import { buildICloudProvider } from '@/services/sync/providers/icloud/buildICloudProvider';
 import {
   createFileSyncProvider,
   getEnabledFileSyncBackends,

@@ -10,8 +10,8 @@ import TextEditor, { TextEditorRef } from '@/components/TextEditor';
 import TextButton from '@/components/TextButton';
 
 interface NoteEditorProps {
-  onSave: (selection: TextSelection, note: string) => void;
-  onEdit: (annotation: BookNote) => void;
+  onSave: (selection: TextSelection, note: string, autoSave?: boolean) => void;
+  onEdit: (annotation: BookNote, autoSave?: boolean) => void;
 }
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ onSave, onEdit }) => {
@@ -26,7 +26,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ onSave, onEdit }) => {
   } = useNotebookStore();
 
   const editorRef = useRef<TextEditorRef>(null);
+  const isDirtyRef = useRef(false);
   const [note, setNote] = useState('');
+  const [autoSaved, setAutoSaved] = useState(false);
   const separatorWidth = useResponsiveSize(3);
 
   useEffect(() => {
@@ -52,6 +54,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ onSave, onEdit }) => {
   };
 
   const handleNoteChange = (value: string) => {
+    isDirtyRef.current = true;
+    setAutoSaved(false);
     setNote(value);
   };
 
@@ -65,17 +69,27 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ onSave, onEdit }) => {
     }
   };
 
-  const handleSaveNote = () => {
+  const handleSaveNote = (autoSave = false) => {
     const currentValue = editorRef.current?.getValue();
     if (currentValue) {
       if (notebookNewAnnotation) {
-        onSave(notebookNewAnnotation, currentValue);
+        onSave(notebookNewAnnotation, currentValue, autoSave);
       } else if (notebookEditAnnotation) {
         notebookEditAnnotation.note = currentValue;
-        onEdit(notebookEditAnnotation);
+        onEdit(notebookEditAnnotation, autoSave);
       }
+      isDirtyRef.current = false;
+      setAutoSaved(autoSave);
     }
   };
+
+  // Drafts survive a panel close immediately; the debounced save also creates
+  // or updates the synced annotation/card in the book config while typing.
+  useEffect(() => {
+    if (!note.trim() || !isDirtyRef.current) return;
+    const timeout = window.setTimeout(() => handleSaveNote(true), 800);
+    return () => window.clearTimeout(timeout);
+  }, [note, notebookNewAnnotation, notebookEditAnnotation]);
 
   const handleEscape = () => {
     if (notebookNewAnnotation) {
@@ -128,6 +142,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ onSave, onEdit }) => {
       </div>
 
       <div className='flex justify-end space-x-3 p-2' dir='ltr'>
+        <span className='font-size-xs text-gray-500 self-center' aria-live='polite'>
+          {autoSaved ? _('Saved') : ''}
+        </span>
         <TextButton onClick={handleEscape}>{_('Cancel')}</TextButton>
         <TextButton onClick={handleSaveNote} disabled={!canSave}>
           {_('Save')}

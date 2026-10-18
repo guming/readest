@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Trans } from 'react-i18next';
 import type { Insets } from '@/types/misc';
 import { useEnv } from '@/context/EnvContext';
@@ -14,6 +14,7 @@ import {
   getReferencePageInfo,
 } from '@/utils/progress';
 import { SIZE_PER_LOC, SIZE_PER_TIME_UNIT } from '@/services/constants';
+import { footerInfoVisible, footerReservesBand } from '../utils/footerBand';
 import StatusInfo from './StatusInfo.tsx';
 import StickyProgressBar from './StickyProgressBar.tsx';
 
@@ -132,19 +133,28 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   const hasTimeInfo = viewSettings.showCurrentTime;
   const hasBatteryInfo = viewSettings.showCurrentBatteryStatus;
 
-  // The footer is display-only: the full-width container stays
-  // pointer-events-none so it never intercepts taps or text selection over
-  // book content along the bottom of the page. To hide it, use Settings →
-  // Layout → Show Footer.
-  //
+  // Tap to toggle (#5293): tapping the footer hides/shows the info without
+  // touching layout or settings — the reserved band stays so the book text
+  // never reflows, showFooter is never written, and the state resets when the
+  // book reopens. The full-width container stays pointer-events-none so taps
+  // and text selection over book content pass through; only the strip (or the
+  // pills in scrolled mode, see below) is a tap target.
+  const [dismissed, setDismissed] = useState(false);
+
   // Scrolled mode reserves no bottom band (footerReservesBand) — the info
   // floats over the book text, so each segment carries its own shrink-wrapped
-  // pill backdrop to stay legible instead of a full-width bar.
+  // pill backdrop to stay legible instead of a full-width bar. The pills
+  // double as the tap targets there: making the whole strip tappable would
+  // swallow taps and text selection over the last lines of the page, so the
+  // strip is only a target where it sits on reserved margin space (paginated
+  // band, sticky-bar band, vertical side column).
+  const hasFooterContent = stickyBarActive || footerInfoVisible(viewSettings);
+  const stripTappable = hasFooterContent && (isVertical || footerReservesBand(viewSettings));
   const pillClass =
     viewSettings.scrolled &&
     !isVertical &&
     !stickyBarActive &&
-    'progress-pill eink-bordered rounded-md bg-base-100/85 px-1.5';
+    'progress-pill eink-bordered pointer-events-auto cursor-pointer rounded-md bg-base-100/85 px-1.5';
   const showStatusInfo = hasTimeInfo || hasBatteryInfo;
 
   return (
@@ -153,7 +163,12 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
       className={clsx(
         'progressinfo pointer-events-none absolute bottom-0 flex items-center justify-between font-sans',
         isEink ? 'text-sm font-normal' : 'text-xs font-extralight',
-        bookData?.isFixedLayout && !isEink
+        // The blend keeps the info legible over an unthemed fixed-layout page,
+        // but it composites the whole container as a group -- with the pills on
+        // it differences a white pill against the white page and paints it pure
+        // black (#5342). The pill backdrop already guarantees legibility, so it
+        // takes over from the blend whenever it is present.
+        bookData?.isFixedLayout && !isEink && !pillClass
           ? 'text-white/75 mix-blend-difference'
           : 'text-base-content',
         isVertical ? 'writing-vertical-rl' : 'w-full',
@@ -189,8 +204,12 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
     >
       <div
         aria-hidden='true'
+        onClick={hasFooterContent ? () => setDismissed((prev) => !prev) : undefined}
         className={clsx(
-          'flex items-center',
+          'progress-strip flex items-center',
+          stripTappable && 'pointer-events-auto cursor-pointer',
+          dismissed && 'opacity-0',
+          !isEink && 'transition-opacity duration-300',
           isVertical ? 'h-full' : 'w-full',
           // Sticky bar grows on the left; the info widgets pack to the right
           // with even gaps. Without it, keep the 3-zone left/center/right row.

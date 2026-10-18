@@ -4,9 +4,12 @@ import { isTauriAppPlatform, isWebAppPlatform } from '@/services/environment';
 
 export const useScreenWakeLock = (lock: boolean) => {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const unlistenOnFocusChangedRef = useRef<Promise<() => void> | null>(null);
 
   useEffect(() => {
+    // Keep the listener scoped to this effect instance. The effect reruns as
+    // `lock` changes; a shared ref retained the old unlisten callback after
+    // cleanup and could unregister the same Tauri event id more than once.
+    let unlistenOnFocusChanged: Promise<() => void> | null = null;
     const requestWakeLock = async () => {
       try {
         if ('wakeLock' in navigator) {
@@ -48,15 +51,13 @@ export const useScreenWakeLock = (lock: boolean) => {
     if (isWebAppPlatform() && lock) {
       document.addEventListener('visibilitychange', handleVisibilityChange);
     } else if (isTauriAppPlatform() && lock) {
-      unlistenOnFocusChangedRef.current = getCurrentWindow().onFocusChanged(
-        ({ payload: focused }) => {
-          if (focused) {
-            requestWakeLock();
-          } else {
-            releaseWakeLock();
-          }
-        },
-      );
+      unlistenOnFocusChanged = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+        if (focused) {
+          requestWakeLock();
+        } else {
+          releaseWakeLock();
+        }
+      });
     }
 
     return () => {
@@ -64,8 +65,8 @@ export const useScreenWakeLock = (lock: boolean) => {
       if (isWebAppPlatform() && lock) {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
-      if (unlistenOnFocusChangedRef.current) {
-        unlistenOnFocusChangedRef.current.then((f) => f());
+      if (unlistenOnFocusChanged) {
+        void unlistenOnFocusChanged.then((unlisten) => unlisten()).catch(() => undefined);
       }
     };
   }, [lock]);

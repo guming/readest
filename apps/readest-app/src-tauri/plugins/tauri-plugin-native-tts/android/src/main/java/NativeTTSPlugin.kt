@@ -95,6 +95,7 @@ class UpdateMediaSessionStateArgs {
 @InvokeArg
 class SetMediaSessionActiveArgs {
   var active: Boolean? = null
+  var ownsAudioFocus: Boolean? = null
   var notificationTitle: String? = null
   var notificationText: String? = null
   var foregroundServiceTitle: String? = null
@@ -546,6 +547,7 @@ class NativeTTSPlugin(private val activity: Activity) : Plugin(activity) {
 
         try {
             if (active) {
+                MediaPlaybackService.ownsAudioFocus = args.ownsAudioFocus ?: true
                 cancelIdleTimer()
                 MediaPlaybackService.pluginEventTrigger = { event, data -> trigger(event, data) }
                 MediaPlaybackService.currentTitle = FOREGROUND_SERVICE_TITLE

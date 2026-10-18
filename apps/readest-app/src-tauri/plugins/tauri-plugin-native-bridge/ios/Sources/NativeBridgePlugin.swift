@@ -40,6 +40,10 @@ class UseBackgroundAudioRequestArgs: Decodable {
   let enabled: Bool
 }
 
+class SetTextSelectionSuppressedRequestArgs: Decodable {
+  let suppressed: Bool
+}
+
 class SetSystemUIVisibilityRequestArgs: Decodable {
   let visible: Bool
   let darkMode: Bool
@@ -63,6 +67,11 @@ class SetScreenBrightnessRequestArgs: Decodable {
 class CopyUriToPathRequestArgs: Decodable {
   let uri: String?
   let dst: String?
+}
+
+struct ICloudEnsureDownloadedArgs: Decodable {
+  let path: String
+  let timeoutMs: Int?
 }
 
 struct InitializeRequest: Decodable {
@@ -104,6 +113,8 @@ class VolumeKeyHandler: NSObject {
   private var volumeView: MPVolumeView?
   private(set) var isIntercepting = false
   private var webView: WKWebView?
+  private weak var activeWebBrowser: WebBrowserController?
+
   private var volumeSlider: UISlider?
   private var ttsOwnsAudioSession = false
   private var ttsSessionObservers: [NSObjectProtocol] = []
@@ -272,6 +283,52 @@ class MediaKeyHandler {
     commandCenter.nextTrackCommand.removeTarget(nil)
     commandCenter.previousTrackCommand.removeTarget(nil)
     logger.log("MediaKeyHandler: stopped")
+  }
+
+  private func forward(_ name: String) {
+    DispatchQueue.main.async { [weak self] in
+      self?.webView?.evaluateJavaScript(
+        "try { window.onNativeKeyDown('\(name)', 0); } catch (_) {}", completionHandler: nil)
+    }
+  }
+}
+
+// Forwards Apple Pencil gestures to JS as native page-turner keys (#5501).
+// Double tap: Pencil 2 / Pro; squeeze: Pencil Pro on iPadOS 17.5+. The
+// system-level pencil preference is honored when set to Off (.ignore); any
+// other preferred action fires the user's in-app binding, since Readest has
+// no drawing tools the system actions could apply to. Unlike MediaKeyHandler
+// this is passive (no MPRemoteCommandCenter claim, never fires on iPhone),
+// so it stays attached for the app's lifetime.
+class PencilGestureHandler: NSObject, UIPencilInteractionDelegate {
+  private weak var webView: WKWebView?
+
+  init(webView: WKWebView) {
+    self.webView = webView
+  }
+
+  // iOS 15.0-17.4 double tap; on 17.5+ the system calls didReceiveTap instead.
+  @available(iOS, deprecated: 17.5)
+  func pencilInteractionDidTap(_ interaction: UIPencilInteraction) {
+    guard UIPencilInteraction.preferredTapAction != .ignore else { return }
+    forward("PencilDoubleTap")
+  }
+
+  @available(iOS 17.5, *)
+  func pencilInteraction(
+    _ interaction: UIPencilInteraction, didReceiveTap tap: UIPencilInteraction.Tap
+  ) {
+    guard UIPencilInteraction.preferredTapAction != .ignore else { return }
+    forward("PencilDoubleTap")
+  }
+
+  @available(iOS 17.5, *)
+  func pencilInteraction(
+    _ interaction: UIPencilInteraction, didReceiveSqueeze squeeze: UIPencilInteraction.Squeeze
+  ) {
+    guard squeeze.phase == .ended else { return }
+    guard UIPencilInteraction.preferredSqueezeAction != .ignore else { return }
+    forward("PencilSqueeze")
   }
 
   private func forward(_ name: String) {
@@ -513,6 +570,7 @@ class NativeBridgePlugin: Plugin {
   private var currentOrientationMask: UIInterfaceOrientationMask = .all
   private var originalDelegate: UIApplicationDelegate?
   private var webViewLifecycleManager: WebViewLifecycleManager?
+  private var pencilGestureHandler: PencilGestureHandler?
   private var traitChangeRegistered = false
 
   // Screen-brightness management. `UIScreen.main.brightness` is a *global*
@@ -544,6 +602,14 @@ class NativeBridgePlugin: Plugin {
     webViewLifecycleManager = WebViewLifecycleManager()
     webViewLifecycleManager?.startMonitoring(webView: webview)
     logger.log("NativeBridgePlugin: WebView lifecycle monitoring activated")
+
+    // Forward Apple Pencil double-tap / squeeze gestures as native keys for
+    // the hardware page turner (#5501).
+    let pencilHandler = PencilGestureHandler(webView: webview)
+    pencilGestureHandler = pencilHandler
+    let pencilInteraction = UIPencilInteraction()
+    pencilInteraction.delegate = pencilHandler
+    webview.addInteraction(pencilInteraction)
 
     // The WKWebView never fires the `prefers-color-scheme` media query
     // `change` event while the app stays foregrounded, so observe the
@@ -837,6 +903,17 @@ class NativeBridgePlugin: Plugin {
     } catch {
       logger.error("Failed to set up audio session: \(error)")
     }
+  }
+
+  // Instant-highlight mode owns the touch long-press: suppress the system
+  // text selection for non-editable content so it can never race the app's
+  // hold-to-highlight gesture. See TextSelectionSuppressor.
+  @objc public func set_text_selection_suppressed(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(SetTextSelectionSuppressedRequestArgs.self)
+    DispatchQueue.main.async {
+      TextSelectionSuppressor.setSuppressed(args.suppressed)
+    }
+    invoke.resolve()
   }
 
   @objc public func auth_with_safari(_ invoke: Invoke) throws {
@@ -1137,6 +1214,19 @@ class NativeBridgePlugin: Plugin {
         UIScreen.main.brightness = CGFloat(brightness)
       }
     }
+    invoke.resolve(["success": true])
+  }
+
+  /// No public ambient-light API on iOS; Ambient Mode is Android-only.
+  @objc public func has_ambient_light_sensor(_ invoke: Invoke) {
+    invoke.resolve(["available": false])
+  }
+
+  @objc public func start_ambient_light_updates(_ invoke: Invoke) {
+    invoke.resolve(["success": false, "error": "unsupported"])
+  }
+
+  @objc public func stop_ambient_light_updates(_ invoke: Invoke) {
     invoke.resolve(["success": true])
   }
 
@@ -1520,6 +1610,64 @@ class NativeBridgePlugin: Plugin {
     }
   }
 
+  /// Resolve the default ubiquity container (nil = the first container in the
+  /// entitlements, iCloud.com.bilingify.readest) and ensure Documents/ exists.
+  /// url(forUbiquityContainerIdentifier:) may block, so hop off the main
+  /// thread before touching it.
+  @objc public func icloud_container_status(_ invoke: Invoke) {
+    DispatchQueue.global(qos: .userInitiated).async {
+      guard let container = FileManager.default.url(forUbiquityContainerIdentifier: nil) else {
+        invoke.resolve(["available": false])
+        return
+      }
+      let documents = container.appendingPathComponent("Documents", isDirectory: true)
+      do {
+        try FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true)
+      } catch {
+        invoke.reject("Failed to create iCloud Documents: \(error.localizedDescription)")
+        return
+      }
+      invoke.resolve(["available": true, "documentsPath": documents.path])
+    }
+  }
+
+  /// Materialise an evicted item (`.name.icloud` placeholder), then poll for
+  /// the real file. "notFound" = neither file nor placeholder exists; the JS
+  /// provider maps that to the engine's 404-null contract.
+  @objc public func icloud_ensure_downloaded(_ invoke: Invoke) {
+    guard let args = try? invoke.parseArgs(ICloudEnsureDownloadedArgs.self) else {
+      return invoke.reject("Failed to parse arguments")
+    }
+    DispatchQueue.global(qos: .userInitiated).async {
+      let fm = FileManager.default
+      if fm.fileExists(atPath: args.path) {
+        invoke.resolve(["status": "ready"])
+        return
+      }
+      let url = URL(fileURLWithPath: args.path)
+      let placeholder = url.deletingLastPathComponent()
+        .appendingPathComponent(".\(url.lastPathComponent).icloud")
+      guard fm.fileExists(atPath: placeholder.path) else {
+        invoke.resolve(["status": "notFound"])
+        return
+      }
+      // Either URL form is accepted by the daemon; try the logical path
+      // first, then the placeholder, and let the poll loop below decide.
+      if (try? fm.startDownloadingUbiquitousItem(at: url)) == nil {
+        try? fm.startDownloadingUbiquitousItem(at: placeholder)
+      }
+      let deadline = Date().addingTimeInterval(Double(args.timeoutMs ?? 60000) / 1000)
+      while Date() < deadline {
+        if fm.fileExists(atPath: args.path) {
+          invoke.resolve(["status": "ready"])
+          return
+        }
+        Thread.sleep(forTimeInterval: 0.25)
+      }
+      invoke.resolve(["status": "timeout"])
+    }
+  }
+
   /// Hold a strong reference to the active folder picker delegate so
   /// it survives until the user dismisses the picker. `present`
   /// only retains the controller; the delegate is `weak` from
@@ -1584,6 +1732,66 @@ class NativeBridgePlugin: Plugin {
   // iOS devices have no e-ink panel; the "Refresh Page" page-turner action is
   // gated to e-ink Android in the UI, so this is only ever reached defensively.
   // Resolve as a soft no-op rather than rejecting.
+  /// Present the in-app browser (#5775). Resolves `{ openBookHash? }` when
+  /// the user closes it; downloads are forwarded as `web-browser-download`
+  /// plugin events while it is open. See `WebBrowserController.swift`.
+  @objc public func open_web_browser(_ invoke: Invoke) {
+    let args: WebBrowserArgs
+    do {
+      args = try invoke.parseArgs(WebBrowserArgs.self)
+    } catch {
+      invoke.reject(error.localizedDescription)
+      return
+    }
+    guard let url = URL(string: args.url), let scheme = url.scheme?.lowercased(),
+      scheme == "http" || scheme == "https"
+    else {
+      invoke.reject("Invalid URL")
+      return
+    }
+    DispatchQueue.main.async {
+      guard let presenter = topmostViewController() else {
+        invoke.reject("Could not find a view controller to present from")
+        return
+      }
+      let controller = WebBrowserController(args: args)
+      controller.onDownload = { [weak self] event in
+        var data: JSObject = [
+          "url": event.url, "path": event.path, "filename": event.filename,
+          "success": event.success,
+        ]
+        if let error = event.error { data["error"] = error }
+        self?.trigger("web-browser-download", data: data)
+      }
+      controller.onFinish = { [weak self] hash in
+        self?.activeWebBrowser = nil
+        var ret = JSObject()
+        if let hash = hash { ret["openBookHash"] = hash }
+        invoke.resolve(ret)
+      }
+      self.activeWebBrowser = controller
+      presenter.present(controller, animated: true)
+    }
+  }
+
+  /// Push an import status (importing / added / failed / unsupported) into
+  /// the open browser's banner. No-op when no browser is presented.
+  @objc public func set_web_browser_status(_ invoke: Invoke) {
+    let args: WebBrowserStatusArgs
+    do {
+      args = try invoke.parseArgs(WebBrowserStatusArgs.self)
+    } catch {
+      invoke.reject(error.localizedDescription)
+      return
+    }
+    DispatchQueue.main.async {
+      self.activeWebBrowser?.setStatus(
+        state: args.state, filename: args.filename, bookHash: args.bookHash)
+      invoke.resolve()
+    }
+  }
+
+
   @objc public func refresh_eink_screen(_ invoke: Invoke) {
     invoke.resolve(["success": false])
   }
@@ -1929,7 +2137,26 @@ private final class ShareBridgeMessageHandler: NSObject, WKScriptMessageHandler 
 @available(iOS 13.0, *)
 extension NativeBridgePlugin: ASWebAuthenticationPresentationContextProviding {
   func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-    return UIApplication.shared.windows.first ?? UIWindow()
+    // `UIApplication.shared.windows` is deprecated since iOS 15 and returns
+    // every window of every scene in an arbitrary order, so it can hand back a
+    // system-owned window: UIRemoteKeyboardWindow and UITextEffectsWindow are
+    // both alive whenever the keyboard is up, which is exactly the state the
+    // sign-in screen is in when the user taps an OAuth provider. Anchoring the
+    // auth sheet to one of those leaves UIKit's remote view controller hosting
+    // without a process handle and it aborts the app
+    // ("Invalid condition not satisfying: processHandle"). The old
+    // `?? UIWindow()` fallback was worse still - a window with no scene can
+    // never host a remote view controller. Keyboard and text-effects windows
+    // sit above `.normal`, so the window level filters them out.
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+    let windows = (scene?.windows ?? []).filter { $0.windowLevel == .normal }
+    if let anchor = windows.first(where: { $0.isKeyWindow }) ?? windows.first {
+      return anchor
+    }
+    // Unreachable while the WebView is on screen; still keep the fallback
+    // attached to a scene so remote view hosting has one.
+    return scene.map { UIWindow(windowScene: $0) } ?? UIWindow()
   }
 }
 
