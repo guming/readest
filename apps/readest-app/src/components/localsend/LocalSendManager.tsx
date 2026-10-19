@@ -139,7 +139,7 @@ const LocalSendManager: React.FC = () => {
         const status = await startLocalSend(alias, deviceModel);
         useLocalSendStore.getState().setStatus(status);
       } else {
-        await stopLocalSend();
+        if (useLocalSendStore.getState().status?.running) await stopLocalSend();
         if (appService.isAndroidApp) await setMulticastLock(false).catch(() => {});
         useLocalSendStore.getState().setStatus(null);
       }
@@ -195,7 +195,7 @@ const LocalSendManager: React.FC = () => {
     const onAliasChanged = async () => {
       if (!isTauriAppPlatform() || !isLocalSendEnabled()) return;
       try {
-        await stopLocalSend();
+        if (useLocalSendStore.getState().status?.running) await stopLocalSend();
       } catch {
         /* it may not have been running */
       }
