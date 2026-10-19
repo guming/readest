@@ -7,6 +7,7 @@ import { useReaderStore } from '@/store/readerStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { eventDispatcher } from '@/utils/event';
 import { useBookDataStore } from '@/store/bookDataStore';
+import { getHeaderFooterStyle } from '../utils/headerFooterStyle';
 
 interface SectionInfoProps {
   bookKey: string;
@@ -38,6 +39,7 @@ const SectionInfo: React.FC<SectionInfoProps> = ({
   const getBookData = useBookDataStore((s) => s.getBookData);
   const viewSettings = getViewSettings(bookKey)!;
   const bookData = getBookData(bookKey);
+  const headerFooterStyle = getHeaderFooterStyle(viewSettings, isEink, !!bookData?.isFixedLayout);
   const topInset = Math.max(
     gridInsets.top,
     appService?.isAndroidApp && systemUIVisible ? statusBarHeight / 2 : 0,
@@ -87,12 +89,14 @@ const SectionInfo: React.FC<SectionInfoProps> = ({
               ? 'text-white/75 mix-blend-difference text-xs font-light'
               : 'text-base-content text-xs font-light',
           isVertical ? 'writing-vertical-rl max-h-[85%]' : 'top-0',
+          viewSettings.headerFooterBackground !== 'auto' && 'rounded px-1',
         )}
         role='none'
         tabIndex={-1}
         onClick={handleSectionClick}
-        style={
-          isVertical
+        style={{
+          ...headerFooterStyle,
+          ...(isVertical
             ? {
                 top: `${(contentInsets.top - gridInsets.top) * 1.5}px`,
                 bottom: `${(contentInsets.bottom - gridInsets.bottom) * 1.5}px`,
@@ -106,8 +110,8 @@ const SectionInfo: React.FC<SectionInfoProps> = ({
                 paddingInline: `calc(${horizontalGap / 2}% + ${contentInsets.left / 2}px)`,
                 width: '100%',
                 height: `${viewSettings.marginTopPx}px`,
-              }
-        }
+              }),
+        }}
       >
         <span
           aria-label={section ? _('Section Title') + `: ${section}` : ''}

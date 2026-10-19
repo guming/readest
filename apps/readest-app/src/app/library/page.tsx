@@ -246,10 +246,15 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   const _ = useTranslation();
   const { selectFiles } = useFileSelector(appService, _);
   const { safeAreaInsets: insets, isRoundedWindow } = useThemeStore();
+  const setThemeScope = useThemeStore((state) => state.setThemeScope);
   const { clearBookData } = useBookDataStore();
   const { settings, setSettings, saveSettings } = useSettingsStore();
   const { isSettingsDialogOpen, setSettingsDialogOpen } = useSettingsStore();
   const { isTransferQueueOpen } = useTransferStore();
+
+  useEffect(() => {
+    setThemeScope('library');
+  }, [setThemeScope]);
 
   // Library page pulls user replicas (dictionaries, custom fonts,
   // background textures, OPDS catalogs, bundled settings). Deferred

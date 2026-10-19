@@ -127,6 +127,14 @@ export interface HardcoverSettings {
   autoSync?: boolean;
 }
 
+export interface NotionSettings {
+  enabled: boolean;
+  accessToken: string;
+  databaseId: string;
+  lastSyncedAt: number;
+  includeChapterHeading?: boolean;
+}
+
 /**
  * Sort field for the WebDAV browser listing. 'name' reproduces the
  * legacy directories-first/alphabetical default; the date fields drive
@@ -436,6 +444,7 @@ export interface SystemSettings {
   bookorbit: BookOrbitSettings;
   readwise: ReadwiseSettings;
   hardcover: HardcoverSettings;
+  notion: NotionSettings;
   webdav: WebDAVSettings;
   googleDrive: GoogleDriveSettings;
   s3: S3Settings;

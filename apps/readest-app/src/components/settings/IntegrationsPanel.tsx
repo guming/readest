@@ -7,6 +7,7 @@ import {
   RiRssLine,
   RiBookReadLine,
   RiBook3Line,
+  RiFileList3Line,
   RiDiscordLine,
   RiCloudLine,
   RiDatabase2Line,
@@ -34,6 +35,7 @@ import BookOrbitForm from './integrations/BookOrbitForm';
 import KOSyncForm from './integrations/KOSyncForm';
 import ReadwiseForm from './integrations/ReadwiseForm';
 import HardcoverForm from './integrations/HardcoverForm';
+import NotionForm from './integrations/NotionForm';
 import WebDAVForm from './integrations/WebDAVForm';
 import GoogleDriveForm from './integrations/GoogleDriveForm';
 import OneDriveForm from './integrations/OneDriveForm';
@@ -58,6 +60,7 @@ type SubPage =
   | 'icloud'
   | 'readwise'
   | 'hardcover'
+  | 'notion'
   | 'opds'
   | 'audiobookshelf'
   | 'localsend'
@@ -136,6 +139,7 @@ const IntegrationsPanel: React.FC = () => {
       requestedSubPage === 'icloud' ||
       requestedSubPage === 'readwise' ||
       requestedSubPage === 'hardcover' ||
+      requestedSubPage === 'notion' ||
       requestedSubPage === 'opds' ||
       requestedSubPage === 'audiobookshelf' ||
       requestedSubPage === 'localsend'
@@ -340,6 +344,12 @@ const IntegrationsPanel: React.FC = () => {
         <HardcoverForm onBack={() => setSubPage(null)} />
       </div>
     );
+  if (subPage === 'notion')
+    return (
+      <div className='my-4 w-full'>
+        <NotionForm onBack={() => setSubPage(null)} />
+      </div>
+    );
   if (subPage === 'opds')
     return (
       <div className='my-4 w-full'>
@@ -378,6 +388,7 @@ const IntegrationsPanel: React.FC = () => {
 
   const readwiseStatus = settings.readwise?.enabled ? _('Connected') : _('Not connected');
   const hardcoverStatus = settings.hardcover?.enabled ? _('Connected') : _('Not connected');
+  const notionStatus = settings.notion?.enabled ? _('Connected') : _('Not connected');
 
   // External sync providers are mutually exclusive. A "configured"
   // third-party provider (WebDAV creds / a Drive token) can be switched on
@@ -479,6 +490,12 @@ const IntegrationsPanel: React.FC = () => {
               title={_('Hardcover')}
               status={hardcoverStatus}
               onClick={() => setSubPage('hardcover')}
+            />
+            <IntegrationRow
+              icon={RiFileList3Line}
+              title={_('Notion')}
+              status={notionStatus}
+              onClick={() => setSubPage('notion')}
             />
           </div>
         </div>

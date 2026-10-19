@@ -36,6 +36,7 @@ describe('ImportAnnotationsDialog', () => {
         isOpen
         onClose={vi.fn()}
         onImportMoonReader={vi.fn()}
+        onImportReadEra={vi.fn()}
         onImportReadest={vi.fn()}
       />,
     );
@@ -52,6 +53,7 @@ describe('ImportAnnotationsDialog', () => {
         isOpen
         onClose={vi.fn()}
         onImportMoonReader={onImportMoonReader}
+        onImportReadEra={vi.fn()}
         onImportReadest={vi.fn()}
       />,
     );
@@ -67,6 +69,7 @@ describe('ImportAnnotationsDialog', () => {
         isOpen
         onClose={vi.fn()}
         onImportMoonReader={vi.fn()}
+        onImportReadEra={vi.fn()}
         onImportReadest={onImportReadest}
       />,
     );

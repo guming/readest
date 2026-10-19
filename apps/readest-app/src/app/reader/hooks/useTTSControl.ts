@@ -690,17 +690,21 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
         (rule) =>
           rule.enabled && rule.onlyForTTS && (rule.scope === 'book' || rule.scope === 'library'),
       );
-      if (ttsOnlyRules.length === 0) return ssml;
-
-      transformCtx['content'] = ssml;
-      transformCtx['viewSettings'] = viewSettings;
-      ssml = await proofreadTransformer.transform(transformCtx, {
-        docType: 'text/xml',
-        onlyForTTS: true,
-      });
+      if (ttsOnlyRules.length > 0) {
+        transformCtx['content'] = ssml;
+        transformCtx['viewSettings'] = viewSettings;
+        ssml = await proofreadTransformer.transform(transformCtx, {
+          docType: 'text/xml',
+          onlyForTTS: true,
+        });
+      }
+      const language = getBookData(bookKey)?.book?.primaryLanguage?.toLowerCase() ?? '';
+      if (viewSettings.ttsSkipJapaneseParentheticalReadings && language.startsWith('ja')) {
+        ssml = ssml.replace(/[（(][^）)]*[）)]/g, '');
+      }
       return ssml;
     },
-    [bookKey, getMergedRules, getViewSettings, transformCtx],
+    [bookKey, getBookData, getMergedRules, getViewSettings, transformCtx],
   );
 
   // Section change callback

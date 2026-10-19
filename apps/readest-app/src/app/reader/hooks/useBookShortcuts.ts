@@ -18,6 +18,8 @@ import { viewPagination } from './usePagination';
 import useShortcuts from '@/hooks/useShortcuts';
 import useBooksManager from './useBooksManager';
 import { getReadingRulerMoveDirection, isReadingRulerMoveKey } from '../utils/readingRuler';
+import { saveViewSettings } from '@/helpers/settings';
+import { useEnv } from '@/context/EnvContext';
 
 interface UseBookShortcutsProps {
   sideBarBookKey: string | null;
@@ -25,6 +27,7 @@ interface UseBookShortcutsProps {
 }
 
 const useBookShortcuts = ({ sideBarBookKey, bookKeys }: UseBookShortcutsProps) => {
+  const { envConfig } = useEnv();
   const { getView, getViewState, getViewSettings, setViewSettings } = useReaderStore();
   const { toggleSideBar, setSideBarBookKey } = useSidebarStore();
   const { setSettingsDialogOpen } = useSettingsStore();
@@ -267,11 +270,35 @@ const useBookShortcuts = ({ sideBarBookKey, bookKeys }: UseBookShortcutsProps) =
   };
 
   const zoomIn = () => {
-    zoomInFactor();
+    if (!sideBarBookKey) return;
+    const data = getBookData(sideBarBookKey);
+    if (data?.isFixedLayout) zoomInFactor();
+    else {
+      const settings = getViewSettings(sideBarBookKey);
+      if (settings)
+        void saveViewSettings(
+          envConfig,
+          sideBarBookKey,
+          'defaultFontSize',
+          Math.min(120, settings.defaultFontSize + 1),
+        );
+    }
   };
 
   const zoomOut = () => {
-    zoomOutFactor();
+    if (!sideBarBookKey) return;
+    const data = getBookData(sideBarBookKey);
+    if (data?.isFixedLayout) zoomOutFactor();
+    else {
+      const settings = getViewSettings(sideBarBookKey);
+      if (settings)
+        void saveViewSettings(
+          envConfig,
+          sideBarBookKey,
+          'defaultFontSize',
+          Math.max(settings.minimumFontSize, settings.defaultFontSize - 1),
+        );
+    }
   };
 
   const handleZoomIn = (event: CustomEvent) => {

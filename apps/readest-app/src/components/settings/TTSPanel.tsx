@@ -24,6 +24,9 @@ const TTSPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }
   const [ttsHighlightGranularity, setTtsHighlightGranularity] = useState<TTSHighlightGranularity>(
     viewSettings.ttsHighlightGranularity ?? 'word',
   );
+  const [skipJapaneseParentheticalReadings, setSkipJapaneseParentheticalReadings] = useState(
+    viewSettings.ttsSkipJapaneseParentheticalReadings ?? false,
+  );
   const [ttsHighlightStyle, setTtsHighlightStyle] = useState(
     viewSettings.ttsHighlightOptions.style,
   );
@@ -49,6 +52,7 @@ const TTSPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }
       ttsHighlightGranularity: setTtsHighlightGranularity as React.Dispatch<
         React.SetStateAction<string>
       >,
+      ttsSkipJapaneseParentheticalReadings: setSkipJapaneseParentheticalReadings,
     });
   };
 
@@ -75,6 +79,19 @@ const TTSPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ttsHighlightGranularity]);
+
+  useEffect(() => {
+    if (skipJapaneseParentheticalReadings === viewSettings.ttsSkipJapaneseParentheticalReadings)
+      return;
+    saveViewSettings(
+      envConfig,
+      bookKey,
+      'ttsSkipJapaneseParentheticalReadings',
+      skipJapaneseParentheticalReadings,
+      false,
+      false,
+    );
+  }, [skipJapaneseParentheticalReadings]);
 
   const handleTTSStyleChange = (style: TTSHighlightStyle) => {
     setTtsHighlightStyle(style);
@@ -134,6 +151,15 @@ const TTSPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }
             ]}
           />
         </SettingsRow>
+      </BoxedList>
+
+      <BoxedList title={_('Japanese')} data-setting-id='settings.tts.japanese'>
+        <SettingsSwitchRow
+          label={_('Skip parenthetical readings')}
+          description={_('Do not read pronunciation guides in parentheses aloud')}
+          checked={skipJapaneseParentheticalReadings}
+          onChange={() => setSkipJapaneseParentheticalReadings(!skipJapaneseParentheticalReadings)}
+        />
       </BoxedList>
 
       <BoxedList title={_('Audio Cache')} data-setting-id='settings.tts.audioCache'>

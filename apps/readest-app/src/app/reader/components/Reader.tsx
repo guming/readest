@@ -60,7 +60,7 @@ const Reader: React.FC<{ ids?: string }> = ({ ids }) => {
   const { libraryLoaded } = useLibrary();
   const { sideBarBookKey } = useSidebarStore();
   const { hoveredBookKey } = useReaderStore();
-  const { showSystemUI, dismissSystemUI } = useThemeStore();
+  const { showSystemUI, dismissSystemUI, setThemeScope } = useThemeStore();
   const { acquireBackKeyInterception, releaseBackKeyInterception } = useDeviceControlStore();
   const { isSideBarVisible, isSideBarPinned } = useSidebarStore();
   const { getIsSideBarVisible, setSideBarVisible } = useSidebarStore();
@@ -78,6 +78,10 @@ const Reader: React.FC<{ ids?: string }> = ({ ids }) => {
   // `pages/reader/[ids].tsx` also gets the pull. Module-scoped dedup
   // means navigating between library and reader doesn't re-pull.
   useReplicaPull({ kinds: ['dictionary', 'font', 'texture'] });
+
+  useEffect(() => {
+    setThemeScope('reader');
+  }, [setThemeScope]);
 
   useEffect(() => {
     mountAdditionalFonts(document);

@@ -815,8 +815,10 @@ export const getThemeCode = () => {
   let ambientIsDarkMode = false;
   let customThemes: CustomTheme[] = [];
   if (typeof window !== 'undefined') {
-    themeColor = localStorage.getItem('themeColor') || 'default';
-    themeMode = localStorage.getItem('themeMode') || 'auto';
+    const libraryScope = localStorage.getItem('themeScope') === 'library';
+    themeColor =
+      localStorage.getItem(libraryScope ? 'libraryThemeColor' : 'themeColor') || 'default';
+    themeMode = localStorage.getItem(libraryScope ? 'libraryThemeMode' : 'themeMode') || 'auto';
     systemIsDarkMode = localStorage.getItem('systemIsDarkMode') === 'true';
     ambientIsDarkMode = readStoredAmbientIsDarkMode(
       localStorage.getItem('ambientIsDarkMode'),

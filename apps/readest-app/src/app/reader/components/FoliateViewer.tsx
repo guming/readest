@@ -737,6 +737,7 @@ const FoliateViewer: React.FC<{
       view.renderer.setStyles?.(getStyles(viewSettings, undefined, getLoadedFonts()));
       applyTranslationStyle(viewSettings);
 
+      view.renderer.style.overflowX = viewSettings.lockHorizontalPan ? 'hidden' : '';
       doubleClickDisabled.current = viewSettings.disableDoubleClick!;
       const animated = viewSettings.animated!;
       const eink = viewSettings.isEink!;
@@ -1001,6 +1002,7 @@ const FoliateViewer: React.FC<{
 
   useEffect(() => {
     if (viewRef.current && viewRef.current.renderer && viewSettings) {
+      viewRef.current.renderer.style.overflowX = viewSettings.lockHorizontalPan ? 'hidden' : '';
       applyMarginAndGap();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1023,6 +1025,7 @@ const FoliateViewer: React.FC<{
     viewSettings?.showProgressInfo,
     viewSettings?.showCurrentTime,
     viewSettings?.showCurrentBatteryStatus,
+    viewSettings?.lockHorizontalPan,
   ]);
 
   return (

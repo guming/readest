@@ -55,6 +55,7 @@ const toc = (over: Partial<NovelToc> = {}): NovelToc => ({
   title: 'My Novel',
   author: 'Author X',
   coverUrl: null,
+  weak: { title: false, author: false },
   chapters: Array.from({ length: 6 }, (_, i) => ({
     title: `Chapter ${i + 1}: Part ${i + 1}`,
     url: `${BASE}/novel/7/${i + 1}`,

@@ -26,6 +26,7 @@ import {
   SettingsSwitchRow,
 } from './primitives';
 import NumberInput from './NumberInput';
+import ColorInput from './color/ColorInput';
 
 const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }) => {
   const _ = useTranslation();
@@ -72,11 +73,26 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
   const [borderColor, setBorderColor] = useState(viewSettings.borderColor);
   const [showHeader, setShowHeader] = useState(viewSettings.showHeader);
   const [showFooter, setShowFooter] = useState(viewSettings.showFooter);
+  const [headerFooterFontSize, setHeaderFooterFontSize] = useState(
+    viewSettings.headerFooterFontSize ?? 12,
+  );
+  const [headerFooterTextColor, setHeaderFooterTextColor] = useState(
+    viewSettings.headerFooterTextColor ?? '',
+  );
+  const [headerFooterBackground, setHeaderFooterBackground] = useState(
+    viewSettings.headerFooterBackground ?? 'auto',
+  );
+  const [headerFooterBgOpacity, setHeaderFooterBgOpacity] = useState(
+    viewSettings.headerFooterBgOpacity ?? 0.8,
+  );
   const [showRemainingTime, setShowRemainingTime] = useState(viewSettings.showRemainingTime);
   const [showRemainingPages, setShowRemainingPages] = useState(viewSettings.showRemainingPages);
   const [showProgressInfo, setShowProgressInfo] = useState(viewSettings.showProgressInfo);
   const [showStickyProgressBar, setShowStickyProgressBar] = useState(
     viewSettings.showStickyProgressBar,
+  );
+  const [lockHorizontalPan, setLockHorizontalPan] = useState(
+    viewSettings.lockHorizontalPan ?? false,
   );
   const [showCurrentTime, setShowCurrentTime] = useState(viewSettings.showCurrentTime);
   const [use24HourClock, setUse24HourClock] = useState(viewSettings.use24HourClock);
@@ -340,6 +356,47 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
   }, [borderColor]);
 
   useEffect(() => {
+    saveViewSettings(
+      envConfig,
+      bookKey,
+      'headerFooterFontSize',
+      headerFooterFontSize,
+      false,
+      false,
+    );
+  }, [headerFooterFontSize]);
+  useEffect(() => {
+    saveViewSettings(
+      envConfig,
+      bookKey,
+      'headerFooterTextColor',
+      headerFooterTextColor,
+      false,
+      false,
+    );
+  }, [headerFooterTextColor]);
+  useEffect(() => {
+    saveViewSettings(
+      envConfig,
+      bookKey,
+      'headerFooterBackground',
+      headerFooterBackground,
+      false,
+      false,
+    );
+  }, [headerFooterBackground]);
+  useEffect(() => {
+    saveViewSettings(
+      envConfig,
+      bookKey,
+      'headerFooterBgOpacity',
+      headerFooterBgOpacity,
+      false,
+      false,
+    );
+  }, [headerFooterBgOpacity]);
+
+  useEffect(() => {
     saveViewSettings(envConfig, bookKey, 'showRemainingTime', showRemainingTime, false, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showRemainingTime]);
@@ -404,6 +461,10 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
     saveViewSettings(envConfig, bookKey, 'progressStyle', progressStyle, false, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progressStyle]);
+
+  useEffect(() => {
+    saveViewSettings(envConfig, bookKey, 'lockHorizontalPan', lockHorizontalPan, false, false);
+  }, [lockHorizontalPan]);
 
   useEffect(() => {
     saveViewSettings(envConfig, bookKey, 'referencePageCount', referencePageCount, true, false);
@@ -681,6 +742,66 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
       </BoxedList>
 
       <BoxedList title={_('Header & Footer')} data-setting-id='settings.layout.showHeader'>
+        <NumberInput
+          label={_('Font Size')}
+          value={headerFooterFontSize}
+          onChange={setHeaderFooterFontSize}
+          min={8}
+          max={24}
+          data-setting-id='settings.layout.headerFooterFontSize'
+        />
+        <SettingsRow label={_('Text Color')}>
+          <ColorInput
+            label={_('Text Color')}
+            value={headerFooterTextColor || '#666666'}
+            onChange={setHeaderFooterTextColor}
+            compact
+          />
+          {headerFooterTextColor && (
+            <button
+              type='button'
+              className='btn btn-ghost btn-xs'
+              onClick={() => setHeaderFooterTextColor('')}
+            >
+              {_('Reset')}
+            </button>
+          )}
+        </SettingsRow>
+        <SettingsRow label={_('Background')}>
+          <select
+            className='select select-sm select-bordered eink-bordered'
+            value={
+              headerFooterBackground === 'auto' || headerFooterBackground === 'none'
+                ? headerFooterBackground
+                : 'custom'
+            }
+            onChange={(e) =>
+              setHeaderFooterBackground(e.target.value === 'custom' ? '#ffffff' : e.target.value)
+            }
+            aria-label={_('Background')}
+          >
+            <option value='auto'>{_('Automatic')}</option>
+            <option value='none'>{_('None')}</option>
+            <option value='custom'>{_('Custom')}</option>
+          </select>
+          {headerFooterBackground !== 'auto' && headerFooterBackground !== 'none' && (
+            <ColorInput
+              label={_('Background')}
+              value={headerFooterBackground}
+              onChange={setHeaderFooterBackground}
+              compact
+            />
+          )}
+        </SettingsRow>
+        {headerFooterBackground !== 'auto' && headerFooterBackground !== 'none' && (
+          <NumberInput
+            label={_('Opacity')}
+            value={Math.round(headerFooterBgOpacity * 100)}
+            onChange={(value) => setHeaderFooterBgOpacity(value / 100)}
+            min={0}
+            max={100}
+          />
+        )}
         <SettingsSwitchRow
           label={_('Show Header')}
           checked={showHeader}
@@ -785,6 +906,16 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
           onChange={() => setShowBatteryPercentage(!showBatteryPercentage)}
         />
       </BoxedList>
+
+      {bookData?.book?.format === 'PDF' && (
+        <BoxedList title={_('PDF')} data-setting-id='settings.layout.pdf'>
+          <SettingsSwitchRow
+            label={_('Lock Horizontal Panning')}
+            checked={lockHorizontalPan}
+            onChange={() => setLockHorizontalPan((value) => !value)}
+          />
+        </BoxedList>
+      )}
 
       {appService?.hasOrientationLock && (
         <BoxedList title={_('Screen')}>

@@ -363,6 +363,10 @@ export interface ViewConfig {
 
   showHeader: boolean;
   showFooter: boolean;
+  headerFooterFontSize?: number;
+  headerFooterTextColor?: string;
+  headerFooterBackground?: string;
+  headerFooterBgOpacity?: number;
   showRemainingTime: boolean;
   showRemainingPages: boolean;
   showProgressInfo: boolean;
@@ -374,6 +378,7 @@ export interface ViewConfig {
   showPaginationButtons: boolean;
   progressStyle: 'percentage' | 'fraction' | 'reference';
   referencePageCount: number;
+  lockHorizontalPan?: boolean;
 
   animated: boolean;
   pageTurnStyle: PageTurnStyle;
@@ -404,6 +409,7 @@ export interface TTSConfig {
   ttsHighlightOptions: TTSHighlightOptions;
   ttsHighlightGranularity: TTSHighlightGranularity;
   ttsMediaMetadata: TTSMediaMetadataMode;
+  ttsSkipJapaneseParentheticalReadings: boolean;
 }
 
 export interface TranslatorConfig {

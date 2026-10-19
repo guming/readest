@@ -25,6 +25,7 @@ import {
   LibrarySortByType,
   ReadSettings,
   ReadwiseSettings,
+  NotionSettings,
   SystemSettings,
   WebDAVSettings,
   GoogleDriveSettings,
@@ -111,6 +112,16 @@ export const DEFAULT_HARDCOVER_SETTINGS = {
   lastSyncedAt: 0,
   autoSync: false,
 } as HardcoverSettings;
+
+export const NOTION_API_BASE_URL = 'https://api.notion.com/v1';
+export const NOTION_API_VERSION = '2022-06-28';
+export const DEFAULT_NOTION_SETTINGS = {
+  enabled: false,
+  accessToken: '',
+  databaseId: '',
+  lastSyncedAt: 0,
+  includeChapterHeading: true,
+} as NotionSettings;
 
 export const DEFAULT_WEBDAV_SETTINGS = {
   enabled: false,
@@ -230,6 +241,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   bookorbit: DEFAULT_BOOKORBIT_SETTINGS,
   readwise: DEFAULT_READWISE_SETTINGS,
   hardcover: DEFAULT_HARDCOVER_SETTINGS,
+  notion: DEFAULT_NOTION_SETTINGS,
   webdav: DEFAULT_WEBDAV_SETTINGS,
   googleDrive: DEFAULT_GOOGLE_DRIVE_SETTINGS,
   s3: DEFAULT_S3_SETTINGS,
@@ -425,6 +437,10 @@ export const DEFAULT_VIEW_CONFIG: ViewConfig = {
 
   showHeader: true,
   showFooter: true,
+  headerFooterFontSize: 12,
+  headerFooterTextColor: '',
+  headerFooterBackground: 'auto',
+  headerFooterBgOpacity: 0.8,
   showRemainingTime: false,
   showRemainingPages: false,
   showProgressInfo: true,
@@ -461,6 +477,7 @@ export const DEFAULT_TTS_CONFIG: TTSConfig = {
   ttsHighlightOptions: { style: 'highlight', color: '#808080' },
   ttsHighlightGranularity: 'word',
   ttsMediaMetadata: 'sentence',
+  ttsSkipJapaneseParentheticalReadings: false,
 };
 
 export const DEFAULT_TRANSLATOR_CONFIG: TranslatorConfig = {

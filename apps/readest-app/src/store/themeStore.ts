@@ -28,6 +28,7 @@ declare global {
 }
 
 interface ThemeState {
+  themeScope: 'library' | 'reader';
   themeMode: ThemeMode;
   themeColor: string;
   systemIsDarkMode: boolean;
@@ -46,6 +47,7 @@ interface ThemeState {
   getIsDarkMode: () => boolean;
   setThemeMode: (mode: ThemeMode) => void;
   setThemeColor: (color: string) => void;
+  setThemeScope: (scope: 'library' | 'reader') => void;
   updateAppTheme: (color: keyof Palette) => void;
   saveCustomTheme: (
     envConfig: EnvConfigType,
@@ -58,18 +60,25 @@ interface ThemeState {
   updateSafeAreaInsets: (insets: Insets) => void;
 }
 
-const getInitialThemeMode = (): ThemeMode => {
+const getInitialThemeScope = (): 'library' | 'reader' =>
+  typeof window !== 'undefined' && window.location.pathname.startsWith('/library')
+    ? 'library'
+    : 'reader';
+
+const getInitialThemeMode = (scope: 'library' | 'reader'): ThemeMode => {
   if (typeof window !== 'undefined' && localStorage) {
-    const stored = localStorage.getItem('themeMode');
+    const stored = localStorage.getItem(scope === 'library' ? 'libraryThemeMode' : 'themeMode');
     if (isValidThemeMode(stored)) return stored;
   }
   return 'auto';
 };
 
-const getInitialThemeColor = (): string => {
+const getInitialThemeColor = (scope: 'library' | 'reader'): string => {
   if (typeof window !== 'undefined' && localStorage) {
     const defaultColor = window.__READEST_IS_EINK ? 'contrast' : 'default';
-    return localStorage.getItem('themeColor') || defaultColor;
+    return (
+      localStorage.getItem(scope === 'library' ? 'libraryThemeColor' : 'themeColor') || defaultColor
+    );
   }
   return 'default';
 };
@@ -154,8 +163,12 @@ const syncAmbientLightSubscription = (mode: ThemeMode) => {
 };
 
 export const useThemeStore = create<ThemeState>((set, get) => {
-  const initialThemeMode = getInitialThemeMode();
-  const initialThemeColor = getInitialThemeColor();
+  const initialThemeScope = getInitialThemeScope();
+  if (typeof window !== 'undefined' && localStorage) {
+    localStorage.setItem('themeScope', initialThemeScope);
+  }
+  const initialThemeMode = getInitialThemeMode(initialThemeScope);
+  const initialThemeColor = getInitialThemeColor(initialThemeScope);
   const systemIsDarkMode =
     typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const ambientIsDarkMode = getInitialAmbientIsDarkMode(systemIsDarkMode);
@@ -163,6 +176,7 @@ export const useThemeStore = create<ThemeState>((set, get) => {
   const themeCode = getThemeCode();
 
   return {
+    themeScope: initialThemeScope,
     themeMode: initialThemeMode,
     themeColor: initialThemeColor,
     systemIsDarkMode,
@@ -181,7 +195,10 @@ export const useThemeStore = create<ThemeState>((set, get) => {
     getIsDarkMode: () => get().isDarkMode,
     setThemeMode: (mode) => {
       if (typeof window !== 'undefined' && localStorage) {
-        localStorage.setItem('themeMode', mode);
+        localStorage.setItem(
+          get().themeScope === 'library' ? 'libraryThemeMode' : 'themeMode',
+          mode,
+        );
       }
       const isDarkMode = resolveThemeIsDarkMode(
         mode,
@@ -195,11 +212,29 @@ export const useThemeStore = create<ThemeState>((set, get) => {
     },
     setThemeColor: (color) => {
       if (typeof window !== 'undefined' && localStorage) {
-        localStorage.setItem('themeColor', color);
+        localStorage.setItem(
+          get().themeScope === 'library' ? 'libraryThemeColor' : 'themeColor',
+          color,
+        );
       }
       applyDataTheme(color, get().isDarkMode);
       set({ themeColor: color });
       set({ themeCode: getThemeCode() });
+    },
+    setThemeScope: (scope) => {
+      if (scope === get().themeScope) return;
+      if (typeof window !== 'undefined' && localStorage) localStorage.setItem('themeScope', scope);
+      const themeMode = getInitialThemeMode(scope);
+      const themeColor = getInitialThemeColor(scope);
+      const isDarkMode = resolveThemeIsDarkMode(
+        themeMode,
+        get().systemIsDarkMode,
+        get().ambientIsDarkMode,
+      );
+      applyDataTheme(themeColor, isDarkMode);
+      set({ themeScope: scope, themeMode, themeColor, isDarkMode });
+      set({ themeCode: getThemeCode() });
+      syncAmbientLightSubscription(themeMode);
     },
     updateAppTheme: (color) => {
       if (isWebAppPlatform()) {
@@ -255,8 +290,10 @@ export const useThemeStore = create<ThemeState>((set, get) => {
 export const loadDataTheme = () => {
   if (typeof localStorage === 'undefined' || typeof document === 'undefined') return;
 
-  const themeMode = localStorage.getItem('themeMode');
-  const themeColor = localStorage.getItem('themeColor');
+  const scope = window.location.pathname.startsWith('/library') ? 'library' : 'reader';
+  localStorage.setItem('themeScope', scope);
+  const themeMode = localStorage.getItem(scope === 'library' ? 'libraryThemeMode' : 'themeMode');
+  const themeColor = localStorage.getItem(scope === 'library' ? 'libraryThemeColor' : 'themeColor');
   if (themeMode && themeColor) {
     const systemIsDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const ambientIsDarkMode = getInitialAmbientIsDarkMode(systemIsDarkMode);

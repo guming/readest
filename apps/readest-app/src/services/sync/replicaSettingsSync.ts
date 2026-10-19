@@ -375,6 +375,12 @@ const mergeSettings = (current: SystemSettings, patch: Partial<SystemSettings>):
   if (patch.hardcover) {
     out.hardcover = { ...current.hardcover, ...patch.hardcover };
   }
+  if (patch.notion) {
+    out.notion = { ...current.notion, ...patch.notion };
+  }
+  if (patch.notion) {
+    out.notion = { ...current.notion, ...patch.notion };
+  }
   if (patch.webdav) {
     // Only serverUrl / username / password / rootPath are whitelisted, so
     // the remote patch never carries the per-device fields (enabled,

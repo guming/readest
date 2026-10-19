@@ -194,6 +194,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
       const settings = useSettingsStore.getState().settings;
       eventDispatcher.dispatch('sync-book-progress', { bookKey });
       eventDispatcher.dispatch('flush-kosync', { bookKey });
+      await eventDispatcher.dispatch('flush-notion-sync', { bookKey });
       await saveConfig(envConfig, bookKey, config, settings);
     }
   };

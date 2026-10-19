@@ -17,6 +17,7 @@ import { SIZE_PER_LOC, SIZE_PER_TIME_UNIT } from '@/services/constants';
 import { footerInfoVisible, footerReservesBand } from '../utils/footerBand';
 import StatusInfo from './StatusInfo.tsx';
 import StickyProgressBar from './StickyProgressBar.tsx';
+import { getHeaderFooterStyle } from '../utils/headerFooterStyle';
 
 interface ProgressBarProps {
   bookKey: string;
@@ -47,6 +48,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   const showDoubleBorder = viewSettings.vertical && viewSettings.doubleBorder;
   const isVertical = viewSettings.vertical;
   const isEink = viewSettings.isEink;
+  const headerFooterStyle = getHeaderFooterStyle(viewSettings, isEink, !!bookData?.isFixedLayout);
   const { progressStyle: readingProgressStyle } = viewSettings;
 
   const template =
@@ -172,6 +174,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
           ? 'text-white/75 mix-blend-difference'
           : 'text-base-content',
         isVertical ? 'writing-vertical-rl' : 'w-full',
+        viewSettings.headerFooterBackground !== 'auto' && 'rounded px-1',
       )}
       aria-label={[
         progress
@@ -188,6 +191,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
       style={
         isVertical
           ? {
+              ...headerFooterStyle,
               top: `${(contentInsets.top - gridInsets.top) * 1.5}px`,
               bottom: `${(contentInsets.bottom - gridInsets.bottom) * 1.5}px`,
               left: showDoubleBorder
@@ -196,6 +200,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
               width: showDoubleBorder ? '32px' : `${contentInsets.left}px`,
             }
           : {
+              ...headerFooterStyle,
               paddingInlineStart: `calc(${horizontalGap / 2}% + ${contentInsets.left / 2}px)`,
               paddingInlineEnd: `calc(${horizontalGap / 2}% + ${contentInsets.right / 2}px)`,
               paddingBottom: appService?.hasSafeAreaInset ? `${gridInsets.bottom * 0.33}px` : 0,
