@@ -82,7 +82,7 @@ describe('useTTSDownloads', () => {
       },
     });
     const getController = () => controller;
-    const { result } = renderHook(() => useTTSDownloads('bookhash', getController, false, true));
+    const { result } = renderHook(() => useTTSDownloads('bookhash', getController, false));
 
     await waitFor(() =>
       expect(result.current.chapters.map((c) => [c.label, c.startSection, c.endSection])).toEqual([
@@ -100,7 +100,7 @@ describe('useTTSDownloads', () => {
       },
     });
     mocks.getBookData.mockReturnValue({ bookDoc: { toc: [{ label: 'Broken', href: '' }] } });
-    const { result } = renderHook(() => useTTSDownloads('bookhash', () => controller, false, true));
+    const { result } = renderHook(() => useTTSDownloads('bookhash', () => controller, false));
     await waitFor(() =>
       expect(result.current.chapters[0]).toMatchObject({
         key: 'section-0',
@@ -126,7 +126,7 @@ describe('useTTSDownloads', () => {
       bookDoc: { toc: [{ label: key, href: '0' }] },
     }));
     const { result, rerender } = renderHook(
-      ({ key, controller }) => useTTSDownloads(key, () => controller, false, true),
+      ({ key, controller }) => useTTSDownloads(key, () => controller, false),
       { initialProps: { key: 'old', controller: oldController } },
     );
     rerender({ key: 'new', controller: newController });
@@ -137,23 +137,6 @@ describe('useTTSDownloads', () => {
     });
 
     expect(result.current.chapters[0]?.label).toBe('new');
-  });
-
-  test('resumes queued downloads only once the session picked its engine', async () => {
-    const controller = makeController(() => new Map());
-    const getController = () => controller;
-    const { rerender } = renderHook(
-      ({ ready }) => useTTSDownloads('bookhash', getController, false, ready),
-      { initialProps: { ready: false } },
-    );
-    // Before the clients initialize, the controller would download with its
-    // default engine, not the voice the session is about to read with.
-    await new Promise((r) => setTimeout(r, 0));
-    expect(mocks.attachController).not.toHaveBeenCalled();
-    rerender({ ready: true });
-    await waitFor(() =>
-      expect(mocks.attachController).toHaveBeenCalledWith('bookhash', getController),
-    );
   });
 
   test('uses the stable book hash for persisted rows and every manager operation', async () => {
@@ -171,7 +154,7 @@ describe('useTTSDownloads', () => {
     );
 
     const { result, unmount } = renderHook(() =>
-      useTTSDownloads('bookhash-reader-session', getController, false, true),
+      useTTSDownloads('bookhash-reader-session', getController, false),
     );
 
     await waitFor(() =>
@@ -208,7 +191,7 @@ describe('useTTSDownloads', () => {
       'bookhash',
     );
 
-    const { result } = renderHook(() => useTTSDownloads('bookhash', getController, true, true));
+    const { result } = renderHook(() => useTTSDownloads('bookhash', getController, true));
     await waitFor(() => expect(controller.getSectionCacheStatuses).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(result.current.chapters).toHaveLength(1));
     expect(result.current.statusOf(result.current.chapters[0]!)).toBe('none');
@@ -238,7 +221,7 @@ describe('useTTSDownloads', () => {
             resolveNewer = resolve;
           }),
       );
-    const { result } = renderHook(() => useTTSDownloads('bookhash', () => controller, false, true));
+    const { result } = renderHook(() => useTTSDownloads('bookhash', () => controller, false));
 
     let older: Promise<void> = Promise.resolve();
     let newer: Promise<void> = Promise.resolve();
@@ -261,7 +244,7 @@ describe('useTTSDownloads', () => {
     const controller = makeController(() => new Map());
     const getController = () => controller;
     const { result } = renderHook(() =>
-      useTTSDownloads('bookhash-reader-session', getController, false, true),
+      useTTSDownloads('bookhash-reader-session', getController, false),
     );
 
     let finishCancellation: () => void = () => {};

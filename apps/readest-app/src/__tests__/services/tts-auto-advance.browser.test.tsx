@@ -213,7 +213,6 @@ const seedStores = (view: FoliateView, viewSettings: ViewSettings) => {
         ribbonVisible: false,
         ttsEnabled: false,
         autoScrollEnabled: false,
-        drawingEnabled: false,
         syncing: false,
         gridInsets: null,
         previewMode: false,

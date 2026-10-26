@@ -37,9 +37,11 @@ const noopStore = {
 };
 vi.mock('@/services/tts/providers/bookCacheStore', () => ({
   getTTSCacheConfig: vi.fn(() => ({ enabled: cacheEnabled, budgetMB: 200, syncEnabled: false })),
-  createBookTTSCacheStore: vi.fn((appService: unknown) =>
-    appService && cacheEnabled ? { ...noopStore } : null,
-  ),
+  BookTTSCacheStore: class {
+    get = noopStore.get;
+    put = noopStore.put;
+    close = noopStore.close;
+  },
 }));
 
 import { EdgeTTSClient } from '@/services/tts/EdgeTTSClient';

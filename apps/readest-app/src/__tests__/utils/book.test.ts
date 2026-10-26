@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  formatSeries,
-  getBookDataAttributes,
-  getBookDocPageCount,
-  getBookPageCount,
-  markBookDeleted,
-  parseSeriesPosition,
-} from '@/utils/book';
-import type { Book } from '@/types/book';
-import type { BookDoc } from '@/libs/document';
+import { formatSeries, getBookDataAttributes } from '@/utils/book';
 
 describe('formatSeries', () => {
   it('returns an empty string when there is no series name', () => {
@@ -152,103 +143,5 @@ describe('getBookDataAttributes (#5776)', () => {
         'data-book-series-index': undefined,
       },
     );
-  });
-});
-
-describe('markBookDeleted', () => {
-  const makeBook = (over: Partial<Book> = {}): Book =>
-    ({
-      hash: 'hash-1',
-      format: 'EPUB',
-      title: 'Book',
-      updatedAt: 100,
-      progress: [3, 10],
-      downloadedAt: 50,
-      coverDownloadedAt: 50,
-      ...over,
-    }) as Book;
-
-  it('stamps the delete on updatedAt so the whole-row sync merge keeps the tombstone', () => {
-    // The cloud merge is last-write-wins on `updatedAt`. A delete used to leave
-    // it alone, so the row's own older page-turn progress won the merge, the
-    // tombstone was cleared, and the book (with its progress) came back — the
-    // purge looked like it did nothing (#6663).
-    const book = makeBook();
-    markBookDeleted(book, 200, true);
-    expect(book.deletedAt).toBe(200);
-    expect(book.fileSyncDeletionRequestedAt).toBe(200);
-    expect(book.downloadedAt).toBeNull();
-    expect(book.coverDownloadedAt).toBeNull();
-    expect(book.updatedAt).toBe(200);
-    expect(book.progress).toBeNull();
-  });
-
-  it('never lowers a future-dated updatedAt, so the tombstone still outranks the cloud row', () => {
-    // A peer with a fast clock can leave `updatedAt` ahead of this device's
-    // now. Lowering it would let that cloud row win the merge (ties go to the
-    // cloud), clearing `deletedAt` again.
-    const book = makeBook({ updatedAt: 500 });
-    markBookDeleted(book, 200, false);
-    expect(book.deletedAt).toBe(200);
-    expect(book.updatedAt).toBeGreaterThan(500);
-  });
-
-  it('keeps the reading progress on a plain delete', () => {
-    const book = makeBook();
-    markBookDeleted(book, 200, false);
-    expect(book.deletedAt).toBe(200);
-    expect(book.progress).toEqual([3, 10]);
-  });
-});
-
-describe('getBookDocPageCount (#6662)', () => {
-  const doc = (sections: { size: number; linear?: string }[], layout?: string) =>
-    ({ sections, rendition: { layout } }) as unknown as BookDoc;
-
-  it('counts reflowable pages the way the reader does: 1500 bytes of linear text a page', () => {
-    expect(getBookDocPageCount(doc([{ size: 2000 }, { size: 1100 }]), 'EPUB')).toBe(3);
-  });
-
-  it('leaves non-linear sections out of a reflowable count', () => {
-    expect(getBookDocPageCount(doc([{ size: 1500 }, { size: 9000, linear: 'no' }]), 'EPUB')).toBe(
-      1,
-    );
-  });
-
-  it('counts one page per section for fixed-layout books', () => {
-    const sections = [{ size: 10 }, { size: 10 }, { size: 10, linear: 'no' }];
-    expect(getBookDocPageCount(doc(sections, 'pre-paginated'), 'EPUB')).toBe(3);
-    expect(getBookDocPageCount(doc(sections), 'PDF')).toBe(3);
-    expect(getBookDocPageCount(doc(sections), 'CBZ')).toBe(3);
-  });
-
-  it('is unknown when the document exposes no sections', () => {
-    expect(getBookDocPageCount(doc([]), 'EPUB')).toBeUndefined();
-    expect(getBookDocPageCount(doc([{ size: 0 }]), 'EPUB')).toBeUndefined();
-  });
-});
-
-describe('getBookPageCount (#6662)', () => {
-  const book = (overrides: Partial<Book>) =>
-    ({
-      hash: 'h',
-      format: 'EPUB',
-      title: '',
-      author: '',
-      createdAt: 0,
-      updatedAt: 0,
-      ...overrides,
-    }) as Book;
-
-  it('prefers the total the reader laid out', () => {
-    expect(getBookPageCount(book({ progress: [3, 120], pageCount: 118 }))).toBe(120);
-  });
-
-  it('falls back to the count recorded at import for an unopened book', () => {
-    expect(getBookPageCount(book({ pageCount: 118 }))).toBe(118);
-  });
-
-  it('is unknown when neither is set', () => {
-    expect(getBookPageCount(book({}))).toBeUndefined();
   });
 });
