@@ -47,7 +47,7 @@ const actionLabels: Record<NotebookAssistantCardAction, string> = {
 
 const NotebookAssistantActions: React.FC<Props> = ({ bookKey, showSetup = true }) => {
   const _ = useTranslation();
-  const { envConfig } = useEnv();
+  const { envConfig, appService } = useEnv();
   const settings = useSettingsStore((state) => state.settings);
   const { getBookData, getConfig, setConfig, saveConfig } = useBookDataStore();
   const { getView, getProgress } = useReaderStore();
@@ -79,7 +79,7 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey, showSetup = true }
   };
 
   const run = async () => {
-    if (!configured) return;
+    if (!configured || !appService) return;
     setLoading(true);
     setError('');
     setResult('');
@@ -95,7 +95,7 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey, showSetup = true }
       usageContext = nextContext;
       usageEstimate = nextEstimate;
       if (nextEstimate.input > assistant.warnAboveTokens) {
-        const accepted = window.confirm(
+        const accepted = await appService.ask(
           _('This context is long and may cost more than usual. Continue?'),
         );
         if (!accepted) return;
@@ -109,7 +109,7 @@ const NotebookAssistantActions: React.FC<Props> = ({ bookKey, showSetup = true }
         );
       }
       if (limit.needsConfirmation) {
-        const accepted = window.confirm(
+        const accepted = await appService.ask(
           _(
             'This request may exceed your daily token limit. Estimated total: {{total}} / {{limit}} tokens. Continue?',
             { total: limit.projectedTotal, limit: limit.limit },

@@ -5,6 +5,7 @@ import type {
   QuizCardContent,
 } from '@/services/notebook-assistant/types';
 import type { UnderstandingMap } from '@/services/notebook-assistant/understandingMap';
+import type { HistoryChapterGuide } from '@/services/notebook-assistant/historyChapterGuide';
 import { TTSHighlightOptions } from '@/services/tts/types';
 import { TTSHighlightGranularity } from '@/services/tts/types';
 import { TTSMediaMetadataMode } from '@/services/tts/types';
@@ -213,6 +214,7 @@ export interface BookNote {
 
 export type NotebookCardType =
   | 'understanding_map'
+  | 'history_chapter_guide'
   | 'translation'
   | 'explanation'
   | 'image_explanation'
@@ -234,7 +236,7 @@ export interface NotebookCard {
   type: NotebookCardType;
   title: string;
   sourceText?: string;
-  content: string | QuizCardContent | BookLearningGuide | UnderstandingMap;
+  content: string | QuizCardContent | BookLearningGuide | UnderstandingMap | HistoryChapterGuide;
   contextType: 'selection' | 'page' | 'chapter' | 'book';
   targetLanguage?: string;
   provider: string;

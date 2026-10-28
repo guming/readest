@@ -113,12 +113,12 @@ export function useBookLearningGuide({ bookKey, book, metadata, bookDoc }: Optio
       stale: isLearningGuideStale(
         guide,
         lastContext?.sourceFingerprint,
-        lastContext?.status === 'grounded' || !!resolvedBookDoc,
+        lastContext?.status === 'grounded',
       ),
     });
     // State changes are driven by persisted guide identity, not transient state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guide, lastContext, resolvedBookDoc]);
+  }, [guide, lastContext]);
 
   const persist = useCallback(
     async (next: BookConfig) => {
@@ -163,10 +163,20 @@ export function useBookLearningGuide({ bookKey, book, metadata, bookDoc }: Optio
       metadata: resolvedMetadata,
       bookDoc: doc,
       costMode: assistant.costMode,
+      aiSettings: settings.aiSettings,
+      signal: abortRef.current?.signal,
     });
     setLastContext(value);
     return value;
-  }, [appService, assistant.costMode, bookKey, resolvedBook, resolvedBookDoc, resolvedMetadata]);
+  }, [
+    appService,
+    assistant.costMode,
+    bookKey,
+    resolvedBook,
+    resolvedBookDoc,
+    resolvedMetadata,
+    settings.aiSettings,
+  ]);
 
   const runGeneration = useCallback(
     async (knowledgeOnly = false, forcedCategory?: NonFictionCategory) => {
@@ -174,7 +184,7 @@ export function useBookLearningGuide({ bookKey, book, metadata, bookDoc }: Optio
         setState({ type: 'needs_ai_setup' });
         return;
       }
-      if (!resolvedMetadata || !config) {
+      if (!resolvedMetadata || !config || !appService) {
         setState({
           type: 'error',
           message: 'Book information is not ready.',
@@ -230,7 +240,7 @@ export function useBookLearningGuide({ bookKey, book, metadata, bookDoc }: Optio
           eligibility.status === 'supported' ? eligibility.category : 'other_nonfiction';
         estimate = estimateLearningGuideTokens(context.sourceText);
         if (estimate.input > assistant.warnAboveTokens) {
-          const accepted = window.confirm(
+          const accepted = await appService.ask(
             'This book context is long and may cost more than usual. Continue?',
           );
           if (!accepted) return;
@@ -238,7 +248,7 @@ export function useBookLearningGuide({ bookKey, book, metadata, bookDoc }: Optio
         const limit = evaluateUsageLimit(assistant, estimate);
         if (!limit.allowed) throw new Error('Daily token limit reached.');
         if (limit.needsConfirmation) {
-          const accepted = window.confirm(
+          const accepted = await appService.ask(
             `This request may exceed your daily token limit (${limit.projectedTotal} / ${limit.limit}). Continue?`,
           );
           if (!accepted) return;
@@ -312,6 +322,7 @@ export function useBookLearningGuide({ bookKey, book, metadata, bookDoc }: Optio
     },
     [
       assistant,
+      appService,
       bookKey,
       collectContext,
       config,

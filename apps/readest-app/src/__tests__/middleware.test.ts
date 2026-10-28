@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { NextRequest } from 'next/server';
-import { middleware } from '@/middleware';
+import { proxy } from '@/proxy';
 
 const coep = (path: string) =>
-  middleware(new NextRequest(`http://localhost:3000${path}`)).headers.get(
+  proxy(new NextRequest(`http://localhost:3000${path}`)).headers.get(
     'Cross-Origin-Embedder-Policy',
   );
 
@@ -24,12 +24,12 @@ describe('middleware cross-origin isolation headers', () => {
   });
 
   it('always pairs COOP same-origin on document responses', () => {
-    const res = middleware(new NextRequest('http://localhost:3000/s/tok'));
+    const res = proxy(new NextRequest('http://localhost:3000/s/tok'));
     expect(res.headers.get('Cross-Origin-Opener-Policy')).toBe('same-origin');
   });
 
   it('does not put COEP on /api routes', () => {
-    const res = middleware(new NextRequest('http://localhost:3000/api/share/tok'));
+    const res = proxy(new NextRequest('http://localhost:3000/api/share/tok'));
     expect(res.headers.get('Cross-Origin-Embedder-Policy')).toBeNull();
   });
 });

@@ -1,9 +1,19 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
+import { generateText } from 'ai';
+
+vi.mock('ai', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('ai')>()),
+  generateText: vi.fn(),
+}));
+vi.mock('@/services/ai/providers', () => ({
+  getAIProvider: () => ({ getModel: () => 'mock-vision-model' }),
+}));
 
 import {
   buildCurrentChapterContext,
   buildCurrentPageContext,
   buildSelectionContext,
+  getCurrentChapterIdentity,
 } from '@/services/notebook-assistant/context';
 import {
   buildLearningGuideContext,
@@ -82,6 +92,108 @@ describe('notebook assistant reading context', () => {
     expect(context.sourceText).toContain('Complete chapter text.');
   });
 
+  test('learning guide accepts PDF outline leaves with null subitems', async () => {
+    const bookDoc = {
+      ...makeBookDoc(),
+      toc: [
+        {
+          label: 'Part One',
+          subitems: [{ label: 'Chapter One', subitems: null }],
+        },
+      ],
+    } as unknown as BookDoc;
+
+    const context = await buildLearningGuideContext({
+      bookKey: 'pdf-outline-null-leaf',
+      metadata: { title: 'Outlined PDF', author: 'Author', language: 'en' },
+      bookDoc,
+      costMode: 'conservative',
+    });
+
+    expect(context.tocTitles).toEqual(['Part One', 'Chapter One']);
+    expect(context.sourceKinds).toContain('toc');
+  });
+
+  test('learning guide accepts numeric PDF page IDs', async () => {
+    const sections = [0, 1, 2].map((id) => ({
+      id,
+      linear: 'yes',
+      loadText: async () => 'A complete page of extracted text from the PDF.',
+    }));
+    const context = await buildLearningGuideContext({
+      bookKey: 'numbered-pdf',
+      metadata: { title: 'Numbered PDF', author: 'Author', language: 'en' },
+      bookDoc: { ...makeBookDoc(), toc: [], sections } as unknown as BookDoc,
+      costMode: 'conservative',
+    });
+    expect(context.sourceText).toContain('A complete page of extracted text');
+  });
+
+  test('scanned PDF uses a vision model to read image-only pages', async () => {
+    vi.mocked(generateText).mockResolvedValue({
+      text: 'This scanned page explains algorithms and data structures with enough detail to prepare a useful reading guide.',
+    } as Awaited<ReturnType<typeof generateText>>);
+    const sections = [0, 1].map((id) => ({
+      id,
+      linear: 'yes',
+      loadText: async () => '',
+      loadImageBlob: async () => new Blob(['page image'], { type: 'image/png' }),
+    }));
+    const context = await buildLearningGuideContext({
+      bookKey: 'scanned-pdf',
+      metadata: { title: 'Scanned PDF', author: 'Author', language: 'en' },
+      bookDoc: { ...makeBookDoc(), toc: [], sections } as unknown as BookDoc,
+      costMode: 'conservative',
+      aiSettings: {
+        connections: [
+          { id: 'vision', provider: 'openrouter', model: 'mock', supportsVision: true },
+        ],
+        notebookConnectionId: 'vision',
+      } as Parameters<typeof buildLearningGuideContext>[0]['aiSettings'],
+    });
+    expect(context.status).toBe('grounded');
+    expect(context.sourceText).toContain('Scanned page 1:');
+    expect(generateText).toHaveBeenCalledTimes(2);
+  });
+
+  test('scanned PDF without vision produces a preliminary guide context', async () => {
+    const bookDoc = {
+      ...makeBookDoc(),
+      toc: [{ label: 'A long chapter title about algorithms and data structures'.repeat(8) }],
+      sections: [
+        { id: 0, linear: 'yes', loadText: async () => '', loadImageBlob: async () => new Blob() },
+      ],
+    } as unknown as BookDoc;
+    const context = await buildLearningGuideContext({
+      bookKey: 'outline-only-scan',
+      metadata: { title: 'Scanned PDF', author: 'Author', language: 'en' },
+      bookDoc,
+      costMode: 'conservative',
+    });
+    expect(context.status).toBe('preliminary');
+    expect(context.sourceKinds).toContain('toc');
+    expect(context.sourceKinds).not.toContain('chapter');
+    expect(context.sourceText).toContain('Scanned PDF');
+  });
+
+  test('PDF with a short cover uses later text pages without requiring vision', async () => {
+    const sections = [0, 1].map((id) => ({
+      id,
+      linear: 'yes',
+      loadText: async () =>
+        id === 0 ? 'Cover' : 'This is a searchable chapter with enough text. '.repeat(12),
+      loadImageBlob: async () => new Blob(),
+    }));
+    const context = await buildLearningGuideContext({
+      bookKey: 'searchable-pdf',
+      metadata: { title: 'Searchable PDF', author: 'Author', language: 'en' },
+      bookDoc: { ...makeBookDoc(), toc: [], sections } as unknown as BookDoc,
+      costMode: 'conservative',
+    });
+    expect(context.sourceText).toContain('Opening page 2:');
+    expect(context.status).toBe('grounded');
+  });
+
   test('selection context includes the selected block and two neighboring blocks per side', () => {
     const container = document.createElement('main');
     container.innerHTML = [
@@ -119,6 +231,19 @@ describe('notebook assistant reading context', () => {
     expect(context.pageCfi).toBe('epubcfi(/6/2)');
     expect(context.chapterId).toBe('chapter-1.xhtml');
     expect(context.chapterTitle).toBe('Chapter One');
+  });
+
+  test('current page awaits asynchronous PDF TOC href resolution', async () => {
+    const bookDoc = {
+      ...makeBookDoc(),
+      splitTOCHref: async () => [0, null],
+    } as unknown as BookDoc;
+    const context = await buildCurrentPageContext(bookDoc, null, makeProgress());
+    expect(context.chapterId).toBe('0');
+    const chapter = await buildCurrentChapterContext(bookDoc, null, makeProgress());
+    expect(chapter.contextType).toBe('chapter');
+    const identity = await getCurrentChapterIdentity(bookDoc, null, makeProgress());
+    expect(identity.contextType).toBe('chapter');
   });
 
   test('current chapter loads the complete section and keeps the current page anchor', async () => {

@@ -6,6 +6,12 @@ const readSource = (file: string) =>
   readFileSync(resolve(process.cwd(), 'src/app/reader/components/notebook', file), 'utf8');
 
 describe('notebook navigation layout', () => {
+  test('shows a grab handle on the desktop resize edge', () => {
+    const source = readSource('Notebook.tsx');
+    expect(source).toContain('group/resize');
+    expect(source).toContain('bg-base-content/40');
+  });
+
   test('keeps the notebook and reading assistant tabs at the bottom of the panel', () => {
     const source = readSource('Notebook.tsx');
     const tabsIndex = source.indexOf('<NotebookTabNavigation');
@@ -22,5 +28,11 @@ describe('notebook navigation layout', () => {
     expect(readSource('AssistantFeatureIcons.tsx')).toContain('AskMeOneIcon');
     expect(readSource('NotebookAssistantActions.tsx')).toContain('<NotebookAssistantIcon');
     expect(readSource('NotebookReview.tsx')).toContain('<AskMeOneIcon');
+  });
+
+  test('exposes AI chapter guide as a reading assistant tab', () => {
+    const source = readSource('Notebook.tsx');
+    expect(source).toContain("id: 'history', label: _('AI Chapter Guide')");
+    expect(source).toContain("readingAssistantSection === 'history'");
   });
 });

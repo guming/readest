@@ -11,6 +11,11 @@ rust-version = "1.88"
 exclude = ["/examples", "/dist-js", "/guest-js", "/node_modules"]
 links = "tauri-plugin-native-bridge"
 
+# The legacy `objc` macros emit `cfg(feature = "cargo-clippy")` in the
+# consuming crate. Declare the feature here to keep rustc's check-cfg quiet.
+[features]
+cargo-clippy = []
+
 [dependencies]
 tauri = { version = "2" }
 serde = "1.0"

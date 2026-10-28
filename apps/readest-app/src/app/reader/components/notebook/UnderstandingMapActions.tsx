@@ -27,7 +27,7 @@ import UnderstandingMapView from './UnderstandingMapView';
 
 export default function UnderstandingMapActions({ bookKey }: { bookKey: string }) {
   const _ = useTranslation();
-  const { envConfig } = useEnv();
+  const { envConfig, appService } = useEnv();
   const settings = useSettingsStore((state) => state.settings);
   const assistant = resolveNotebookAssistantSettings(settings.notebookAssistant);
   const identity = getNotebookAssistantIdentity(assistant, settings.aiSettings);
@@ -44,13 +44,13 @@ export default function UnderstandingMapActions({ bookKey }: { bookKey: string }
   const [saving, setSaving] = useState(false);
 
   const generate = async () => {
-    if (!configured || loading) return;
+    if (!configured || !appService || loading) return;
     if (
-      !window.confirm(
+      !(await appService.ask(
         _(
           'This uses the entire current chapter and may reveal text you have not read yet. Continue?',
         ),
-      )
+      ))
     )
       return;
     setLoading(true);
@@ -74,7 +74,7 @@ export default function UnderstandingMapActions({ bookKey }: { bookKey: string }
       const tokenEstimate = { input: Math.ceil(sourceLength / 3) + 600, output: 2400 };
       if (
         tokenEstimate.input > assistant.warnAboveTokens &&
-        !window.confirm(_('This context is long and may cost more than usual. Continue?'))
+        !(await appService.ask(_('This context is long and may cost more than usual. Continue?')))
       )
         return;
       const limit = evaluateUsageLimit(assistant, tokenEstimate);
@@ -86,12 +86,12 @@ export default function UnderstandingMapActions({ bookKey }: { bookKey: string }
         );
       if (
         limit.needsConfirmation &&
-        !window.confirm(
+        !(await appService.ask(
           _(
             'This request may exceed your daily token limit. Estimated total: {{total}} / {{limit}} tokens. Continue?',
             { total: limit.projectedTotal, limit: limit.limit },
           ),
-        )
+        ))
       )
         return;
       const result = await runUnderstandingMapAssistant(

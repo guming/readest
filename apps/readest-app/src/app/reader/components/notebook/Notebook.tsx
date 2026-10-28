@@ -34,6 +34,7 @@ import BooknoteItem from '../sidebar/BooknoteItem';
 import NotebookAssistantActions from './NotebookAssistantActions';
 import UnderstandingMapActions from './UnderstandingMapActions';
 import UnderstandingMapView from './UnderstandingMapView';
+import HistoryChapterGuideActions, { HistoryChapterGuideView } from './HistoryChapterGuide';
 import NotebookReview from './NotebookReview';
 import NotebookHeader from './Header';
 import NoteEditor from './NoteEditor';
@@ -46,7 +47,7 @@ import { createPDFTextAnchor } from '../../utils/pdfAnchor';
 
 const MIN_NOTEBOOK_WIDTH = 0.15;
 const MAX_NOTEBOOK_WIDTH = 0.45;
-type ReadingAssistantSection = 'guide' | 'assistant' | 'question';
+type ReadingAssistantSection = 'guide' | 'history' | 'assistant' | 'question';
 
 const Notebook: React.FC = ({}) => {
   const _ = useTranslation();
@@ -392,13 +393,15 @@ const Notebook: React.FC = ({}) => {
     const contentText =
       typeof card.content === 'string'
         ? card.content
-        : 'schemaVersion' in card.content && 'nodes' in card.content
-          ? card.content.nodes.map((node) => node.label).join('\n')
-          : 'questions' in card.content
-            ? card.content.questions
-                .map((question, index) => `${index + 1}. ${question.question}`)
-                .join('\n')
-            : card.content.learningGoal;
+        : 'keyPoints' in card.content
+          ? card.content.overview
+          : 'schemaVersion' in card.content && 'nodes' in card.content
+            ? card.content.nodes.map((node) => node.label).join('\n')
+            : 'questions' in card.content
+              ? card.content.questions
+                  .map((question, index) => `${index + 1}. ${question.question}`)
+                  .join('\n')
+              : card.content.learningGoal;
     return (
       <li key={card.id} className='my-2'>
         <article className='border-base-300 bg-base-100 rounded-md border p-3 text-sm'>
@@ -406,8 +409,8 @@ const Notebook: React.FC = ({}) => {
             <button
               type='button'
               className='flex min-w-0 items-center gap-2 font-medium disabled:cursor-default'
-              disabled={!card.selectionCfi && !card.pageCfi}
-              onClick={() => handleNavigateCard(card)}
+              aria-expanded={isExpanded}
+              onClick={() => toggleCardExpanded(card.id)}
             >
               <Icon className='shrink-0' />
               <span className='truncate'>{card.title}</span>
@@ -444,11 +447,20 @@ const Notebook: React.FC = ({}) => {
             </div>
           </div>
           {(card.pageNumber != null || card.chapterTitle) && (
-            <p className={clsx('text-base-content/55 text-xs', isExpanded && 'mb-2')}>
+            <button
+              type='button'
+              className={clsx(
+                'text-base-content/55 block text-start text-xs',
+                isExpanded && 'mb-2',
+                (card.pageCfi || card.selectionCfi) && 'cursor-pointer hover:text-base-content',
+              )}
+              disabled={!card.pageCfi && !card.selectionCfi}
+              onClick={() => handleNavigateCard(card)}
+            >
               {card.pageNumber != null && _('Page {{number}}', { number: card.pageNumber })}
               {card.pageNumber != null && card.chapterTitle ? ' · ' : ''}
               {card.chapterTitle || ''}
-            </p>
+            </button>
           )}
           {isExpanded && (
             <>
@@ -464,6 +476,8 @@ const Notebook: React.FC = ({}) => {
               )}
               {typeof card.content === 'string' ? (
                 <p className='whitespace-pre-wrap leading-relaxed'>{card.content}</p>
+              ) : 'keyPoints' in card.content ? (
+                <HistoryChapterGuideView guide={card.content} bookKey={sideBarBookKey!} />
               ) : 'nodes' in card.content ? (
                 <UnderstandingMapView map={card.content} bookKey={sideBarBookKey!} />
               ) : 'questions' in card.content ? (
@@ -570,7 +584,7 @@ const Notebook: React.FC = ({}) => {
         `}</style>
         <div
           className={clsx(
-            'drag-bar absolute -left-2 top-0 h-full w-0.5 cursor-col-resize bg-transparent p-2',
+            'drag-bar group/resize absolute -left-3 top-0 z-50 flex h-full w-6 cursor-col-resize touch-none items-center justify-center',
             isMobile && 'hidden',
           )}
           role='slider'
@@ -581,7 +595,9 @@ const Notebook: React.FC = ({}) => {
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}
           onKeyDown={handleDragKeyDown}
-        />
+        >
+          <span className='bg-base-content/40 group-hover/resize:bg-base-content/70 h-16 w-1 rounded-full transition-colors' />
+        </div>
         <div className='flex-shrink-0'>
           {isMobile && (
             <div
@@ -630,6 +646,7 @@ const Notebook: React.FC = ({}) => {
               {(
                 [
                   { id: 'guide', label: _('Learning Guide'), Icon: LearningGuideIcon },
+                  { id: 'history', label: _('AI Chapter Guide'), Icon: NotebookAssistantIcon },
                   { id: 'assistant', label: _('Notebook Assistant'), Icon: NotebookAssistantIcon },
                   { id: 'question', label: _('Ask Me One'), Icon: AskMeOneIcon },
                 ] as const
@@ -674,6 +691,9 @@ const Notebook: React.FC = ({}) => {
                     </section>
                   )}
                 </>
+              )}
+              {readingAssistantSection === 'history' && (
+                <HistoryChapterGuideActions bookKey={sideBarBookKey} />
               )}
               {readingAssistantSection === 'question' && (
                 <>

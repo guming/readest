@@ -15,7 +15,7 @@ const corsOptions = {
   'Access-Control-Max-Age': '86400',
 };
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const isApi = request.nextUrl.pathname.startsWith('/api/');
 
   if (isApi) {

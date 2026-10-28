@@ -131,4 +131,74 @@ describe('PDF spread canvas seam (#4587)', () => {
     expect(parseFloat(canvas.style.width)).toBeCloseTo(viewportWidth, 3);
     expect(parseFloat(canvas.style.width) / 1.5).toBeCloseTo(pageBoxWidth, 3);
   });
+
+  it('retries a rejected native range read without an unhandled rejection', async () => {
+    const { makePDF } = await import('foliate-js/pdf.js');
+    const pdfjs = (
+      globalThis as unknown as {
+        pdfjsLib: {
+          getDocument: ReturnType<
+            typeof vi.fn<(options?: { range?: unknown }) => { promise: Promise<unknown> }>
+          >;
+        };
+      }
+    ).pdfjsLib;
+    const task = pdfjs.getDocument();
+    const destroy = vi.fn(async () => undefined);
+    let transport:
+      | {
+          requestDataRange: (begin: number, end: number) => void;
+          onDataRange: ReturnType<typeof vi.fn>;
+        }
+      | undefined;
+    pdfjs.getDocument.mockImplementationOnce((options) => {
+      transport = options?.range as typeof transport;
+      return { ...task, destroy };
+    });
+    const arrayBuffer = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('The resource id 1268604719 is invalid.'))
+      .mockResolvedValueOnce(new ArrayBuffer(10));
+    const file = { size: 1024, slice: vi.fn(() => ({ arrayBuffer })) };
+    await makePDF(file as unknown as File);
+
+    transport!.requestDataRange(0, 10);
+    await vi.waitFor(() => expect(transport!.onDataRange).toHaveBeenCalledOnce());
+    expect(file.slice).toHaveBeenCalledTimes(2);
+    expect(destroy).not.toHaveBeenCalled();
+  });
+
+  it('ends a PDF task when a native range remains invalid', async () => {
+    const { makePDF } = await import('foliate-js/pdf.js');
+    const pdfjs = (
+      globalThis as unknown as {
+        pdfjsLib: {
+          getDocument: ReturnType<
+            typeof vi.fn<(options?: { range?: unknown }) => { promise: Promise<unknown> }>
+          >;
+        };
+      }
+    ).pdfjsLib;
+    const task = pdfjs.getDocument();
+    const destroy = vi.fn(async () => undefined);
+    let transport: { requestDataRange: (begin: number, end: number) => void } | undefined;
+    pdfjs.getDocument.mockImplementationOnce((options) => {
+      transport = options?.range as typeof transport;
+      return { ...task, destroy };
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const file = {
+      size: 1024,
+      slice: vi.fn(() => ({
+        arrayBuffer: async () => {
+          throw new Error('The resource id 1268604719 is invalid.');
+        },
+      })),
+    };
+    await makePDF(file as unknown as File);
+
+    transport!.requestDataRange(0, 10);
+    await vi.waitFor(() => expect(destroy).toHaveBeenCalledOnce());
+    expect(file.slice).toHaveBeenCalledTimes(2);
+  });
 });

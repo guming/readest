@@ -85,28 +85,49 @@ const stripHtml = (html: string): string => {
   return normalizeText(html.replace(/<[^>]+>/g, ' '));
 };
 
-const sectionIdFromHref = (bookDoc: BookDoc, href?: string): string | undefined => {
+const sectionIdFromHref = async (bookDoc: BookDoc, href?: string): Promise<string | undefined> => {
   if (!href) return undefined;
-  const [sectionId] = bookDoc.splitTOCHref(href) as [string | undefined];
-  return sectionId;
+  // PDF documents resolve outline destinations asynchronously.
+  const [sectionId] = await (bookDoc.splitTOCHref(href) as
+    | Array<string | number | null>
+    | Promise<Array<string | number | null>>);
+  return sectionId == null ? undefined : String(sectionId);
 };
 
-const findCurrentSection = (
+const findCurrentSection = async (
   bookDoc: BookDoc,
   view: FoliateView | null,
   progress: BookProgress | null,
-): SectionItem | undefined => {
+): Promise<SectionItem | undefined> => {
   const primaryIndex = view?.renderer.primaryIndex;
   if (typeof primaryIndex === 'number' && bookDoc.sections[primaryIndex]) {
     return bookDoc.sections[primaryIndex];
   }
-  const fromHref = sectionIdFromHref(bookDoc, progress?.sectionHref);
+  const fromHref = await sectionIdFromHref(bookDoc, progress?.sectionHref);
   if (fromHref) {
     const section = bookDoc.sections.find((item) => item.id === fromHref || item.href === fromHref);
     if (section) return section;
   }
   return bookDoc.sections[progress?.index ?? 0];
 };
+
+export async function getCurrentChapterIdentity(
+  bookDoc: BookDoc,
+  view: FoliateView | null,
+  progress: BookProgress | null,
+): Promise<
+  Pick<NotebookAssistantContext, 'contextType' | 'title' | 'chapterId' | 'chapterTitle' | 'pageCfi'>
+> {
+  const section = await findCurrentSection(bookDoc, view, progress);
+  const title = progress?.sectionLabel || section?.href || section?.id || 'Current Chapter';
+  return {
+    contextType: 'chapter',
+    title,
+    chapterId: section?.id || (await sectionIdFromHref(bookDoc, progress?.sectionHref)),
+    chapterTitle: title || undefined,
+    pageCfi: progress?.location,
+  };
+}
 
 export async function buildCurrentPageContext(
   bookDoc: BookDoc,
@@ -127,7 +148,7 @@ export async function buildCurrentPageContext(
     contextType: 'page',
     sourceText,
     title: progress?.pageItem?.label || progress?.sectionLabel || 'Current Page',
-    chapterId: sectionIdFromHref(bookDoc, progress?.sectionHref),
+    chapterId: await sectionIdFromHref(bookDoc, progress?.sectionHref),
     chapterTitle: progress?.sectionLabel || undefined,
     pageNumber: progress?.page,
     pageCfi: progress?.location,
@@ -139,7 +160,7 @@ export async function buildCurrentChapterContext(
   view: FoliateView | null,
   progress: BookProgress | null,
 ): Promise<NotebookAssistantContext> {
-  const section = findCurrentSection(bookDoc, view, progress);
+  const section = await findCurrentSection(bookDoc, view, progress);
   let sourceText = '';
   if (section?.loadText) {
     try {
@@ -178,7 +199,7 @@ export async function buildCurrentChapterContext(
     contextType: 'chapter',
     sourceText,
     title: progress?.sectionLabel || section?.href || section?.id || 'Current Chapter',
-    chapterId: section?.id || sectionIdFromHref(bookDoc, progress?.sectionHref),
+    chapterId: section?.id || (await sectionIdFromHref(bookDoc, progress?.sectionHref)),
     chapterTitle: progress?.sectionLabel || section?.href || section?.id || undefined,
     pageNumber: progress?.page,
     pageCfi: progress?.location,
