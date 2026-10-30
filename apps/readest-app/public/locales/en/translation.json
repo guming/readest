@@ -85,5 +85,11 @@
   "Downloading {{count}} book(s)_one": "Downloading {{count}} book",
   "Downloading {{count}} book(s)_other": "Downloading {{count}} books",
   "Failed to download {{count}} book(s)_one": "Failed to download {{count}} book",
-  "Failed to download {{count}} book(s)_other": "Failed to download {{count}} books"
+  "Failed to download {{count}} book(s)_other": "Failed to download {{count}} books",
+  "Loading highlights...": "Loading highlights...",
+  "No highlights found.": "No highlights found.",
+  "No highlights yet.": "No highlights yet.",
+  "Import Website": "Import Website",
+  "Enter a website with a table of contents. Review the chapters before importing.": "Enter a website with a table of contents. Review the chapters before importing.",
+  "Chapters": "Chapters"
 }

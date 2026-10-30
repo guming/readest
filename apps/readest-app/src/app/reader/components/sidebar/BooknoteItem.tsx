@@ -184,9 +184,7 @@ const BooknoteItem: React.FC<BooknoteItemProps> = ({
     const linkType =
       getViewSettings(bookKey)?.noteExportConfig?.linkType ?? DEFAULT_NOTE_EXPORT_CONFIG.linkType;
     const url = buildAnnotationUrl({ bookHash, noteId: item.id, cfi: item.cfi }, linkType);
-    const linkLabel = item.page
-      ? _('Page: {{number}}', { number: item.page })
-      : _('Open in Readest');
+    const linkLabel = item.page ? _('Page: {{number}}', { number: item.page }) : _('Open in Lumen');
     const markdown = buildAnnotationCopyMarkdown({
       text: item.text,
       note: item.note,

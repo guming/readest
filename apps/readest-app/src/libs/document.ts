@@ -93,6 +93,7 @@ export type BookMetadata = {
 
   calibreColumns?: CalibreCustomColumn[];
   feedUrl?: string;
+  siteUrl?: string;
   absSource?: string;
   absMediaType?: 'podcast';
   absEpisodeCount?: number;

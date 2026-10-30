@@ -42,7 +42,7 @@ describe('ImportAnnotationsDialog', () => {
     );
 
     expect(screen.getByRole('dialog', { name: 'Import Annotations' })).toBeTruthy();
-    expect(screen.getByText('Readest')).toBeTruthy();
+    expect(screen.getByText('Lumen')).toBeTruthy();
     expect(screen.getByText('Moon+ Reader')).toBeTruthy();
   });
 
@@ -74,7 +74,7 @@ describe('ImportAnnotationsDialog', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Readest'));
+    fireEvent.click(screen.getByText('Lumen'));
     expect(onImportReadest).toHaveBeenCalledTimes(1);
   });
 });

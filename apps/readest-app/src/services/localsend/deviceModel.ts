@@ -31,6 +31,6 @@ export function localSendDeviceModel(os: OsPlatform, isTablet: boolean): string 
     case 'linux':
       return 'Linux';
     default:
-      return 'Readest';
+      return 'Lumen';
   }
 }

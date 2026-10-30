@@ -168,7 +168,7 @@
             "start",
             "",
             {
-              "validator": "^.*Readest(.*)\\.exe$"
+              "validator": "^.*(Readest|Lumen)(.*)\\.exe$"
             }
           ]
         },
@@ -178,7 +178,7 @@
           "args": [
             "+x",
             {
-              "validator": "^.*Readest(.*)\\.AppImage$"
+              "validator": "^.*(Readest|Lumen)(.*)\\.AppImage$"
             }
           ]
         },
@@ -187,7 +187,7 @@
           "cmd": "setsid",
           "args": [
             {
-              "validator": "^.*Readest(.*)\\.AppImage$"
+              "validator": "^.*(Readest|Lumen)(.*)\\.AppImage$"
             }
           ]
         }

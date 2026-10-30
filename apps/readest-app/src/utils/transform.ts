@@ -11,6 +11,7 @@ import {
 import { DBBookConfig, DBBook, DBBookNote } from '@/types/records';
 import { sanitizeString } from './sanitize';
 import { buildFeedBookUrl } from '@/services/rss/feedBookUrl';
+import { buildSiteBookUrl } from '@/services/site/siteBookUrl';
 
 export const transformBookConfigToDB = (bookConfig: unknown, userId: string): DBBookConfig => {
   const {
@@ -163,6 +164,9 @@ export const transformBookFromDB = (dbBook: DBBook): Book => {
   // metadata so the reader can rebuild the feed:// descriptor here.
   if (!book.url && book.metadata?.feedUrl) {
     book.url = buildFeedBookUrl(book.metadata.feedUrl);
+  }
+  if (!book.url && book.metadata?.siteUrl) {
+    book.url = buildSiteBookUrl(book.metadata.siteUrl);
   }
   return book;
 };

@@ -13,6 +13,10 @@ import {
 import { md5Fingerprint } from '@/utils/md5';
 import { SIZE_PER_LOC, SIZE_PER_TIME_UNIT } from '@/services/constants';
 import { isFeedBookUrl } from '@/services/rss/feedBookUrl';
+import { isSiteBookUrl } from '@/services/site/siteBookUrl';
+
+export const isSubscriptionBook = (book: Book): boolean =>
+  !!book.url && (isFeedBookUrl(book.url) || isSiteBookUrl(book.url));
 
 /** Valid sort types for the library */
 const VALID_SORT_TYPES: LibrarySortByType[] = Object.values(LibrarySortByType);
@@ -173,6 +177,7 @@ export const selectDownloadableBooks = (
       hashes.has(book.hash) &&
       !book.deletedAt &&
       !(book.url && isFeedBookUrl(book.url)) &&
+      !(book.url && isSiteBookUrl(book.url)) &&
       !!book.uploadedAt &&
       !book.downloadedAt,
   );

@@ -61,9 +61,9 @@ import { useOpenBookLink } from '@/hooks/useOpenBookLink';
 import { useReadingWidget } from '@/hooks/useReadingWidget';
 import { useOpenShareLink } from '@/hooks/useOpenShareLink';
 import { useClipUrlIngress } from '@/hooks/useClipUrlIngress';
-import { useWebBrowserDownloads } from '@/hooks/useWebBrowserDownloads';
 import { useABSSync } from '@/hooks/useABSSync';
 import LocalSendManager from '@/components/localsend/LocalSendManager';
+import LibraryViewTabs from '@/components/LibraryViewTabs';
 import { splitLibraryOpenIds } from '@/utils/audiobook';
 import { useKeyDownActions } from '@/hooks/useKeyDownActions';
 import { debounce } from '@/utils/debounce';
@@ -115,7 +115,9 @@ import ImportFromFolderDialog, {
 } from './components/ImportFromFolderDialog';
 import ImportFromUrlDialog from './components/ImportFromUrlDialog';
 import ImportNovelDialog from './components/ImportNovelDialog';
-import WebSourcesDialog from './components/WebSourcesDialog';
+import ImportSiteDialog from './components/ImportSiteDialog';
+import { createSiteBook, refreshSiteBook, type SiteToc } from '@/services/site/siteBook';
+import type { FileSystem } from '@/types/system';
 import NowPlayingBar from './components/NowPlayingBar';
 import { ttsSessionManager } from '@/services/tts';
 import { convertToEpubWithWorker } from '@/services/send/conversion/conversionWorker';
@@ -275,7 +277,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   const [showAddFeed, setShowAddFeed] = useState(false);
   const [showImportFromUrl, setShowImportFromUrl] = useState(false);
   const [showImportNovel, setShowImportNovel] = useState(false);
-  const [showWebSources, setShowWebSources] = useState(false);
+  const [showImportSite, setShowImportSite] = useState(false);
   const [loading, setLoading] = useState(false);
   // Seed from the library store: if we already have books in memory (the
   // common reader → library return path), treat the page as loaded
@@ -386,7 +388,6 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   useReadingWidget();
   useOpenShareLink();
   useClipUrlIngress();
-  useWebBrowserDownloads();
   useABSSync();
   useTransferQueue(libraryLoaded);
 
@@ -671,10 +672,6 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
       message: _('Subscribed to "{{title}}"', { title: book.title }),
       timeout: 3000,
     });
-  };
-
-  const handleShowOPDSDialog = () => {
-    setShowCatalogManager(true);
   };
 
   const handleDismissOPDSDialog = () => {
@@ -1838,11 +1835,10 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
             appService?.canReadExternalDir ? handleImportBooksFromDirectory : undefined
           }
           onImportBookFromUrl={isTauriAppPlatform() ? () => setShowImportFromUrl(true) : undefined}
-          onImportFromWebBrowser={isTauriAppPlatform() ? () => setShowWebSources(true) : undefined}
           onImportBookFromNovelUrl={
             isTauriAppPlatform() ? () => setShowImportNovel(true) : undefined
           }
-          onOpenCatalogManager={handleShowOPDSDialog}
+          onImportSite={isTauriAppPlatform() ? () => setShowImportSite(true) : undefined}
           onOpenFeeds={handleShowFeeds}
           onToggleSelectMode={() => handleSetSelectMode(!isSelectMode)}
           onSelectAll={handleSelectAll}
@@ -1875,6 +1871,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
           max='100'
         />
       </div>
+      <LibraryViewTabs active='books' onHighlights={() => router.push('/highlights')} />
       {(loading || isSyncing) && (
         <div className='fixed inset-0 z-50 flex items-center justify-center'>
           <Spinner loading />
@@ -2101,7 +2098,28 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         onClose={() => setShowImportNovel(false)}
         onImport={handleImportNovelFile}
       />
-      <WebSourcesDialog isOpen={showWebSources} onClose={() => setShowWebSources(false)} />
+      <ImportSiteDialog
+        isOpen={showImportSite}
+        onClose={() => setShowImportSite(false)}
+        onImport={async (toc: SiteToc, onProgress) => {
+          if (!appService) return;
+          const newBook = createSiteBook(toc);
+          const book = useLibraryStore.getState().getBookByHash(newBook.hash) ?? newBook;
+          await refreshSiteBook(appService as unknown as FileSystem, book, toc, onProgress);
+          if (book === newBook) {
+            try {
+              const cover = generateFeedCoverSvg(toc.url, book.title);
+              const pngBytes = await rasterizeCoverSvg(cover);
+              await appService.createDir(book.hash, 'Books', true);
+              await appService.writeFile(getCoverFilename(book), 'Books', pngBytes);
+              book.coverImageUrl = await appService.generateCoverImageUrl(book);
+            } catch (e) {
+              console.warn('Failed to generate website book cover:', e);
+            }
+            await useLibraryStore.getState().updateBooks(envConfig, [book]);
+          }
+        }}
+      />
       <Toast />
     </div>
   );

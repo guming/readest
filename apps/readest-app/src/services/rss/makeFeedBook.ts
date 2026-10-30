@@ -48,7 +48,25 @@ export async function makeFeedBook(
     const inner = Array.from(docBody.childNodes)
       .map((n) => serializer.serializeToString(n))
       .join('');
-    const h1 = `<h1>${escapeHtml(entry.title)}</h1>`;
+    // Only inspect the first content element, descending through wrappers. A later
+    // matching heading may be a legitimate section and must remain untouched.
+    let first = docBody.firstElementChild;
+    while (
+      first &&
+      !/^H[1-6]$/.test(first.tagName) &&
+      first.firstElementChild &&
+      !Array.from(first.childNodes)
+        .slice(0, Array.from(first.childNodes).indexOf(first.firstElementChild))
+        .some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())
+    ) {
+      first = first.firstElementChild;
+    }
+    const normalize = (text: string) => text.replace(/\s+/g, ' ').trim();
+    const hasTitle =
+      first &&
+      /^H[1-6]$/.test(first.tagName) &&
+      normalize(first.textContent ?? '') === normalize(entry.title);
+    const h1 = hasTitle ? '' : `<h1>${escapeHtml(entry.title)}</h1>`;
     return wrapXhtml(h1 + inner);
   });
 

@@ -41,6 +41,19 @@ describe('makeFeedBook', () => {
     expect(doc0.body.textContent).toContain('body c'); // C is slot-7, date-first
   });
 
+  it('does not prepend a title already present at the start of cached content', async () => {
+    const book = await makeFeedBook(manifest, async (entry) =>
+      entry.id === 'c'
+        ? '<div><h1> C </h1><p>Article content</p><h2>C</h2></div>'
+        : '<p>Article content</p>',
+    );
+    const existing = await book.sections[0]!.createDocument();
+    expect(existing.querySelectorAll('h1')).toHaveLength(1);
+    expect(existing.querySelector('h2')?.textContent).toBe('C');
+    const missing = await book.sections[1]!.createDocument();
+    expect(missing.querySelector('h1')?.textContent).toBe('A');
+  });
+
   it('sorts sections by publishedAt ascending (entries with date before undated)', async () => {
     const mixedManifest: FeedManifest = {
       feedUrl: 'u',

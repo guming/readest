@@ -1,8 +1,6 @@
 import clsx from 'clsx';
 import { MdLanguage, MdLink, MdMenuBook, MdRssFeed } from 'react-icons/md';
-import { LuLibrary } from 'react-icons/lu';
 import { IoFileTray } from 'react-icons/io5';
-import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import MenuItem from '@/components/MenuItem';
 import Menu from '@/components/Menu';
@@ -12,9 +10,8 @@ interface ImportMenuProps {
   onImportBooksFromFiles: () => void;
   onImportBooksFromDirectory?: () => void;
   onImportBookFromUrl?: () => void;
-  onImportFromWebBrowser?: () => void;
   onImportBookFromNovelUrl?: () => void;
-  onOpenCatalogManager: () => void;
+  onImportSite?: () => void;
   onOpenFeeds: () => void;
 }
 
@@ -23,13 +20,11 @@ const ImportMenu: React.FC<ImportMenuProps> = ({
   onImportBooksFromFiles,
   onImportBooksFromDirectory,
   onImportBookFromUrl,
-  onImportFromWebBrowser,
   onImportBookFromNovelUrl,
-  onOpenCatalogManager,
+  onImportSite,
   onOpenFeeds,
 }) => {
   const _ = useTranslation();
-  const { appService } = useEnv();
 
   const handleImportFromFiles = () => {
     onImportBooksFromFiles();
@@ -48,16 +43,6 @@ const ImportMenu: React.FC<ImportMenuProps> = ({
 
   const handleImportFromNovelUrl = () => {
     onImportBookFromNovelUrl?.();
-    setIsDropdownOpen?.(false);
-  };
-
-  const handleImportFromWebBrowser = () => {
-    onImportFromWebBrowser?.();
-    setIsDropdownOpen?.(false);
-  };
-
-  const handleOpenCatalogManager = () => {
-    onOpenCatalogManager();
     setIsDropdownOpen?.(false);
   };
 
@@ -90,13 +75,6 @@ const ImportMenu: React.FC<ImportMenuProps> = ({
           onClick={handleImportFromUrl}
         />
       )}
-      {onImportFromWebBrowser && (
-        <MenuItem
-          label={_('From Web Browser')}
-          Icon={<MdLanguage className='h-5 w-5' />}
-          onClick={handleImportFromWebBrowser}
-        />
-      )}
       {onImportBookFromNovelUrl && (
         <MenuItem
           label={_('From Web Novel')}
@@ -104,15 +82,20 @@ const ImportMenu: React.FC<ImportMenuProps> = ({
           onClick={handleImportFromNovelUrl}
         />
       )}
+      {onImportSite && (
+        <MenuItem
+          label={_('Import Website')}
+          Icon={<MdLanguage className='h-5 w-5' />}
+          onClick={() => {
+            onImportSite();
+            setIsDropdownOpen?.(false);
+          }}
+        />
+      )}
       <MenuItem
         label={_('From Feed URL')}
         Icon={<MdRssFeed className='h-5 w-5' />}
         onClick={handleOpenFeeds}
-      />
-      <MenuItem
-        label={appService?.isOnlineCatalogsAccessible ? _('Online Library') : _('OPDS Catalogs')}
-        Icon={<LuLibrary className='h-5 w-5' />}
-        onClick={handleOpenCatalogManager}
       />
     </Menu>
   );

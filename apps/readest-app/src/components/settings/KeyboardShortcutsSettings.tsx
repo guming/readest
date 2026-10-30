@@ -226,7 +226,7 @@ const KeyboardShortcutsSettings: React.FC<KeyboardShortcutsSettingsProps> = ({ o
       <SubPageHeader
         parentLabel={_('Behavior')}
         currentLabel={_('Keyboard Shortcuts')}
-        description={_('Choose the keyboard keys or mouse buttons that control Readest.')}
+        description={_('Choose the keyboard keys or mouse buttons that control Lumen.')}
         onBack={onBack}
         rightSlot={
           <button

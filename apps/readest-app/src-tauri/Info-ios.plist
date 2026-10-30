@@ -5,7 +5,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>Readest uses the local network to discover nearby devices and transfer books with Nearby BookDrop.</string>
+    <string>Lumen uses the local network to discover nearby devices and transfer books with Nearby BookDrop.</string>
     <key>CFBundleLocalizations</key>
     <array>
       <string>en</string>
@@ -106,7 +106,7 @@
         <key>NSUbiquitousContainerIsDocumentScopePublic</key>
         <true/>
         <key>NSUbiquitousContainerName</key>
-        <string>Readest</string>
+        <string>Lumen</string>
         <key>NSUbiquitousContainerSupportedFolderLevels</key>
         <string>Any</string>
       </dict>

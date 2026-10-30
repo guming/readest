@@ -40,6 +40,7 @@ import {
   ensureLibrarySortByType,
   ensureLibrarySecondarySortByType,
   expandBookshelfSelection,
+  isSubscriptionBook,
   getBookSortValue,
   getGroupSortValue,
   compareSortValues,
@@ -114,6 +115,7 @@ type BookshelfListContext = {
    * identity stable and does not reset its scroller on every Bookshelf render.
    */
   recentShelfHeader: React.ReactNode;
+  feedsShelfFooter: React.ReactNode;
 };
 
 const BOOKSHELF_GRID_CLASSES =
@@ -156,16 +158,22 @@ BookshelfLinearList.displayName = 'BookshelfLinearList';
 const BookshelfHeader = ({ context }: { context?: BookshelfListContext }) => (
   <>{context?.recentShelfHeader ?? null}</>
 );
+const BookshelfFooter = ({ context }: { context?: BookshelfListContext }) => (
+  <>
+    {context?.feedsShelfFooter ?? null}
+    <div style={{ height: 34 }} />
+  </>
+);
 
 const GRID_VIRTUOSO_COMPONENTS: GridComponents<BookshelfListContext> = {
   List: BookshelfGridList,
   Header: BookshelfHeader,
-  Footer: () => <div style={{ height: 34 }} />,
+  Footer: BookshelfFooter,
 };
 const LIST_VIRTUOSO_COMPONENTS: Components<unknown, BookshelfListContext> = {
   List: BookshelfLinearList,
   Header: BookshelfHeader,
-  Footer: () => <div style={{ height: 34 }} />,
+  Footer: BookshelfFooter,
 };
 
 const Bookshelf: React.FC<BookshelfProps> = ({
@@ -271,9 +279,20 @@ const Bookshelf: React.FC<BookshelfProps> = ({
   }, [libraryBooks, queryTerm]);
 
   const manualGroupName = groupBy === LibraryGroupByType.Group ? getGroupName(groupId) : undefined;
+  const feedBooks = useMemo(
+    () => libraryBooks.filter((book) => !book.deletedAt && isSubscriptionBook(book)),
+    [libraryBooks],
+  );
+  const shelfSourceBooks = useMemo(
+    () =>
+      !queryTerm && !groupId
+        ? libraryBooks.filter((book) => !isSubscriptionBook(book))
+        : libraryBooks,
+    [libraryBooks, queryTerm, groupId],
+  );
   const currentShelfBooks = useMemo(
-    () => resolveCurrentShelfBooks(libraryBooks, groupBy, groupId, manualGroupName),
-    [libraryBooks, groupBy, groupId, manualGroupName],
+    () => resolveCurrentShelfBooks(shelfSourceBooks, groupBy, groupId, manualGroupName),
+    [shelfSourceBooks, groupBy, groupId, manualGroupName],
   );
   const filteredShelfBooks = useMemo(() => {
     const bookFilter = createBookFilter(queryTerm);
@@ -757,7 +776,11 @@ const Bookshelf: React.FC<BookshelfProps> = ({
   // Flat recency slice of the whole library, independent of the main shelf's
   // sort/grouping. Built from `libraryBooks` (not the sorted/filtered items).
   const recentBooks = useMemo(
-    () => selectRecentShelfBooks(libraryBooks, RECENT_SHELF_BOOK_COUNT),
+    () =>
+      selectRecentShelfBooks(
+        libraryBooks.filter((book) => !isSubscriptionBook(book)),
+        RECENT_SHELF_BOOK_COUNT,
+      ),
     [libraryBooks],
   );
 
@@ -799,14 +822,53 @@ const Bookshelf: React.FC<BookshelfProps> = ({
     ],
   );
 
+  const showFeedsShelf = !queryTerm && !groupId && !isSelectMode && feedBooks.length > 0;
+  const feedsShelfFooter = useMemo(
+    () =>
+      showFeedsShelf ? (
+        <RecentShelf
+          title={_('Feeds')}
+          books={feedBooks}
+          coverFit={coverFit as LibraryCoverFitType}
+          autoColumns={settings.libraryAutoColumns}
+          fixedColumns={settings.libraryColumns}
+          onOpenBook={openRecentBook}
+          handleBookUpload={handleBookUpload}
+          handleBookDownload={handleBookDownload}
+          showBookDetailsModal={handleShowDetailsBook}
+          showTimeRemaining={showTimeRemaining}
+        />
+      ) : null,
+    [
+      showFeedsShelf,
+      feedBooks,
+      coverFit,
+      settings.libraryAutoColumns,
+      settings.libraryColumns,
+      openRecentBook,
+      handleBookUpload,
+      handleBookDownload,
+      handleShowDetailsBook,
+      showTimeRemaining,
+      _,
+    ],
+  );
+
   const listContext = useMemo<BookshelfListContext>(
     () => ({
       autoColumns: settings.libraryAutoColumns,
       fixedColumns: settings.libraryColumns,
       recentShelfHeader,
+      feedsShelfFooter,
       showTimeRemaining,
     }),
-    [settings.libraryAutoColumns, settings.libraryColumns, recentShelfHeader, showTimeRemaining],
+    [
+      settings.libraryAutoColumns,
+      settings.libraryColumns,
+      recentShelfHeader,
+      feedsShelfFooter,
+      showTimeRemaining,
+    ],
   );
 
   const renderBookshelfItem = useCallback(
@@ -938,6 +1000,7 @@ const Bookshelf: React.FC<BookshelfProps> = ({
         // React swap children inside it caused NotFoundError crashes on
         // WebKit when a search was cleared.
         <div ref={osRootRef} data-overlayscrollbars-initialize='' className='min-h-0 flex-1'>
+          {!contentSearch?.query.trim() && !hasItems && showFeedsShelf && feedsShelfFooter}
           {!contentSearch?.query.trim() && hasItems && isGridMode && (
             <VirtuosoGrid<unknown, BookshelfListContext>
               overscan={200}

@@ -2038,5 +2038,20 @@
   "Loading models": "正在加载模型",
   "AI Translation": "AI 模型翻译",
   "After a moment of inactivity": "静止片刻后隐藏",
-  "Ambient Mode": "环境光主题"
+  "Ambient Mode": "环境光主题",
+  "Loading highlights...": "正在加载高亮...",
+  "No highlights found.": "未找到高亮内容。",
+  "No highlights yet.": "还没有高亮内容。",
+  "Import Website": "导入网站",
+  "Enter a website with a table of contents. Review the chapters before importing.": "输入带目录的网站地址，导入前请确认章节列表。",
+  "Chapters": "章",
+  "Paste the link to a web novel’s chapter list. Lumen downloads the chapters and saves them as a book.": "粘贴网络小说目录的链接。Lumen 会下载章节并保存为书籍。",
+  "Drop books to nearby Lumen devices, and to LocalSend apps, over your local network.": "通过局域网向附近的 Lumen 设备和 LocalSend 应用发送书籍。",
+  "Receive books while Lumen is open": "Lumen 打开时接收书籍",
+  "Choose the keyboard keys or mouse buttons that control Lumen.": "选择用于控制 Lumen 的键盘按键或鼠标按钮。",
+  "Choose one known match. Lumen will map the remaining chapters sequentially from it.": "选择一个已知的匹配项。Lumen 将从此处依次匹配其余章节。",
+  "Import highlights and notes exported from Lumen or another reading app.": "导入从 Lumen 或其他阅读应用导出的标注和笔记。",
+  "Lumen annotations file (.json)": "Lumen 标注文件（.json）",
+  "Select Lumen Annotations File": "选择 Lumen 标注文件",
+  "This is not a Lumen annotations file.": "这不是 Lumen 标注文件。"
 }

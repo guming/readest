@@ -289,7 +289,7 @@ export class NotionClient {
   private async proxyHeaders(body?: string): Promise<Record<string, string>> {
     const readestToken = await getAccessToken();
     if (!readestToken) {
-      throw new Error('Notion sync requires signing in to Readest on the web');
+      throw new Error('Notion sync requires signing in to Lumen on the web');
     }
     return {
       Authorization: `Bearer ${readestToken}`,
@@ -457,7 +457,7 @@ export class NotionClient {
       type: 'paragraph',
       paragraph: {
         rich_text: richTextItems(
-          'Synced from Readest',
+          'Synced from Lumen',
           { italic: true, color: 'gray' },
           bookMarkerUrl(bookHash),
         ),
