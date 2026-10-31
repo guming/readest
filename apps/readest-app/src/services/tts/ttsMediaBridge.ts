@@ -28,6 +28,8 @@ export interface TTSMediaBridgeMeta {
   coverImageUrl: string | null;
   metadataMode: TTSMediaMetadataMode;
   ownsAudioFocus?: boolean;
+  /** In-app route for media that is not a library book. */
+  playbackUrl?: string;
   // Live section label while the reader is mounted; returns undefined when
   // the supplying hook is dead (headless) — the bridge then keeps the last
   // known label rather than freezing on a stale store read.

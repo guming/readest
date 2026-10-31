@@ -15,10 +15,14 @@ export interface RssFeedItem {
   contentHtml?: string;
   /** Hero image URL if present (enclosure / media:content / og image). */
   imageUrl?: string;
+  audio?: { url: string; mimeType: string; byteLength?: number };
+  duration?: number;
   read: boolean;
 }
 
 export interface RssFeed {
+  kind?: 'article' | 'podcast';
+  author?: string;
   /** Stable id: the subscribed feed URL. */
   id: string;
   /** The feed document URL (what we re-fetch on refresh). */
@@ -36,6 +40,8 @@ export interface RssFeed {
 /** Result of parsing a raw feed document (metadata + items), before it is
  *  merged into an existing subscription's item list. */
 export interface ParsedFeed {
+  kind?: 'article' | 'podcast';
+  author?: string;
   title: string;
   siteUrl?: string;
   description?: string;

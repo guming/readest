@@ -1,12 +1,18 @@
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface LibraryViewTabsProps {
-  active: 'books' | 'highlights';
+  active: 'books' | 'highlights' | 'podcasts';
   onBooks?: () => void;
   onHighlights?: () => void;
+  onPodcasts?: () => void;
 }
 
-export default function LibraryViewTabs({ active, onBooks, onHighlights }: LibraryViewTabsProps) {
+export default function LibraryViewTabs({
+  active,
+  onBooks,
+  onHighlights,
+  onPodcasts,
+}: LibraryViewTabsProps) {
   const _ = useTranslation();
   return (
     <nav
@@ -30,6 +36,15 @@ export default function LibraryViewTabs({ active, onBooks, onHighlights }: Libra
         className={`border-b-2 px-1 py-3 text-sm font-medium ${active === 'highlights' ? 'border-primary text-base-content' : 'text-base-content/60 border-transparent hover:text-base-content'}`}
       >
         {_('Highlights')}
+      </button>
+      <button
+        type='button'
+        onClick={onPodcasts}
+        disabled={active === 'podcasts'}
+        aria-current={active === 'podcasts' ? 'page' : undefined}
+        className={`border-b-2 px-1 py-3 text-sm font-medium ${active === 'podcasts' ? 'border-primary text-base-content' : 'text-base-content/60 border-transparent hover:text-base-content'}`}
+      >
+        {_('Podcasts')}
       </button>
     </nav>
   );

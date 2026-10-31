@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { IoArrowBack } from 'react-icons/io5';
 import { PiCopy, PiShareNetwork } from 'react-icons/pi';
 import LibraryBookCover from '@/components/BookCover';
+import NowPlayingBar from '@/app/library/components/NowPlayingBar';
 import LibraryViewTabs from '@/components/LibraryViewTabs';
 import { Toast } from '@/components/Toast';
 import { useEnv } from '@/context/EnvContext';
@@ -163,12 +164,15 @@ const HighlightsContent = () => {
       {!bookHash && (
         <LibraryViewTabs
           active='highlights'
+          onPodcasts={() => router.push('/podcasts')}
           onBooks={() => navigateToLibrary(router, undefined, undefined, true)}
         />
       )}
       <div
         className='scroll-container min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6'
-        style={{ paddingBottom: Math.max(20, insets?.bottom ?? 0) }}
+        style={{
+          paddingBottom: `calc(${Math.max(20, insets?.bottom ?? 0)}px + var(--now-playing-inset, 0px))`,
+        }}
       >
         <div className={bookHash ? 'mx-auto max-w-3xl space-y-3' : 'space-y-3'}>
           {loading ? (
@@ -263,6 +267,7 @@ const HighlightsContent = () => {
           )}
         </div>
       </div>
+      <NowPlayingBar isSelectMode={false} />
       <Toast />
     </main>
   );

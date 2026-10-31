@@ -33,11 +33,13 @@ import { useCountdownLabel } from '@/app/reader/components/tts/useCountdownLabel
 import Dialog from '@/components/Dialog';
 import Spinner from '@/components/Spinner';
 import EpisodesView from './EpisodesView';
+import { PodcastArtwork } from '@/app/library/components/feeds/PodcastArtwork';
 
 type PlayerSubView = 'main' | 'speed' | 'timer' | 'chapters' | 'episodes';
 
 interface PlayerViewProps {
-  book: Book;
+  book: Pick<Book, 'hash' | 'title' | 'author' | 'coverImageUrl' | 'filePath'>;
+  onBrowseEpisodes?: () => void;
   bookKey: string;
   controller: AudiobookController;
   onGoBack: () => void;
@@ -61,6 +63,7 @@ const PlayerView = ({
   onGoBack,
   onSelectEpisode,
   pendingEpisodeId,
+  onBrowseEpisodes,
 }: PlayerViewProps) => {
   const _ = useTranslation();
   const { envConfig, appService } = useEnv();
@@ -163,7 +166,7 @@ const PlayerView = ({
   // the first await and never cleared" failure mode here to work around, so
   // the plain flag (not a promise cache) is enough.
   useEffect(() => {
-    if (view !== 'episodes') return;
+    if (view !== 'episodes' || onBrowseEpisodes) return;
     let cancelled = false;
     setEpisodesData(null);
     (async () => {
@@ -265,8 +268,12 @@ const PlayerView = ({
         <IoArrowBack size={iconSize24 * 0.85} className='rtl:rotate-180' />
       </button>
       <div className='pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-16 text-center'>
-        <span className='line-clamp-1 text-sm font-semibold'>{headingTitle}</span>
-        <span className='text-base-content/70 line-clamp-1 text-xs'>{headingSubtitle}</span>
+        <span className='line-clamp-1 text-sm font-semibold'>
+          {onBrowseEpisodes ? _('Now playing') : headingTitle}
+        </span>
+        {!onBrowseEpisodes && (
+          <span className='text-base-content/70 line-clamp-1 text-xs'>{headingSubtitle}</span>
+        )}
       </div>
     </div>
   );
@@ -274,8 +281,21 @@ const PlayerView = ({
   return (
     <div className='bg-base-100 flex h-full w-full flex-col overflow-hidden'>
       {header}
-      <div className='flex w-full flex-1 flex-col items-center gap-4 overflow-y-auto px-4 pb-6 pt-2'>
-        {book.coverImageUrl && !coverFailed ? (
+      <div
+        className={clsx(
+          'flex w-full flex-1 flex-col items-center overflow-y-auto px-6 pb-8',
+          onBrowseEpisodes
+            ? 'mx-auto max-w-lg gap-6 pt-6 sm:justify-center sm:pb-16 sm:pt-0'
+            : 'gap-4 pt-2',
+        )}
+      >
+        {onBrowseEpisodes ? (
+          <PodcastArtwork
+            src={book.coverImageUrl}
+            title={book.title}
+            className='w-56 shrink-0 sm:w-64'
+          />
+        ) : book.coverImageUrl && !coverFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={book.coverImageUrl}
@@ -285,11 +305,22 @@ const PlayerView = ({
           />
         ) : (
           <div className='eink-bordered bg-base-200 text-base-content/40 mt-4 flex h-56 w-56 items-center justify-center rounded-2xl'>
-            <MdMenuBook size={iconSize32 * 1.5} />
+            {episodeId ? (
+              <MdPodcasts size={iconSize32 * 1.5} />
+            ) : (
+              <MdMenuBook size={iconSize32 * 1.5} />
+            )}
           </div>
         )}
         <div className='flex w-full flex-col items-center gap-0.5 text-center'>
-          <span className='line-clamp-2 text-lg font-semibold'>{headingTitle}</span>
+          <span
+            className={clsx(
+              'line-clamp-2 text-balance font-semibold leading-snug',
+              onBrowseEpisodes ? 'text-xl' : 'text-lg',
+            )}
+          >
+            {headingTitle}
+          </span>
           <span className='text-base-content/70 line-clamp-1 text-sm'>{headingSubtitle}</span>
           {currentChapter && (
             <span className='text-base-content/60 line-clamp-1 text-sm'>
@@ -306,15 +337,17 @@ const PlayerView = ({
           />
         </div>
         <div dir='ltr' className='flex items-center justify-center gap-2'>
-          <button
-            type='button'
-            className='rounded-full p-2'
-            title={_('Previous Chapter')}
-            aria-label={_('Previous Chapter')}
-            onClick={() => void controller.backward()}
-          >
-            <MdSkipPrevious size={iconSize28} />
-          </button>
+          {chapters.length > 0 && (
+            <button
+              type='button'
+              className='rounded-full p-2'
+              title={_('Previous Chapter')}
+              aria-label={_('Previous Chapter')}
+              onClick={() => void controller.backward()}
+            >
+              <MdSkipPrevious size={iconSize28} />
+            </button>
+          )}
           <button
             type='button'
             className='rounded-full p-2'
@@ -341,15 +374,17 @@ const PlayerView = ({
           >
             <TbRewindForward30 size={iconSize24} />
           </button>
-          <button
-            type='button'
-            className='rounded-full p-2'
-            title={_('Next Chapter')}
-            aria-label={_('Next Chapter')}
-            onClick={() => void controller.forward()}
-          >
-            <MdSkipNext size={iconSize28} />
-          </button>
+          {chapters.length > 0 && (
+            <button
+              type='button'
+              className='rounded-full p-2'
+              title={_('Next Chapter')}
+              aria-label={_('Next Chapter')}
+              onClick={() => void controller.forward()}
+            >
+              <MdSkipNext size={iconSize28} />
+            </button>
+          )}
         </div>
         <div className='flex w-full max-w-md gap-2'>
           <button
@@ -391,7 +426,7 @@ const PlayerView = ({
             <button
               type='button'
               aria-label={_('Episodes')}
-              onClick={() => setView('episodes')}
+              onClick={() => (onBrowseEpisodes ? onBrowseEpisodes() : setView('episodes'))}
               className='not-eink:bg-base-200 eink-bordered flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl'
             >
               <MdPodcasts size={iconSize18} />

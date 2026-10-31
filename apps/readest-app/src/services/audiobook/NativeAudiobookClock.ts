@@ -15,6 +15,7 @@ interface PlayoutPosition {
   session: number;
   index: number;
   positionMs: number;
+  durationMs?: number;
   playing: boolean;
 }
 
@@ -34,6 +35,11 @@ export class NativeAudiobookClock implements AudiobookClock {
   #listener: PluginListener | null = null;
   #listenerStarted = false;
   #rate = 1;
+  #duration = 0;
+
+  get duration(): number {
+    return this.#duration;
+  }
   #userPaused = true;
   #pollTimer: ReturnType<typeof setInterval> | null = null;
   #cache = { mediaSec: 0, playing: false, at: 0 };
@@ -91,6 +97,7 @@ export class NativeAudiobookClock implements AudiobookClock {
   // surfaces exclusively through the async 'error' native event in
   // #onNativeEvent, once load() has already resolved.
   async load(url: string, startAt: number): Promise<void> {
+    this.#duration = 0;
     await this.#ensureReady();
     const positionMs = Math.max(0, startAt) * 1000;
     await invoke('plugin:native-tts|playout_control', {
@@ -232,6 +239,7 @@ export class NativeAudiobookClock implements AudiobookClock {
     try {
       const pos = await invoke<PlayoutPosition>('plugin:native-tts|playout_position');
       if (pos.session !== this.#resolvedSession) return;
+      this.#duration = (pos.durationMs ?? 0) / 1000;
       if (pos.index >= 0) {
         this.#cache = {
           mediaSec: pos.positionMs / 1000,

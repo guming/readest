@@ -35,6 +35,10 @@ const mockManager = vi.hoisted(() => {
         start: ReturnType<typeof vi.fn>;
       };
     } | null = null;
+    meta: { title: string; coverImageUrl: string | null; playbackUrl?: string } | null = null;
+    getActiveMeta() {
+      return this.meta;
+    }
     sleepTimer: { timeoutSec: number; firesAt: number } | null = null;
     stopActive = vi.fn().mockResolvedValue(undefined);
     getActiveSession() {
@@ -72,6 +76,7 @@ describe('NowPlayingBar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockManager.session = null;
+    mockManager.meta = null;
     mockManager.sleepTimer = null;
     getBookData.mockReturnValue({
       book: { title: 'Alice in Wonderland', coverImageUrl: null },
@@ -92,6 +97,20 @@ describe('NowPlayingBar', () => {
     render(<NowPlayingBar isSelectMode={false} />);
     expect(screen.getByText('Alice in Wonderland')).toBeTruthy();
     expect(screen.getByRole('status')).toBeTruthy();
+  });
+
+  test('opens a podcast using its playback route and session metadata', () => {
+    mockManager.session = makeSession();
+    mockManager.meta = {
+      title: 'RSS Episode',
+      coverImageUrl: null,
+      playbackUrl: '/podcast?feed=show&episode=1',
+    };
+    getBookData.mockReturnValue(undefined);
+    render(<NowPlayingBar isSelectMode={false} />);
+    fireEvent.click(screen.getByText('RSS Episode'));
+    expect(pushMock).toHaveBeenCalledWith('/podcast?feed=show&episode=1');
+    expect(navigateToReader).not.toHaveBeenCalled();
   });
 
   test('hides in select mode even with an active session', () => {

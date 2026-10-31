@@ -61,7 +61,7 @@ export interface AudiobookProgressHooks {
   onPause?: (positionSec: number) => void;
   onTick?: (positionSec: number) => void; // ~ every 15s while playing
   onSeek?: (positionSec: number) => void;
-  onEnd?: (positionSec: number) => void; // shutdown / natural end
+  onEnd?: (positionSec: number, reason?: 'ended' | 'error') => void; // shutdown / natural end
 }
 
 export class AudiobookController extends EventTarget implements PlaybackSource {
@@ -84,6 +84,7 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
   #state: PlaybackState = 'stopped';
   #terminated = false;
   #started = false;
+  #loaded = false;
   // Position to resume from after a transient clock error; also doubles as
   // the "did the last start() follow an error" flag (non-null = yes).
   #errorResumeAt: number | null = null;
@@ -161,7 +162,9 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
     this.#hooks = hooks;
     this.#tracks = [...source.tracks].sort((a, b) => a.startOffset - b.startOffset);
     this.#chapters = [...source.chapters].sort((a, b) => a.start - b.start);
-    this.#timeline = new AudiobookTimeline(source.tracks, source.chapters);
+    // A single RSS enclosure may omit duration. Keep its seek range open
+    // until the media clock reports metadata instead of clamping to zero.
+    this.#timeline = new AudiobookTimeline(this.#timelineTracks(), source.chapters);
     this.#clock.addEventListener('ended', this.#onEnded);
     this.#clock.addEventListener('error', this.#onError);
     this.#clock.addEventListener('timeupdate', this.#onTimeUpdate);
@@ -180,6 +183,7 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
   }
 
   async start(): Promise<void> {
+    if (this.#terminated) return;
     if (this.#retryTimer) {
       clearTimeout(this.#retryTimer);
       this.#retryTimer = null;
@@ -202,6 +206,7 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
       this.#errorResumeAt = null;
       await this.#loadGlobal(resumeAt);
     }
+    if (this.#terminated) return;
     try {
       await this.#clock.play();
     } catch {
@@ -213,6 +218,7 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
       this.#setState('paused');
       return;
     }
+    if (this.#terminated) return;
     this.#setState('playing');
     this.#startTicking();
     this.#emitMark();
@@ -250,6 +256,7 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
   }
 
   async seekToTime(seconds: number): Promise<void> {
+    this.#refreshDuration();
     const clamped = Math.max(0, Math.min(seconds, this.#timeline.duration));
     const { trackIndex, offset } = this.#timeline.locate(clamped);
     if (trackIndex === this.#trackIndex) {
@@ -273,9 +280,10 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
   }
 
   getPlaybackInfo(): PlaybackInfo | null {
+    this.#refreshDuration();
     return {
       position: this.#position(),
-      duration: this.#timeline.duration,
+      duration: Number.isFinite(this.#timeline.duration) ? this.#timeline.duration : 0,
       measuredFraction: 1,
     };
   }
@@ -314,7 +322,7 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
   }
 
   async shutdown(): Promise<void> {
-    if (!this.#terminated) {
+    if (!this.#terminated && this.#loaded) {
       this.#hooks?.onEnd?.(this.#position());
     }
     this.#terminated = true;
@@ -333,6 +341,29 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
     return this.#timeline.toGlobal(this.#trackIndex, this.#clock.currentTime);
   }
 
+  #timelineTracks(): ABSTrack[] {
+    return this.#tracks.map((track) =>
+      this.#tracks.length === 1 && track.duration <= 0
+        ? { ...track, duration: Number.POSITIVE_INFINITY }
+        : track,
+    );
+  }
+
+  #refreshDuration(): void {
+    const duration = this.#clock.duration;
+    if (
+      this.#tracks.length !== 1 ||
+      this.#source.tracks[0]!.duration > 0 ||
+      !duration ||
+      !Number.isFinite(duration) ||
+      duration <= 0 ||
+      duration === this.#timeline.duration
+    )
+      return;
+    this.#tracks[0] = { ...this.#tracks[0]!, duration };
+    this.#timeline = new AudiobookTimeline(this.#tracks, this.#chapters);
+  }
+
   async #loadGlobal(sec: number): Promise<void> {
     const { trackIndex, offset } = this.#timeline.locate(sec);
     const track = this.#tracks[trackIndex];
@@ -345,6 +376,7 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
     // source.startAt over the seek.
     this.#started = true;
     await this.#clock.load(this.#source.resolveUrl(track.contentUrl), offset);
+    this.#loaded = true;
   }
 
   #setState(next: PlaybackState): void {
@@ -394,7 +426,12 @@ export class AudiobookController extends EventTarget implements PlaybackSource {
     this.#clock.pause();
     this.#setState('stopped');
     this.#terminated = true;
-    this.#hooks?.onEnd?.(this.#timeline.duration);
+    this.#refreshDuration();
+    const position =
+      reason === 'ended' && Number.isFinite(this.#timeline.duration)
+        ? this.#timeline.duration
+        : this.#position();
+    this.#hooks?.onEnd?.(position, reason);
     queueMicrotask(() => {
       this.dispatchEvent(new CustomEvent('tts-session-ended', { detail: { reason } }));
     });

@@ -1871,7 +1871,11 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
           max='100'
         />
       </div>
-      <LibraryViewTabs active='books' onHighlights={() => router.push('/highlights')} />
+      <LibraryViewTabs
+        active='books'
+        onHighlights={() => router.push('/highlights')}
+        onPodcasts={() => router.push('/podcasts')}
+      />
       {(loading || isSyncing) && (
         <div className='fixed inset-0 z-50 flex items-center justify-center'>
           <Spinner loading />
@@ -2102,10 +2106,15 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         isOpen={showImportSite}
         onClose={() => setShowImportSite(false)}
         onImport={async (toc: SiteToc, onProgress) => {
-          if (!appService) return;
+          if (!appService) throw new Error('App service unavailable');
           const newBook = createSiteBook(toc);
           const book = useLibraryStore.getState().getBookByHash(newBook.hash) ?? newBook;
-          await refreshSiteBook(appService as unknown as FileSystem, book, toc, onProgress);
+          const result = await refreshSiteBook(
+            appService as unknown as FileSystem,
+            book,
+            toc,
+            onProgress,
+          );
           if (book === newBook) {
             try {
               const cover = generateFeedCoverSvg(toc.url, book.title);
@@ -2118,6 +2127,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
             }
             await useLibraryStore.getState().updateBooks(envConfig, [book]);
           }
+          return result;
         }}
       />
       <Toast />

@@ -142,5 +142,7 @@ pub struct PlayoutPositionResponse {
     pub session: i32,
     pub index: i32,
     pub position_ms: f64,
+    #[serde(default)]
+    pub duration_ms: f64,
     pub playing: bool,
 }

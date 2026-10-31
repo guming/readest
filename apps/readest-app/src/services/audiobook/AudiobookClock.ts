@@ -6,6 +6,7 @@ export interface AudiobookClock {
   currentTime: number; // in-track seconds (get/set where supported; use load+seek otherwise)
   playbackRate: number;
   readonly paused: boolean;
+  readonly duration?: number;
   /** Point the clock at a track URL and position; resolves when seekable. */
   load(url: string, startAt: number): Promise<void>;
   play(): Promise<void>;
@@ -23,6 +24,10 @@ export class HtmlAudioClock implements AudiobookClock {
     this.#audio.preload = 'auto';
     // Speed changes must not raise the narrator's pitch (MediaOverlayClient precedent).
     this.#audio.preservesPitch = true;
+  }
+
+  get duration() {
+    return this.#audio.duration;
   }
 
   get currentTime() {

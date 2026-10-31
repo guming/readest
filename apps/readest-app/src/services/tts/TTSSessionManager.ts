@@ -96,6 +96,10 @@ export class TTSSessionManager extends EventTarget {
     return this.#session?.bookHash === bookHash ? this.#session : null;
   }
 
+  getActiveMeta(): TTSSessionMeta | null {
+    return this.#meta;
+  }
+
   getActiveSession(): TTSSession | null {
     return this.#session;
   }

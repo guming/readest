@@ -43,6 +43,8 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     const feed: RssFeed = {
       id: url,
       url,
+      kind: parsed.kind,
+      author: parsed.author,
       title: parsed.title,
       siteUrl: parsed.siteUrl,
       description: parsed.description,
@@ -65,6 +67,10 @@ export const useFeedStore = create<FeedState>((set, get) => ({
           f.id === id
             ? {
                 ...f,
+                kind: parsed.kind ?? f.kind,
+                author: parsed.author ?? f.author,
+                iconUrl: parsed.iconUrl ?? f.iconUrl,
+                description: parsed.description ?? f.description,
                 title: parsed.title || f.title,
                 items: mergeItems(f.items, parsed.items),
                 lastFetchedAt: Date.now(),

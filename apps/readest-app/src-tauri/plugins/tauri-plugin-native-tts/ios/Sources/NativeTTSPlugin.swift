@@ -86,6 +86,7 @@ struct PlayoutPositionResponse: Encodable {
   let session: Int
   let index: Int
   let positionMs: Double
+  let durationMs: Double
   let playing: Bool
 }
 
@@ -1184,11 +1185,14 @@ class NativeTTSPlugin: Plugin, AVSpeechSynthesizerDelegate {
     DispatchQueue.main.async {
       let time = self.playoutPlayer?.currentTime()
       let seconds = time.map { CMTimeGetSeconds($0) } ?? 0
+      let durationTime = self.playoutPlayer?.currentItem?.duration
+      let duration = durationTime.map { CMTimeGetSeconds($0) } ?? 0
       invoke.resolve(
         PlayoutPositionResponse(
           session: self.playoutSession,
           index: self.playoutCurrentIndex,
           positionMs: seconds.isFinite ? seconds * 1000.0 : 0,
+          durationMs: duration.isFinite ? duration * 1000.0 : 0,
           playing: (self.playoutPlayer?.rate ?? 0) != 0
         ))
     }

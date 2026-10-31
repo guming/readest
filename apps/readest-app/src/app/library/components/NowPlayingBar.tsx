@@ -97,8 +97,9 @@ const NowPlayingBar = ({ isSelectMode }: NowPlayingBarProps) => {
   if (!visible) return null;
 
   const book = getBookData(session.bookKey)?.book;
-  const title = book?.title ?? '';
-  const coverImageUrl = book?.coverImageUrl;
+  const meta = ttsSessionManager.getActiveMeta();
+  const title = meta?.title ?? book?.title ?? '';
+  const coverImageUrl = meta?.coverImageUrl ?? book?.coverImageUrl;
 
   const handleToggle = () => {
     const controller = session.controller;
@@ -117,13 +118,15 @@ const NowPlayingBar = ({ isSelectMode }: NowPlayingBarProps) => {
   };
 
   const handleOpen = () => {
-    navigateToReader(router, [session.bookHash]);
+    if (meta?.playbackUrl) router.push(meta.playbackUrl);
+    else if (session.controller.kind === 'audiobook') router.push(`/player?id=${session.bookHash}`);
+    else navigateToReader(router, [session.bookHash]);
   };
 
   return (
     <div
       role='status'
-      aria-label={`${_('Reading aloud')}: ${title}`}
+      aria-label={`${_('Now playing')}: ${title}`}
       className={clsx(
         'fixed bottom-0 start-1/2 z-40 -translate-x-1/2 rtl:translate-x-1/2',
         'motion-safe:transition-all motion-safe:duration-200',
@@ -138,7 +141,7 @@ const NowPlayingBar = ({ isSelectMode }: NowPlayingBarProps) => {
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') handleOpen();
         }}
-        aria-label={`${_('Open Book')}: ${title}`}
+        aria-label={`${_('Now playing')}: ${title}`}
         className={clsx(
           'not-eink:bg-base-300 eink-bordered flex items-center gap-2 rounded-full shadow-lg',
           'h-14 max-w-[calc(100vw-2rem)] cursor-pointer px-2',

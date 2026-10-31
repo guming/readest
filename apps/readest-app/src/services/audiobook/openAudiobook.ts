@@ -57,7 +57,9 @@ const notifyEpisodeNotFound = (): void => {
 };
 
 /** Resolves the server config for a library book, toasting when it's gone. */
-const resolveServer = (book: Book): { itemId: string; server: ABSServer } | null => {
+const resolveServer = (
+  book: Pick<Book, 'filePath'>,
+): { itemId: string; server: ABSServer } | null => {
   const parsed = parseAbsFilePath(book.filePath);
   const server = parsed ? findABSServerById(parsed.serverId) : undefined;
   if (!parsed || !server) {
@@ -211,7 +213,7 @@ export const openAudiobookSession = async (input: {
  */
 export const loadAbsEpisodes = async (
   appService: AppService,
-  book: Book,
+  book: Pick<Book, 'filePath'>,
 ): Promise<{
   episodes: ABSEpisode[];
   progressByEpisodeId: Map<string, ABSMediaProgress>;
